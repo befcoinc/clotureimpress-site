@@ -56,7 +56,7 @@
 
     /* ===== BASE ===== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; scroll-padding-top: 80px; -webkit-font-smoothing: antialiased; }
+    html { scroll-behavior: smooth; scroll-padding-top: 96px; -webkit-font-smoothing: antialiased; }
     body { font-family: var(--font-body); font-size: var(--text-base); color: var(--color-text); background: var(--color-bg); line-height: 1.65; }
     img { display: block; max-width: 100%; height: auto; }
     a { text-decoration: none; color: inherit; }
@@ -143,17 +143,14 @@
     .header--scrolled { box-shadow: 0 2px 20px rgba(0,0,0,0.5); }
     .nav {
       display: flex; align-items: center; justify-content: space-between;
-      height: 72px; gap: var(--space-6);
+      height: 88px; gap: var(--space-6);
     }
     .nav-logo {
       display: block;
-      width: 180px; height: 56px;
-      background-image: url('logo.png');
-      background-repeat: no-repeat;
-      background-position: left center;
-      /* Logo PNG ~1542x1024, marque dans ~55% gauche : on étend pour cropper le slogan/tél. */
-      background-size: auto 110%;
-      text-indent: -9999px; overflow: hidden;
+      height: 64px;
+    }
+    .nav-logo img {
+      height: 100%; width: auto; display: block;
     }
     .nav-links {
       display: flex; align-items: center; gap: var(--space-8);
@@ -192,7 +189,7 @@
     .hero {
       min-height: 100vh;
       display: flex; flex-direction: column; justify-content: flex-end;
-      padding-top: 72px;
+      padding-top: 88px;
       position: relative; overflow: hidden;
     }
     .hero-bg {
@@ -522,6 +519,8 @@
     @media (max-width: 1100px) {
       .nav-links { display: none; }
       .hamburger { display: flex; }
+      .nav-logo { height: 52px; }
+      .nav { height: 76px; }
     }
     @media (max-width: 900px) {
       .why-grid { grid-template-columns: 1fr; }
@@ -557,7 +556,9 @@
 <header class="header" id="header">
   <div class="container">
     <nav class="nav">
-      <a href="#hero" class="nav-logo" aria-label="Clôture Impress – accueil">Clôture Impress</a>
+      <a href="#hero" class="nav-logo" aria-label="Clôture Impress – accueil">
+        <img src="logo.png" alt="Clôture Impress">
+      </a>
       <ul class="nav-links" role="list">
         <li><a href="#services">Services</a></li>
         <li><a href="#a-propos">À propos</a></li>
