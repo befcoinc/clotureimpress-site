@@ -1,121 +1,953 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Clôture Impress | Clôtures résidentielles et commerciales à Montréal</title>
-  <meta name="description" content="Importation, vente et installation de clôtures résidentielles et commerciales à Montréal. Soumission rapide pour clôtures ornementales, maille de chaîne et clôtures d'intimité." />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clôture Impress | Clôtures haut de gamme à Montréal, Laval et Rive-Nord</title>
+  <meta name="description" content="Clôture Impress installe des clôtures résidentielles et commerciales haut de gamme à Montréal, Laval et sur la Rive-Nord depuis 2018. Ornementale, maille de chaîne, intimité. Soumission gratuite rapide.">
+  <meta property="og:title" content="Clôture Impress | L'art de la clôture depuis 2018">
+  <meta property="og:description" content="Installation de clôtures ornementales, maille de chaîne et d'intimité à Montréal et Rive-Nord. Soumission gratuite.">
+  <meta property="og:image" content="https://agi-prod-file-upload-public-main-use1.s3.amazonaws.com/f3a6aba1-5d5a-42eb-9656-a185c07aeb9b">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ===== DESIGN TOKENS ===== */
+    :root {
+      --color-bg: #0a0a0a;
+      --color-surface: #111111;
+      --color-surface-2: #181818;
+      --color-surface-3: #1f1f1f;
+      --color-border: rgba(255,255,255,0.08);
+      --color-divider: rgba(255,255,255,0.06);
+      --color-text: #f0ece3;
+      --color-text-muted: #a09a90;
+      --color-text-faint: #5a554e;
+      --color-gold: #c9a35a;
+      --color-gold-hover: #e0b96a;
+      --color-gold-light: #f5e6c3;
+      --color-gold-dim: rgba(201,163,90,0.12);
+
+      --font-display: 'Cormorant Garamond', Georgia, serif;
+      --font-body: 'Inter', system-ui, sans-serif;
+
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --text-2xl: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+      --text-hero: clamp(3rem, 1rem + 6vw, 6rem);
+
+      --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem;
+      --space-4: 1rem; --space-5: 1.25rem; --space-6: 1.5rem;
+      --space-8: 2rem; --space-10: 2.5rem; --space-12: 3rem;
+      --space-16: 4rem; --space-20: 5rem; --space-24: 6rem;
+
+      --radius-sm: 0.25rem; --radius-md: 0.5rem;
+      --radius-lg: 0.75rem; --radius-xl: 1rem;
+
+      --shadow-gold: 0 4px 24px rgba(201,163,90,0.15);
+      --transition: 200ms cubic-bezier(0.16,1,0.3,1);
+
+      --content-default: 1100px;
+      --content-narrow: 720px;
+    }
+
+    /* ===== BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; -webkit-font-smoothing: antialiased; }
+    body { font-family: var(--font-body); font-size: var(--text-base); color: var(--color-text); background: var(--color-bg); line-height: 1.65; }
+    img { display: block; max-width: 100%; height: auto; }
+    a { text-decoration: none; color: inherit; }
+    ul { list-style: none; }
+    button { cursor: pointer; border: none; background: none; font: inherit; color: inherit; }
+    h1,h2,h3,h4 { text-wrap: balance; }
+    p { text-wrap: pretty; max-width: 70ch; }
+    :focus-visible { outline: 2px solid var(--color-gold); outline-offset: 3px; }
+
+    /* ===== LAYOUT ===== */
+    .container { max-width: var(--content-default); margin-inline: auto; padding-inline: var(--space-6); }
+    .container--narrow { max-width: var(--content-narrow); margin-inline: auto; padding-inline: var(--space-6); }
+
+    /* ===== TYPOGRAPHY ===== */
+    .eyebrow {
+      font-family: var(--font-body);
+      font-size: var(--text-xs);
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--color-gold);
+      display: block;
+      margin-bottom: var(--space-3);
+    }
+    .display-heading {
+      font-family: var(--font-display);
+      font-size: var(--text-hero);
+      font-weight: 600;
+      line-height: 1.05;
+      letter-spacing: -0.01em;
+    }
+    .section-heading {
+      font-family: var(--font-display);
+      font-size: var(--text-2xl);
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+    }
+    .subheading {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: 500;
+      line-height: 1.2;
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-3) var(--space-8);
+      font-family: var(--font-body); font-size: var(--text-sm); font-weight: 500;
+      letter-spacing: 0.05em; text-transform: uppercase;
+      border-radius: var(--radius-sm);
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .btn-gold {
+      background: var(--color-gold);
+      color: #0a0a0a;
+      border: 1.5px solid var(--color-gold);
+    }
+    .btn-gold:hover { background: var(--color-gold-hover); border-color: var(--color-gold-hover); transform: translateY(-1px); box-shadow: var(--shadow-gold); }
+    .btn-outline {
+      background: transparent;
+      color: var(--color-text);
+      border: 1.5px solid rgba(255,255,255,0.25);
+    }
+    .btn-outline:hover { border-color: var(--color-gold); color: var(--color-gold); transform: translateY(-1px); }
+    .btn-large { padding: var(--space-4) var(--space-10); font-size: var(--text-base); }
+
+    /* ===== GOLD DIVIDER ===== */
+    .gold-line {
+      display: block; width: 60px; height: 1px;
+      background: var(--color-gold); margin-bottom: var(--space-6);
+    }
+
+    /* ===== HEADER / NAV ===== */
+    .header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(10,10,10,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--color-border);
+      transition: box-shadow var(--transition);
+    }
+    .header--scrolled { box-shadow: 0 2px 20px rgba(0,0,0,0.5); }
+    .nav {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 72px; gap: var(--space-6);
+    }
+    .nav-logo img {
+      height: 44px; width: auto;
+    }
+    .nav-links {
+      display: flex; align-items: center; gap: var(--space-8);
+    }
+    .nav-links a {
+      font-size: var(--text-xs); font-weight: 500;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--color-text-muted);
+      transition: color var(--transition);
+    }
+    .nav-links a:hover { color: var(--color-gold); }
+    .nav-phone {
+      font-family: var(--font-display); font-size: var(--text-lg); font-weight: 600;
+      color: var(--color-gold);
+      transition: color var(--transition);
+    }
+    .nav-phone:hover { color: var(--color-gold-hover); }
+    .nav-cta { display: flex; align-items: center; gap: var(--space-4); }
+    .hamburger { display: none; flex-direction: column; gap: 5px; padding: var(--space-2); }
+    .hamburger span { display: block; width: 24px; height: 2px; background: var(--color-text); border-radius: 2px; transition: all var(--transition); }
+    .mobile-menu {
+      display: none; flex-direction: column; gap: var(--space-4);
+      padding: var(--space-6); border-top: 1px solid var(--color-border);
+      background: rgba(10,10,10,0.98);
+    }
+    .mobile-menu a {
+      font-size: var(--text-base); color: var(--color-text-muted);
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: var(--space-2) 0; border-bottom: 1px solid var(--color-divider);
+      transition: color var(--transition);
+    }
+    .mobile-menu a:hover { color: var(--color-gold); }
+    .mobile-menu .nav-phone { margin-top: var(--space-2); }
+
+    /* ===== HERO ===== */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column; justify-content: flex-end;
+      padding-top: 72px;
+      position: relative; overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1208 60%, #0a0a0a 100%);
+    }
+    .hero-bg::after {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 70% 40%, rgba(201,163,90,0.06) 0%, transparent 70%),
+        linear-gradient(to bottom, rgba(10,10,10,0) 60%, rgba(10,10,10,0.95) 100%);
+    }
+    .hero-image {
+      position: absolute; inset: 0;
+      object-fit: cover; width: 100%; height: 100%;
+      opacity: 0.18;
+    }
+    .hero-content {
+      position: relative; z-index: 2;
+      padding-bottom: clamp(var(--space-12), 8vw, var(--space-24));
+      padding-top: var(--space-20);
+    }
+    .hero-zones {
+      display: flex; flex-wrap: wrap; gap: var(--space-3);
+      margin-bottom: var(--space-6);
+    }
+    .zone-badge {
+      font-size: var(--text-xs); font-weight: 500;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--color-gold); border: 1px solid rgba(201,163,90,0.3);
+      padding: var(--space-1) var(--space-3); border-radius: var(--radius-full, 999px);
+    }
+    .hero h1 { margin-bottom: var(--space-6); max-width: 14ch; }
+    .hero-lead {
+      font-size: var(--text-lg); color: var(--color-text-muted);
+      max-width: 52ch; line-height: 1.6; margin-bottom: var(--space-8);
+    }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-10); }
+    .hero-stats {
+      display: flex; flex-wrap: wrap; gap: var(--space-8);
+      border-top: 1px solid var(--color-divider); padding-top: var(--space-8);
+    }
+    .hero-stat-value {
+      font-family: var(--font-display); font-size: var(--text-2xl);
+      font-weight: 600; color: var(--color-gold); line-height: 1;
+      display: block; margin-bottom: var(--space-1);
+    }
+    .hero-stat-label {
+      font-size: var(--text-xs); letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--color-text-faint);
+    }
+
+    /* ===== SECTIONS ===== */
+    .section { padding-block: clamp(var(--space-12), 8vw, var(--space-24)); }
+    .section-dark { background: var(--color-bg); }
+    .section-surface { background: var(--color-surface); }
+    .section-surface-2 { background: var(--color-surface-2); }
+    .section-intro { max-width: 56ch; margin-bottom: var(--space-12); }
+
+    /* ===== SERVICES ===== */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(300px,100%), 1fr));
+      gap: var(--space-4);
+    }
+    .service-card {
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+    }
+    .service-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(201,163,90,0.25);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(201,163,90,0.1);
+    }
+    .service-card-img {
+      aspect-ratio: 4/3; object-fit: cover; width: 100%;
+      background: var(--color-surface-3);
+    }
+    .service-card-body { padding: var(--space-6); }
+    .service-card h3 {
+      font-family: var(--font-display); font-size: var(--text-xl);
+      font-weight: 600; margin-bottom: var(--space-3);
+    }
+    .service-card p { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.6; }
+
+    /* ===== WHY US ===== */
+    .why-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: var(--space-16); align-items: center;
+    }
+    .why-list { display: flex; flex-direction: column; gap: var(--space-6); margin-top: var(--space-8); }
+    .why-item { display: flex; gap: var(--space-4); align-items: flex-start; }
+    .why-icon {
+      flex-shrink: 0; width: 44px; height: 44px;
+      border: 1px solid rgba(201,163,90,0.3); border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--color-gold); font-size: 18px;
+    }
+    .why-item h4 {
+      font-size: var(--text-base); font-weight: 600;
+      margin-bottom: var(--space-1);
+    }
+    .why-item p { font-size: var(--text-sm); color: var(--color-text-muted); }
+    .why-visual {
+      position: relative; border-radius: var(--radius-xl); overflow: hidden;
+    }
+    .why-visual img {
+      width: 100%; aspect-ratio: 4/5; object-fit: cover;
+    }
+    .why-visual-badge {
+      position: absolute; bottom: var(--space-6); left: var(--space-6);
+      background: rgba(10,10,10,0.88); border: 1px solid var(--color-gold);
+      backdrop-filter: blur(8px);
+      padding: var(--space-4) var(--space-5); border-radius: var(--radius-md);
+    }
+    .why-visual-badge .badge-value {
+      font-family: var(--font-display); font-size: var(--text-2xl);
+      font-weight: 700; color: var(--color-gold); line-height: 1; display: block;
+    }
+    .why-visual-badge .badge-label {
+      font-size: var(--text-xs); letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--color-text-muted);
+    }
+
+    /* ===== GALLERY ===== */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: auto;
+      gap: var(--space-3);
+    }
+    .gallery-item { border-radius: var(--radius-md); overflow: hidden; background: var(--color-surface-2); }
+    .gallery-item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+    .gallery-item:hover img { transform: scale(1.04); }
+    .gallery-item:first-child { grid-column: span 2; grid-row: span 2; }
+    .gallery-item:first-child { aspect-ratio: unset; min-height: 420px; }
+    .gallery-item:not(:first-child) { aspect-ratio: 4/3; }
+
+    /* ===== TESTIMONIALS ===== */
+    .testimonials-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px,100%), 1fr));
+      gap: var(--space-4);
+    }
+    .testimonial-card {
+      background: var(--color-surface-2); border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg); padding: var(--space-6);
+    }
+    .testimonial-stars { color: var(--color-gold); font-size: var(--text-sm); margin-bottom: var(--space-4); letter-spacing: 0.1em; }
+    .testimonial-text { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.7; margin-bottom: var(--space-4); font-style: italic; }
+    .testimonial-author { font-size: var(--text-xs); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-text-faint); }
+
+    /* ===== ZONES ===== */
+    .zones-grid {
+      display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-8);
+    }
+    .zone-chip {
+      font-size: var(--text-sm); color: var(--color-text-muted);
+      border: 1px solid var(--color-border); border-radius: var(--radius-full, 999px);
+      padding: var(--space-2) var(--space-5);
+      transition: all var(--transition);
+    }
+    .zone-chip:hover { border-color: var(--color-gold); color: var(--color-gold); }
+
+    /* ===== SOUMISSION / CONTACT ===== */
+    .contact-section {
+      display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-16); align-items: start;
+    }
+    .contact-info { padding-top: var(--space-4); }
+    .contact-item { display: flex; gap: var(--space-4); align-items: flex-start; margin-bottom: var(--space-6); }
+    .contact-icon { color: var(--color-gold); font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+    .contact-item h4 { font-size: var(--text-sm); font-weight: 600; margin-bottom: var(--space-1); }
+    .contact-item a, .contact-item p { font-size: var(--text-base); color: var(--color-text-muted); transition: color var(--transition); }
+    .contact-item a:hover { color: var(--color-gold); }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+    .form-group { display: flex; flex-direction: column; gap: var(--space-2); }
+    .form-group.full { grid-column: span 2; }
+    .form-label { font-size: var(--text-xs); font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-muted); }
+    .form-input, .form-select, .form-textarea {
+      background: var(--color-surface-2); border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); padding: var(--space-3) var(--space-4);
+      font-family: var(--font-body); font-size: var(--text-base); color: var(--color-text);
+      transition: border-color var(--transition), box-shadow var(--transition);
+      width: 100%;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      outline: none; border-color: var(--color-gold);
+      box-shadow: 0 0 0 3px rgba(201,163,90,0.12);
+    }
+    .form-input::placeholder, .form-textarea::placeholder { color: var(--color-text-faint); }
+    .form-select option { background: var(--color-surface-2); }
+    .form-textarea { resize: vertical; min-height: 120px; }
+    .form-submit { grid-column: span 2; }
+
+    /* ===== CTA BANNER ===== */
+    .cta-banner {
+      text-align: center; padding-block: clamp(var(--space-12), 8vw, var(--space-20));
+      background: var(--color-surface);
+      border-top: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--color-border);
+      position: relative; overflow: hidden;
+    }
+    .cta-banner::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 60% 100% at 50% 50%, rgba(201,163,90,0.05) 0%, transparent 70%);
+    }
+    .cta-banner > * { position: relative; z-index: 1; }
+    .cta-banner p { color: var(--color-text-muted); max-width: 50ch; margin-inline: auto; margin-bottom: var(--space-8); }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: #060606; border-top: 1px solid var(--color-border);
+      padding-block: var(--space-12);
+    }
+    .footer-grid {
+      display: grid; grid-template-columns: 2fr 1fr 1fr; gap: var(--space-12);
+      padding-bottom: var(--space-10); margin-bottom: var(--space-8);
+      border-bottom: 1px solid var(--color-divider);
+    }
+    .footer-brand img { height: 40px; margin-bottom: var(--space-4); }
+    .footer-brand p { font-size: var(--text-sm); color: var(--color-text-faint); max-width: 36ch; line-height: 1.7; }
+    .footer-col h4 {
+      font-size: var(--text-xs); font-weight: 600;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--color-gold); margin-bottom: var(--space-4);
+    }
+    .footer-col ul { display: flex; flex-direction: column; gap: var(--space-2); }
+    .footer-col a { font-size: var(--text-sm); color: var(--color-text-faint); transition: color var(--transition); }
+    .footer-col a:hover { color: var(--color-gold); }
+    .footer-bottom {
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-4);
+      font-size: var(--text-xs); color: var(--color-text-faint);
+    }
+    .footer-bottom a { color: var(--color-text-faint); transition: color var(--transition); }
+    .footer-bottom a:hover { color: var(--color-gold); }
+
+    /* ===== FLOATING CTA ===== */
+    .floating-cta {
+      position: fixed; bottom: var(--space-6); right: var(--space-6);
+      z-index: 90; display: flex; flex-direction: column; gap: var(--space-2);
+      align-items: flex-end;
+    }
+    .floating-cta a {
+      display: flex; align-items: center; gap: var(--space-2);
+      padding: var(--space-3) var(--space-5);
+      font-size: var(--text-sm); font-weight: 500;
+      border-radius: var(--radius-full, 999px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      transition: all var(--transition);
+    }
+    .floating-call {
+      background: var(--color-gold); color: #0a0a0a;
+    }
+    .floating-call:hover { background: var(--color-gold-hover); transform: translateY(-2px); }
+
+    /* ===== SCROLL REVEAL ===== */
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 900px) {
+      .nav-links { display: none; }
+      .hamburger { display: flex; }
+      .why-grid { grid-template-columns: 1fr; }
+      .why-visual { display: none; }
+      .contact-section { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .footer-brand { grid-column: span 2; }
+      .gallery-grid { grid-template-columns: 1fr 1fr; }
+      .gallery-item:first-child { grid-column: span 2; min-height: 280px; }
+    }
+    @media (max-width: 640px) {
+      .hero-stats { gap: var(--space-6); }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.full { grid-column: span 1; }
+      .form-submit { grid-column: span 1; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .footer-brand { grid-column: span 1; }
+      .gallery-grid { grid-template-columns: 1fr; }
+      .gallery-item:first-child { grid-column: span 1; min-height: 240px; }
+      .cta-banner .section-heading { font-size: var(--text-xl); }
+      .floating-cta a span:not(.icon) { display: none; }
+      .nav-cta .btn { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; transition: none; }
+      *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+    }
+  </style>
 </head>
 <body>
-  <header class="hero">
-    <nav class="nav container">
-      <div class="logo">Clôture Impress</div>
-      <a class="nav-cta" href="#soumission">Demander une soumission</a>
-    </nav>
 
-    <section class="hero-content container">
-      <div class="hero-text">
-        <p class="eyebrow">Montréal · Résidentiel · Commercial</p>
-        <h1>Importation, vente et installation de clôtures durables</h1>
-        <p class="lead">Clôture Impress offre des solutions simples et professionnelles pour les propriétés résidentielles et commerciales. Nous vous aidons à choisir la bonne clôture selon votre budget, votre terrain et vos besoins.</p>
-        <div class="hero-actions">
-          <a class="btn btn-primary" href="#soumission">Obtenir une soumission</a>
-          <a class="btn btn-secondary" href="#services">Voir nos services</a>
-        </div>
+<!-- ===== HEADER ===== -->
+<header class="header" id="header">
+  <div class="container">
+    <nav class="nav">
+      <a href="#hero" class="nav-logo" aria-label="Clôture Impress – accueil">
+        <img src="https://agi-prod-file-upload-public-main-use1.s3.amazonaws.com/f3a6aba1-5d5a-42eb-9656-a185c07aeb9b" alt="Clôture Impress" width="130" height="44" loading="eager">
+      </a>
+      <ul class="nav-links" role="list">
+        <li><a href="#services">Services</a></li>
+        <li><a href="#a-propos">À propos</a></li>
+        <li><a href="#realisations">Réalisations</a></li>
+        <li><a href="#zones">Zones desservies</a></li>
+      </ul>
+      <div class="nav-cta">
+        <a href="tel:4506240821" class="nav-phone" aria-label="Appeler Clôture Impress">(450) 624-0821</a>
+        <a href="#soumission" class="btn btn-gold">Soumission gratuite</a>
       </div>
-      <div class="hero-card">
-        <h2>Pourquoi nous choisir</h2>
-        <ul>
-          <li>Soumissions rapides</li>
-          <li>Service professionnel et transparent</li>
-          <li>Clôtures résidentielles et commerciales</li>
-          <li>Installation soignée et durable</li>
+      <button class="hamburger" aria-label="Menu" id="hamburger" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </nav>
+  </div>
+  <div class="mobile-menu" id="mobile-menu" hidden>
+    <a href="#services" class="mobile-link">Services</a>
+    <a href="#a-propos" class="mobile-link">À propos</a>
+    <a href="#realisations" class="mobile-link">Réalisations</a>
+    <a href="#zones" class="mobile-link">Zones desservies</a>
+    <a href="tel:4506240821" class="nav-phone">(450) 624-0821</a>
+    <a href="#soumission" class="btn btn-gold" style="text-align:center;">Soumission gratuite</a>
+  </div>
+</header>
+
+<!-- ===== HERO ===== -->
+<section class="hero" id="hero" aria-label="Clôture Impress – Clôtures haut de gamme">
+  <div class="hero-bg"></div>
+  <img
+    class="hero-image"
+    src="https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=1600&q=80&auto=format&fit=crop"
+    alt="Maison résidentielle avec belle clôture ornementale"
+    width="1600" height="900"
+    loading="eager"
+    decoding="async"
+  >
+  <div class="hero-content container" id="hero-content-top">
+    <div class="hero-zones reveal">
+      <span class="zone-badge">Montréal</span>
+      <span class="zone-badge">Laval</span>
+      <span class="zone-badge">Rive-Nord</span>
+      <span class="zone-badge">Rive-Sud</span>
+    </div>
+    <span class="eyebrow reveal reveal-delay-1">L'art de la clôture depuis 2018</span>
+    <h1 class="display-heading reveal reveal-delay-2">Clôtures<br>haut de gamme</h1>
+    <p class="hero-lead reveal reveal-delay-3">
+      Clôture Impress conçoit, fournit et installe des clôtures résidentielles et commerciales avec précision, durabilité et un service soigné. Du choix des matériaux à la finition.
+    </p>
+    <div class="hero-actions reveal reveal-delay-3">
+      <a href="#soumission" class="btn btn-gold btn-large">Soumission gratuite</a>
+      <a href="#realisations" class="btn btn-outline btn-large">Voir nos réalisations</a>
+    </div>
+    <div class="hero-stats reveal">
+      <div>
+        <span class="hero-stat-value">+500</span>
+        <span class="hero-stat-label">Projets réalisés</span>
+      </div>
+      <div>
+        <span class="hero-stat-value">7+</span>
+        <span class="hero-stat-label">Années d'expérience</span>
+      </div>
+      <div>
+        <span class="hero-stat-value">100%</span>
+        <span class="hero-stat-label">Satisfaction garantie</span>
+      </div>
+      <div>
+        <span class="hero-stat-value">48h</span>
+        <span class="hero-stat-label">Délai de réponse</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SERVICES ===== -->
+<section class="section section-surface" id="services" aria-labelledby="services-heading">
+  <div class="container">
+    <div class="section-intro reveal">
+      <span class="eyebrow">Nos services</span>
+      <span class="gold-line"></span>
+      <h2 class="section-heading" id="services-heading">Des solutions pour chaque projet</h2>
+      <p style="color: var(--color-text-muted); margin-top: var(--space-4);">
+        Nous importons, vendons et installons des clôtures adaptées à vos besoins — résidentiels ou commerciaux — avec des matériaux durables et une finition soignée.
+      </p>
+    </div>
+    <div class="services-grid">
+      <article class="service-card reveal reveal-delay-1">
+        <img class="service-card-img" src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80&auto=format&fit=crop" alt="Clôture ornementale en fer forgé" width="600" height="400" loading="lazy">
+        <div class="service-card-body">
+          <h3>Clôture ornementale</h3>
+          <p>Un choix élégant et intemporel pour sécuriser et embellir votre propriété. Disponible en fer forgé ou en aluminium peint.</p>
+        </div>
+      </article>
+      <article class="service-card reveal reveal-delay-2">
+        <img class="service-card-img" src="https://images.unsplash.com/photo-1523413363574-c30aa1c2a516?w=600&q=80&auto=format&fit=crop" alt="Clôture maille de chaîne résidentielle" width="600" height="400" loading="lazy">
+        <div class="service-card-body">
+          <h3>Maille de chaîne</h3>
+          <p>Une solution robuste et économique pour délimiter un terrain résidentiel, commercial ou industriel avec efficacité.</p>
+        </div>
+      </article>
+      <article class="service-card reveal reveal-delay-3">
+        <img class="service-card-img" src="https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=600&q=80&auto=format&fit=crop" alt="Clôture d'intimité en bois ou composite" width="600" height="400" loading="lazy">
+        <div class="service-card-body">
+          <h3>Clôture d'intimité</h3>
+          <p>Créez un espace privé et paisible dans votre cour avec nos clôtures en bois, composite ou vinyle. Idéale pour les propriétés résidentielles.</p>
+        </div>
+      </article>
+      <article class="service-card reveal">
+        <img class="service-card-img" src="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&q=80&auto=format&fit=crop" alt="Clôture commerciale et industrielle" width="600" height="400" loading="lazy">
+        <div class="service-card-body">
+          <h3>Commercial & industriel</h3>
+          <p>Des installations solides et durables pour périmétrer des entrepôts, stationnements, terrains industriels et sites commerciaux.</p>
+        </div>
+      </article>
+      <article class="service-card reveal reveal-delay-1">
+        <img class="service-card-img" src="https://images.unsplash.com/photo-1560185007-cde436f6a4d0?w=600&q=80&auto=format&fit=crop" alt="Portail et entrée sécurisée" width="600" height="400" loading="lazy">
+        <div class="service-card-body">
+          <h3>Portails & accès</h3>
+          <p>Complétez votre installation avec un portail sur mesure motorisé ou manuel. Sécurité et esthétique au service de votre propriété.</p>
+        </div>
+      </article>
+      <article class="service-card reveal reveal-delay-2">
+        <img class="service-card-img" src="https://images.unsplash.com/photo-1604014023990-c95cc47ae4df?w=600&q=80&auto=format&fit=crop" alt="Clôture sur mesure et installation personnalisée" width="600" height="400" loading="lazy">
+        <div class="service-card-body">
+          <h3>Installation sur mesure</h3>
+          <p>Chaque terrain est unique. Nous mesurons, planifions et adaptons chaque installation à votre espace pour une finition parfaite.</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== POURQUOI NOUS ===== -->
+<section class="section section-dark" id="a-propos" aria-labelledby="why-heading">
+  <div class="container">
+    <div class="why-grid">
+      <div>
+        <div class="reveal">
+          <span class="eyebrow">Pourquoi nous choisir</span>
+          <span class="gold-line"></span>
+          <h2 class="section-heading" id="why-heading">Notre engagement envers chaque projet</h2>
+        </div>
+        <ul class="why-list">
+          <li class="why-item reveal reveal-delay-1">
+            <div class="why-icon" aria-hidden="true">★</div>
+            <div>
+              <h4>Expérience depuis 2018</h4>
+              <p>Plus de 7 ans à installer des clôtures résidentielles et commerciales dans la région de Montréal et sur la Rive-Nord.</p>
+            </div>
+          </li>
+          <li class="why-item reveal reveal-delay-2">
+            <div class="why-icon" aria-hidden="true">⚡</div>
+            <div>
+              <h4>Soumission rapide en 48h</h4>
+              <p>Nous répondons rapidement à toutes les demandes. Pas de longues attentes, pas de surprises sur votre facture.</p>
+            </div>
+          </li>
+          <li class="why-item reveal reveal-delay-3">
+            <div class="why-icon" aria-hidden="true">✦</div>
+            <div>
+              <h4>Matériaux durables et haut de gamme</h4>
+              <p>Nous importons des matériaux de qualité supérieure pour garantir une installation qui résiste aux hivers québécois.</p>
+            </div>
+          </li>
+          <li class="why-item reveal">
+            <div class="why-icon" aria-hidden="true">◎</div>
+            <div>
+              <h4>Chantier propre, délais respectés</h4>
+              <p>Travail soigné, respect de votre propriété et des délais promis. Nous partons en laissant tout impeccable.</p>
+            </div>
+          </li>
         </ul>
       </div>
-    </section>
-  </header>
-
-  <main>
-    <section id="services" class="section container">
-      <div class="section-heading">
-        <p class="eyebrow">Services</p>
-        <h2>Des solutions de clôture adaptées à votre projet</h2>
-        <p>Nous importons, vendons et installons des clôtures fiables pour répondre aux besoins des propriétaires et des entreprises.</p>
-      </div>
-      <div class="cards">
-        <article class="card">
-          <h3>Clôtures ornementales</h3>
-          <p>Un choix élégant et durable pour sécuriser et mettre en valeur votre propriété.</p>
-        </article>
-        <article class="card">
-          <h3>Maille de chaîne</h3>
-          <p>Une solution pratique, robuste et économique pour les terrains résidentiels et commerciaux.</p>
-        </article>
-        <article class="card">
-          <h3>Clôtures d’intimité</h3>
-          <p>Idéales pour créer plus de tranquillité, de sécurité et de séparation sur votre terrain.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="section section-alt">
-      <div class="container split">
-        <div>
-          <p class="eyebrow">À propos</p>
-          <h2>Une approche simple, honnête et efficace</h2>
-          <p>Clôture Impress a été créée pour offrir un service de clôture clair, rapide et professionnel. Notre mission est de livrer des installations durables avec une communication simple et un chantier propre.</p>
-        </div>
-        <div class="checklist">
-          <div>Conseils honnêtes sur le bon produit</div>
-          <div>Prix transparents</div>
-          <div>Respect des délais</div>
-          <div>Service local à Montréal et environs</div>
+      <div class="why-visual reveal">
+        <img src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=700&q=80&auto=format&fit=crop" alt="Belle propriété avec clôture ornementale installée par Clôture Impress" width="700" height="875" loading="lazy">
+        <div class="why-visual-badge">
+          <span class="badge-value">+500</span>
+          <span class="badge-label">projets complétés</span>
         </div>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
-    <section class="section container">
-      <div class="section-heading">
-        <p class="eyebrow">Secteurs desservis</p>
-        <h2>Nous desservons Montréal et les environs</h2>
-        <p>Montréal, Laval, Rive-Nord, Rive-Sud et secteurs voisins.</p>
+<!-- ===== RÉALISATIONS ===== -->
+<section class="section section-surface-2" id="realisations" aria-labelledby="gallery-heading">
+  <div class="container">
+    <div class="section-intro reveal">
+      <span class="eyebrow">Nos réalisations</span>
+      <span class="gold-line"></span>
+      <h2 class="section-heading" id="gallery-heading">Des installations qui parlent d'elles-mêmes</h2>
+    </div>
+    <div class="gallery-grid reveal">
+      <div class="gallery-item">
+        <img src="https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=900&q=80&auto=format&fit=crop" alt="Résidence avec clôture ornementale noire installée à Montréal" width="900" height="600" loading="lazy">
       </div>
-      <div class="service-area-box">
-        <p>Vous avez un projet résidentiel ou commercial? Parlez-nous de votre emplacement, du type de clôture recherché et des dimensions approximatives pour recevoir une soumission plus rapide.</p>
+      <div class="gallery-item">
+        <img src="https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&q=80&auto=format&fit=crop" alt="Clôture d'intimité bois sur la Rive-Nord" width="600" height="400" loading="lazy">
       </div>
-    </section>
+      <div class="gallery-item">
+        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=80&auto=format&fit=crop" alt="Portail d'entrée résidentiel sur mesure" width="600" height="400" loading="lazy">
+      </div>
+      <div class="gallery-item">
+        <img src="https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=600&q=80&auto=format&fit=crop" alt="Clôture commerciale maille de chaîne à Laval" width="600" height="400" loading="lazy">
+      </div>
+      <div class="gallery-item">
+        <img src="https://images.unsplash.com/photo-1599619351208-3e6c839d6828?w=600&q=80&auto=format&fit=crop" alt="Clôture intimité moderne résidentiel" width="600" height="400" loading="lazy">
+      </div>
+    </div>
+  </div>
+</section>
 
-    <section id="soumission" class="section contact-section">
-      <div class="container contact-grid">
-        <div>
-          <p class="eyebrow">Soumission</p>
-          <h2>Parlez-nous de votre projet</h2>
-          <p>Remplissez ce formulaire et nous vous contacterons rapidement pour discuter de votre projet de clôture.</p>
+<!-- ===== TÉMOIGNAGES ===== -->
+<section class="section section-dark" id="temoignages" aria-labelledby="temoignages-heading">
+  <div class="container">
+    <div class="section-intro reveal">
+      <span class="eyebrow">Avis clients</span>
+      <span class="gold-line"></span>
+      <h2 class="section-heading" id="temoignages-heading">Ce que disent nos clients</h2>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testimonial-card reveal reveal-delay-1">
+        <div class="testimonial-stars" aria-label="5 étoiles sur 5">★★★★★</div>
+        <p class="testimonial-text">"Service impeccable du début à la fin. Équipe professionnelle, installation rapide et résultat vraiment beau. Ma clôture ornementale est exactement ce que je voulais."</p>
+        <span class="testimonial-author">Marie-Claude B. — Laval</span>
+      </div>
+      <div class="testimonial-card reveal reveal-delay-2">
+        <div class="testimonial-stars" aria-label="5 étoiles sur 5">★★★★★</div>
+        <p class="testimonial-text">"J'ai eu une soumission en moins de 24 heures. Les travaux ont été faits dans les délais. Très satisfait du résultat final. Je recommande sans hésiter."</p>
+        <span class="testimonial-author">Patrick D. — Repentigny</span>
+      </div>
+      <div class="testimonial-card reveal reveal-delay-3">
+        <div class="testimonial-stars" aria-label="5 étoiles sur 5">★★★★★</div>
+        <p class="testimonial-text">"Excellent rapport qualité-prix. Ils ont pris le temps d'expliquer les options et de respecter notre budget. Le chantier était propre après les travaux. Merci !"</p>
+        <span class="testimonial-author">Sophie T. — Terrebonne</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== ZONES DESSERVIES ===== -->
+<section class="section section-surface" id="zones" aria-labelledby="zones-heading">
+  <div class="container">
+    <div class="section-intro reveal">
+      <span class="eyebrow">Zones desservies</span>
+      <span class="gold-line"></span>
+      <h2 class="section-heading" id="zones-heading">On installe partout dans la région</h2>
+      <p style="color: var(--color-text-muted); margin-top: var(--space-4);">
+        Clôture Impress dessert Montréal, Laval et toute la Rive-Nord ainsi que plusieurs secteurs de la Rive-Sud. Contactez-nous pour vérifier si votre secteur est couvert.
+      </p>
+    </div>
+    <div class="zones-grid reveal">
+      <span class="zone-chip">Montréal</span>
+      <span class="zone-chip">Laval</span>
+      <span class="zone-chip">Terrebonne</span>
+      <span class="zone-chip">Repentigny</span>
+      <span class="zone-chip">Blainville</span>
+      <span class="zone-chip">Boisbriand</span>
+      <span class="zone-chip">Sainte-Thérèse</span>
+      <span class="zone-chip">Saint-Jérôme</span>
+      <span class="zone-chip">Mirabel</span>
+      <span class="zone-chip">Mascouche</span>
+      <span class="zone-chip">L'Assomption</span>
+      <span class="zone-chip">Longueuil</span>
+      <span class="zone-chip">Brossard</span>
+      <span class="zone-chip">Saint-Hubert</span>
+      <span class="zone-chip">Et plus encore...</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CTA BANNER ===== -->
+<div class="cta-banner" aria-label="Appel à l'action – obtenir une soumission">
+  <span class="eyebrow">Prêt à commencer?</span>
+  <h2 class="section-heading" style="margin-bottom: var(--space-4);">Obtenez votre soumission gratuite</h2>
+  <p>Réponse en moins de 48 heures. Sans engagement. On s'adapte à votre terrain, votre budget et vos délais.</p>
+  <div style="display:flex; gap: var(--space-4); justify-content:center; flex-wrap:wrap;">
+    <a href="#soumission" class="btn btn-gold btn-large">Demander une soumission</a>
+    <a href="tel:4506240821" class="btn btn-outline btn-large">(450) 624-0821</a>
+  </div>
+</div>
+
+<!-- ===== SOUMISSION ===== -->
+<section class="section section-dark" id="soumission" aria-labelledby="soumission-heading">
+  <div class="container">
+    <div class="contact-section">
+      <div class="contact-info reveal">
+        <span class="eyebrow">Nous contacter</span>
+        <span class="gold-line"></span>
+        <h2 class="section-heading" id="soumission-heading">Soumission gratuite</h2>
+        <p style="color: var(--color-text-muted); margin-top: var(--space-4); margin-bottom: var(--space-10);">
+          Remplissez le formulaire et nous vous répondons dans les 48 heures. Pas de frais, pas d'engagement.
+        </p>
+        <div class="contact-item">
+          <span class="contact-icon" aria-hidden="true">📞</span>
+          <div>
+            <h4>Téléphone</h4>
+            <a href="tel:4506240821">(450) 624-0821</a>
+          </div>
         </div>
-        <form class="contact-form">
-          <label>Nom complet<input type="text" placeholder="Votre nom" /></label>
-          <label>Téléphone<input type="tel" placeholder="Votre numéro" /></label>
-          <label>Courriel<input type="email" placeholder="Votre courriel" /></label>
-          <label>Type de clôture<input type="text" placeholder="Ornementale, maille de chaîne, intimité..." /></label>
-          <label>Message<textarea rows="5" placeholder="Décrivez votre projet"></textarea></label>
-          <button type="submit" class="btn btn-primary btn-full">Envoyer la demande</button>
+        <div class="contact-item">
+          <span class="contact-icon" aria-hidden="true">📍</span>
+          <div>
+            <h4>Zones desservies</h4>
+            <p>Montréal, Laval, Rive-Nord, Rive-Sud</p>
+          </div>
+        </div>
+        <div class="contact-item">
+          <span class="contact-icon" aria-hidden="true">🕐</span>
+          <div>
+            <h4>Heures d'ouverture</h4>
+            <p>Lundi–Vendredi : 7h–18h<br>Samedi : 8h–14h</p>
+          </div>
+        </div>
+      </div>
+      <div class="reveal reveal-delay-1">
+        <form class="form-grid" name="soumission" method="POST" action="#merci" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="prenom">Prénom *</label>
+            <input class="form-input" type="text" id="prenom" name="prenom" placeholder="Jean" required autocomplete="given-name">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="nom">Nom *</label>
+            <input class="form-input" type="text" id="nom" name="nom" placeholder="Dupont" required autocomplete="family-name">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="telephone">Téléphone *</label>
+            <input class="form-input" type="tel" id="telephone" name="telephone" placeholder="(514) 000-0000" required autocomplete="tel">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="email">Courriel</label>
+            <input class="form-input" type="email" id="email" name="email" placeholder="vous@exemple.com" autocomplete="email">
+          </div>
+          <div class="form-group full">
+            <label class="form-label" for="ville">Ville</label>
+            <input class="form-input" type="text" id="ville" name="ville" placeholder="Montréal, Laval, Terrebonne..." autocomplete="address-level2">
+          </div>
+          <div class="form-group full">
+            <label class="form-label" for="service">Type de clôture</label>
+            <select class="form-select" id="service" name="service">
+              <option value="">Sélectionnez un type...</option>
+              <option value="ornementale">Clôture ornementale</option>
+              <option value="maille">Maille de chaîne</option>
+              <option value="intimite">Clôture d'intimité</option>
+              <option value="commercial">Commercial / Industriel</option>
+              <option value="portail">Portail & accès</option>
+              <option value="autre">Autre / Je ne sais pas encore</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label class="form-label" for="message">Message (optionnel)</label>
+            <textarea class="form-textarea" id="message" name="message" placeholder="Décrivez votre projet : dimensions, terrain, délais souhaités..."></textarea>
+          </div>
+          <div class="form-submit">
+            <button type="submit" class="btn btn-gold btn-large" style="width:100%; justify-content:center;">
+              Envoyer ma demande →
+            </button>
+          </div>
         </form>
       </div>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <div class="container footer-inner">
-      <div>
-        <strong>Clôture Impress</strong>
-        <p>Clôtures résidentielles et commerciales à Montréal.</p>
-      </div>
-      <a href="mailto:info@clotureimpress.com">info@clotureimpress.com</a>
     </div>
-  </footer>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img src="https://agi-prod-file-upload-public-main-use1.s3.amazonaws.com/f3a6aba1-5d5a-42eb-9656-a185c07aeb9b" alt="Clôture Impress" width="120" height="40" loading="lazy">
+        <p>L'art de la clôture depuis 2018. Clôture Impress installe des clôtures résidentielles et commerciales haut de gamme à Montréal, Laval et sur la Rive-Nord.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Services</h4>
+        <ul role="list">
+          <li><a href="#services">Clôture ornementale</a></li>
+          <li><a href="#services">Maille de chaîne</a></li>
+          <li><a href="#services">Clôture d'intimité</a></li>
+          <li><a href="#services">Commercial & industriel</a></li>
+          <li><a href="#services">Portails & accès</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <ul role="list">
+          <li><a href="tel:4506240821">(450) 624-0821</a></li>
+          <li><a href="#soumission">Soumission gratuite</a></li>
+          <li><a href="#zones">Zones desservies</a></li>
+        </ul>
+        <div style="margin-top: var(--space-6);">
+          <h4 style="margin-bottom: var(--space-3);">Heures</h4>
+          <p style="font-size: var(--text-xs); color: var(--color-text-faint); line-height: 1.8;">
+            Lun–Ven : 7h–18h<br>
+            Samedi : 8h–14h<br>
+            Dimanche : Fermé
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Clôture Impress. Tous droits réservés.</span>
+      <span>Montréal · Laval · Rive-Nord · Rive-Sud</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ===== FLOATING CTA ===== -->
+<div class="floating-cta" aria-label="Boutons flottants">
+  <a href="tel:4506240821" class="floating-call" aria-label="Appeler maintenant">
+    <span aria-hidden="true">📞</span>
+    <span>(450) 624-0821</span>
+  </a>
+</div>
+
+<!-- ===== SCRIPTS ===== -->
+<script>
+  // Header scroll behaviour
+  const header = document.getElementById('header');
+  window.addEventListener('scroll', () => {
+    header.classList.toggle('header--scrolled', window.scrollY > 30);
+  }, { passive: true });
+
+  // Mobile menu
+  const hamburger = document.getElementById('hamburger');
+  const mobileMenu = document.getElementById('mobile-menu');
+  hamburger.addEventListener('click', () => {
+    const isOpen = !mobileMenu.hidden;
+    mobileMenu.hidden = isOpen;
+    hamburger.setAttribute('aria-expanded', String(!isOpen));
+    mobileMenu.style.display = isOpen ? 'none' : 'flex';
+  });
+  mobileMenu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      mobileMenu.hidden = true;
+      mobileMenu.style.display = 'none';
+      hamburger.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+  reveals.forEach(el => io.observe(el));
+
+  // Smooth anchor close mobile menu
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', () => {
+      if (!mobileMenu.hidden) {
+        mobileMenu.hidden = true;
+        mobileMenu.style.display = 'none';
+        hamburger.setAttribute('aria-expanded', 'false');
+      }
+    });
+  });
+</script>
 </body>
 </html>
