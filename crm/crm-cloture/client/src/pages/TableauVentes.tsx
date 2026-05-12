@@ -4,16 +4,19 @@ import { KpiCard } from "@/components/KpiCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/lib/language-context";
 import type { Quote, User, Lead } from "@shared/schema";
 import { SALES_STATUSES } from "@shared/schema";
 import { FileText, CheckCircle2, TrendingUp, Users } from "lucide-react";
 
 export function TableauVentes() {
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const reps = users.filter(u => u.role === "sales_rep");
-  const moneyFmt = new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
+  const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
 
   const totalPipeline = quotes.filter(q => !["perdue", "signee"].includes(q.salesStatus)).reduce((s, q) => s + (q.estimatedPrice || 0), 0);
   const signedValue = quotes.filter(q => q.salesStatus === "signee").reduce((s, q) => s + (q.finalPrice || q.estimatedPrice || 0), 0);
@@ -38,32 +41,32 @@ export function TableauVentes() {
   return (
     <>
       <PageHeader
-        title="Tableau de bord Ventes"
-        description="Performance des vendeurs, pipeline, conversion et activité commerciale."
+        title={isEn ? "Sales dashboard" : "Tableau de bord Ventes"}
+        description={isEn ? "Sales rep performance, pipeline, conversion and sales activity." : "Performance des vendeurs, pipeline, conversion et activité commerciale."}
       />
       <div className="p-6 lg:p-8 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <KpiCard label="Pipeline actif" value={moneyFmt.format(totalPipeline)} icon={<TrendingUp className="h-4 w-4" />} accent="info" />
-          <KpiCard label="Ventes signées" value={moneyFmt.format(signedValue)} icon={<CheckCircle2 className="h-4 w-4" />} accent="success" />
-          <KpiCard label="Taux de conversion" value={`${conversion}%`} icon={<FileText className="h-4 w-4" />} />
-          <KpiCard label="Vendeurs actifs" value={reps.filter(r => r.active).length} icon={<Users className="h-4 w-4" />} />
+          <KpiCard label={isEn ? "Active pipeline" : "Pipeline actif"} value={moneyFmt.format(totalPipeline)} icon={<TrendingUp className="h-4 w-4" />} accent="info" />
+          <KpiCard label={isEn ? "Signed sales" : "Ventes signées"} value={moneyFmt.format(signedValue)} icon={<CheckCircle2 className="h-4 w-4" />} accent="success" />
+          <KpiCard label={isEn ? "Conversion rate" : "Taux de conversion"} value={`${conversion}%`} icon={<FileText className="h-4 w-4" />} />
+          <KpiCard label={isEn ? "Active reps" : "Vendeurs actifs"} value={reps.filter(r => r.active).length} icon={<Users className="h-4 w-4" />} />
         </div>
 
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">Performance par vendeur</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-base">{isEn ? "Performance by sales rep" : "Performance par vendeur"}</CardTitle></CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground border-b border-border">
-                    <th className="py-2 pr-3 font-semibold">Vendeur</th>
-                    <th className="py-2 pr-3 font-semibold">Région</th>
-                    <th className="py-2 pr-3 font-semibold text-right">Soumissions</th>
+                    <th className="py-2 pr-3 font-semibold">{isEn ? "Sales rep" : "Vendeur"}</th>
+                    <th className="py-2 pr-3 font-semibold">{isEn ? "Region" : "Région"}</th>
+                    <th className="py-2 pr-3 font-semibold text-right">{isEn ? "Quotes" : "Soumissions"}</th>
                     <th className="py-2 pr-3 font-semibold text-right">Actives</th>
-                    <th className="py-2 pr-3 font-semibold text-right">Signées</th>
-                    <th className="py-2 pr-3 font-semibold text-right">Perdues</th>
+                    <th className="py-2 pr-3 font-semibold text-right">{isEn ? "Signed" : "Signées"}</th>
+                    <th className="py-2 pr-3 font-semibold text-right">{isEn ? "Lost" : "Perdues"}</th>
                     <th className="py-2 pr-3 font-semibold text-right">Pipeline</th>
-                    <th className="py-2 pr-3 font-semibold text-right">Revenu</th>
+                    <th className="py-2 pr-3 font-semibold text-right">{isEn ? "Revenue" : "Revenu"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -86,7 +89,7 @@ export function TableauVentes() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">Funnel de conversion</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-base">{isEn ? "Conversion funnel" : "Funnel de conversion"}</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-2">
               {Object.entries(SALES_STATUSES).map(([k, v]) => {

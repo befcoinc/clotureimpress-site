@@ -4,11 +4,14 @@ import { KpiCard } from "@/components/KpiCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/lib/language-context";
 import type { Quote, User, Crew } from "@shared/schema";
 import { INSTALL_STATUSES } from "@shared/schema";
 import { Wrench, AlertTriangle, CheckCircle2, Calendar } from "lucide-react";
 
 export function TableauInstallation() {
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const { data: crews = [] } = useQuery<Crew[]>({ queryKey: ["/api/crews"] });
@@ -32,19 +35,19 @@ export function TableauInstallation() {
   return (
     <>
       <PageHeader
-        title="Tableau de bord Installation"
-        description="État des installations en cours, planifiées et historiques. Performance des équipes."
+        title={isEn ? "Installation dashboard" : "Tableau de bord Installation"}
+        description={isEn ? "Status of ongoing, scheduled and completed installations. Team performance." : "État des installations en cours, planifiées et historiques. Performance des équipes."}
       />
       <div className="p-6 lg:p-8 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <KpiCard label="À planifier" value={aPlanifier} icon={<Calendar className="h-4 w-4" />} accent="warning" />
-          <KpiCard label="En cours" value={enCours} icon={<Wrench className="h-4 w-4" />} accent="info" />
-          <KpiCard label="Terminées" value={terminees} icon={<CheckCircle2 className="h-4 w-4" />} accent="success" />
-          <KpiCard label="Problèmes" value={problemes} icon={<AlertTriangle className="h-4 w-4" />} accent={problemes > 0 ? "danger" : "default"} />
+          <KpiCard label={isEn ? "To schedule" : "À planifier"} value={aPlanifier} icon={<Calendar className="h-4 w-4" />} accent="warning" />
+          <KpiCard label={isEn ? "In progress" : "En cours"} value={enCours} icon={<Wrench className="h-4 w-4" />} accent="info" />
+          <KpiCard label={isEn ? "Completed" : "Terminées"} value={terminees} icon={<CheckCircle2 className="h-4 w-4" />} accent="success" />
+          <KpiCard label={isEn ? "Issues" : "Problèmes"} value={problemes} icon={<AlertTriangle className="h-4 w-4" />} accent={problemes > 0 ? "danger" : "default"} />
         </div>
 
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">Statuts d'installation</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-base">{isEn ? "Installation statuses" : "Statuts d'installation"}</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {Object.entries(INSTALL_STATUSES).map(([k, v]) => {
@@ -61,18 +64,18 @@ export function TableauInstallation() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">Performance installateurs</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-base">{isEn ? "Installer performance" : "Performance installateurs"}</CardTitle></CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground border-b border-border">
-                    <th className="py-2 pr-3 font-semibold">Installateur</th>
-                    <th className="py-2 pr-3 font-semibold">Région</th>
-                    <th className="py-2 pr-3 font-semibold">Villes</th>
+                    <th className="py-2 pr-3 font-semibold">{isEn ? "Installer" : "Installateur"}</th>
+                    <th className="py-2 pr-3 font-semibold">{isEn ? "Region" : "Région"}</th>
+                    <th className="py-2 pr-3 font-semibold">{isEn ? "Cities" : "Villes"}</th>
                     <th className="py-2 pr-3 font-semibold text-right">Total</th>
-                    <th className="py-2 pr-3 font-semibold text-right">Actifs</th>
-                    <th className="py-2 pr-3 font-semibold text-right">Terminés</th>
+                    <th className="py-2 pr-3 font-semibold text-right">{isEn ? "Active" : "Actifs"}</th>
+                    <th className="py-2 pr-3 font-semibold text-right">{isEn ? "Completed" : "Terminés"}</th>
                   </tr>
                 </thead>
                 <tbody>

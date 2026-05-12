@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fiche sous-traitant installateur</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #222; }
+    h1 { font-size: 24px; margin-bottom: 8px; }
+    h2 { font-size: 18px; margin: 24px 0 10px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+    p { margin: 0 0 12px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+    .full { grid-column: 1 / -1; }
+    label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+    input[type="text"], input[type="email"], input[type="tel"], input[type="date"], textarea, select {
+      width: 100%; box-sizing: border-box; border: 1px solid #999; padding: 8px; min-height: 34px;
+    }
+    textarea { min-height: 70px; resize: vertical; }
+    .checks { display: flex; flex-wrap: wrap; gap: 12px 18px; }
+    .checks label { font-weight: normal; display: flex; align-items: center; gap: 6px; }
+    .section { margin-bottom: 8px; }
+    .signature { margin-top: 30px; }
+    .note { font-size: 12px; color: #555; }
+    .btns { margin: 24px 0; display: flex; gap: 10px; }
+    button { padding: 10px 14px; border: 1px solid #333; background: #f3f3f3; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { border: 1px solid #999; padding: 8px; font-size: 12px; vertical-align: middle; }
+    th { background: #f2f2f2; text-align: left; }
+    td input { min-height: 30px; }
+    @media print {
+      .btns { display: none; }
+      body { margin: 14px; }
+      input, textarea, select { border: 1px solid #777; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Fiche de candidature — Installateur sous-traitant</h1>
+  <p class="note">Version mise à jour avec un seul champ code postal dans la section territoire desservi.</p>
+
+  <div class="btns">
+    <button onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+    <button onclick="document.getElementById('fiche').reset()">Réinitialiser</button>
+  </div>
+
+  <form id="fiche">
+    <h2>1. Informations générales</h2>
+    <div class="grid section">
+      <div><label>Nom légal de l'entreprise</label><input type="text" /></div>
+      <div><label>Nom commercial</label><input type="text" /></div>
+      <div><label>Nom du responsable</label><input type="text" /></div>
+      <div><label>Courriel</label><input type="email" /></div>
+      <div><label>Téléphone principal</label><input type="tel" /></div>
+      <div><label>Téléphone secondaire</label><input type="tel" /></div>
+      <div class="full"><label>Adresse complète</label><input type="text" /></div>
+      <div><label>Ville</label><input type="text" /></div>
+      <div><label>Province</label><input type="text" /></div>
+      <div><label>Code postal</label><input type="text" /></div>
+      <div><label>NEQ / Numéro d'entreprise</label><input type="text" /></div>
+      <div><label>Site web</label><input type="text" /></div>
+    </div>
+
+    <h2>2. Territoire desservi et secteur heatmap</h2>
+    <div class="grid section">
+      <div class="full"><label>Régions desservies</label><input type="text" /></div>
+      <div>
+        <label>Choix du rayon à partir de votre code postal</label>
+        <select>
+          <option value="">Choisir</option>
+          <option>25 km</option>
+          <option>50 km</option>
+          <option>75 km</option>
+          <option>100 km</option>
+          <option>125 km</option>
+          <option>150 km</option>
+          <option>175 km</option>
+          <option>200 km</option>
+          <option>300 km</option>
+          <option>400 km</option>
+          <option>500 km</option>
+        </select>
+      </div>
+      <div><label>Code postal de départ pour heatmap</label><input type="text" placeholder="Ex.: H7A 2X5" /></div>
+      <div>
+        <label>Disponible pour travaux hors région</label>
+        <div class="checks">
+          <label><input type="checkbox" /> Oui</label>
+          <label><input type="checkbox" /> Non</label>
+        </div>
+      </div>
+      <div class="full">
+        <label>Provinces acceptées</label>
+        <div class="checks">
+          <label><input type="checkbox" /> Québec</label>
+          <label><input type="checkbox" /> Ontario</label>
+          <label><input type="checkbox" /> Alberta</label>
+          <label><input type="checkbox" /> Colombie-Britannique</label>
+          <label><input type="checkbox" /> Autres</label>
+        </div>
+      </div>
+    </div>
+
+    <h2>3. Expérience et tarification par type de clôture</h2>
+    <div class="grid section">
+      <div><label>Années d'expérience</label><input type="text" /></div>
+      <div><label>Nombre d'installateurs</label><input type="text" /></div>
+      <div><label>Nombre d'équipes disponibles</label><input type="text" /></div>
+      <div><label>Capacité moyenne par semaine</label><input type="text" /></div>
+      <div class="full"><label>Spécialités</label><textarea></textarea></div>
+      <div class="full">
+        <label>Tarification par type de clôture (au pied linéaire)</label>
+        <table>
+          <thead>
+            <tr>
+              <th>Type de clôture</th>
+              <th>Offert</th>
+              <th>Tarif au pied linéaire</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Maille de chaîne</td><td><input type="checkbox" /></td><td><input type="text" placeholder="$ / pi lin." /></td><td><input type="text" /></td></tr>
+            <tr><td>Ornementale</td><td><input type="checkbox" /></td><td><input type="text" placeholder="$ / pi lin." /></td><td><input type="text" /></td></tr>
+            <tr><td>Bois</td><td><input type="checkbox" /></td><td><input type="text" placeholder="$ / pi lin." /></td><td><input type="text" /></td></tr>
+            <tr><td>Vinyle</td><td><input type="checkbox" /></td><td><input type="text" placeholder="$ / pi lin." /></td><td><input type="text" /></td></tr>
+            <tr><td>Commerciale</td><td><input type="checkbox" /></td><td><input type="text" placeholder="$ / pi lin." /></td><td><input type="text" /></td></tr>
+            <tr><td>Industrielle</td><td><input type="checkbox" /></td><td><input type="text" placeholder="$ / pi lin." /></td><td><input type="text" /></td></tr>
+            <tr><td>Portails</td><td><input type="checkbox" /></td><td><input type="text" placeholder="$ / pi lin. ou forfait" /></td><td><input type="text" /></td></tr>
+            <tr><td>Composite fibre de bois/aluminium</td><td><input type="checkbox" /></td><td><input type="text" placeholder="$ / pi lin." /></td><td><input type="text" /></td></tr>
+            <tr><td>Autres</td><td><input type="checkbox" /></td><td><input type="text" placeholder="$ / pi lin." /></td><td><input type="text" placeholder="Préciser" /></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h2>4. Équipement et véhicules</h2>
+    <div class="grid section">
+      <div class="full"><label>Camions / remorques disponibles</label><input type="text" /></div>
+      <div class="full">
+        <label>Équipements disponibles</label>
+        <div class="checks">
+          <label><input type="checkbox" /> Tarière</label>
+          <label><input type="checkbox" /> Mini-excavatrice</label>
+          <label><input type="checkbox" /> Bétonnière</label>
+          <label><input type="checkbox" /> Outils de coupe</label>
+          <label><input type="checkbox" /> Soudeuse</label>
+          <label><input type="checkbox" /> Niveau laser</label>
+          <label><input type="checkbox" /> Équipement de sécurité</label>
+          <label><input type="checkbox" /> Autres</label>
+        </div>
+      </div>
+      <div>
+        <label>Transport des matériaux</label>
+        <div class="checks">
+          <label><input type="checkbox" /> Oui</label>
+          <label><input type="checkbox" /> Non</label>
+        </div>
+      </div>
+    </div>
+
+    <h2>5. Conformité et assurances</h2>
+    <div class="grid section">
+      <div>
+        <label>Assurance responsabilité civile</label>
+        <div class="checks">
+          <label><input type="checkbox" /> Oui</label>
+          <label><input type="checkbox" /> Non</label>
+        </div>
+      </div>
+      <div><label>Nom de l'assureur</label><input type="text" /></div>
+      <div><label>Numéro de police</label><input type="text" /></div>
+      <div><label>Montant de couverture</label><input type="text" /></div>
+      <div><label>Date d'expiration</label><input type="date" /></div>
+      <div>
+        <label>CNESST / WCB active</label>
+        <div class="checks">
+          <label><input type="checkbox" /> Oui</label>
+          <label><input type="checkbox" /> Non</label>
+        </div>
+      </div>
+      <div><label>Numéro de dossier</label><input type="text" /></div>
+      <div><label>Permis RBQ</label><input type="text" /></div>
+      <div><label>TPS</label><input type="text" /></div>
+      <div><label>TVQ / TVH</label><input type="text" /></div>
+    </div>
+
+    <h2>6. Disponibilité</h2>
+    <div class="grid section">
+      <div>
+        <label>Disponible immédiatement</label>
+        <div class="checks">
+          <label><input type="checkbox" /> Oui</label>
+          <label><input type="checkbox" /> Non</label>
+        </div>
+      </div>
+      <div><label>Date de disponibilité</label><input type="date" /></div>
+      <div><label>Préavis minimal requis</label><input type="text" /></div>
+      <div><label>Commentaires sur la disponibilité</label><input type="text" /></div>
+    </div>
+
+    <h2>7. Références</h2>
+    <div class="grid section">
+      <div><label>Référence 1 — Entreprise / client</label><input type="text" /></div>
+      <div><label>Personne contact</label><input type="text" /></div>
+      <div><label>Téléphone</label><input type="text" /></div>
+      <div><label>Type de projet</label><input type="text" /></div>
+
+      <div><label>Référence 2 — Entreprise / client</label><input type="text" /></div>
+      <div><label>Personne contact</label><input type="text" /></div>
+      <div><label>Téléphone</label><input type="text" /></div>
+      <div><label>Type de projet</label><input type="text" /></div>
+
+      <div><label>Référence 3 — Entreprise / client</label><input type="text" /></div>
+      <div><label>Personne contact</label><input type="text" /></div>
+      <div><label>Téléphone</label><input type="text" /></div>
+      <div><label>Type de projet</label><input type="text" /></div>
+    </div>
+
+    <h2>8. Engagement</h2>
+    <div class="grid section">
+      <div class="full">
+        <label>Respect des standards de qualité, délais et sécurité</label>
+        <div class="checks">
+          <label><input type="checkbox" /> Oui</label>
+          <label><input type="checkbox" /> Non</label>
+        </div>
+      </div>
+      <div class="full">
+        <label>Transmission des photos avant / après</label>
+        <div class="checks">
+          <label><input type="checkbox" /> Oui</label>
+          <label><input type="checkbox" /> Non</label>
+        </div>
+      </div>
+      <div class="full">
+        <label>Utilisation d'un outil de suivi de chantier</label>
+        <div class="checks">
+          <label><input type="checkbox" /> Oui</label>
+          <label><input type="checkbox" /> Non</label>
+        </div>
+      </div>
+      <div class="full"><label>Commentaires additionnels</label><textarea></textarea></div>
+    </div>
+
+    <h2>9. Signature</h2>
+    <div class="grid signature">
+      <div><label>Nom du signataire</label><input type="text" /></div>
+      <div><label>Fonction</label><input type="text" /></div>
+      <div><label>Date</label><input type="date" /></div>
+      <div><label>Signature</label><input type="text" /></div>
+    </div>
+  </form>
+</body>
+</html>

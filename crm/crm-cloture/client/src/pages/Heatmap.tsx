@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useLanguage } from "@/lib/language-context";
 import type { Lead, Quote } from "@shared/schema";
 import { PROVINCES, SALES_STATUSES, INSTALL_STATUSES } from "@shared/schema";
 
@@ -111,12 +112,14 @@ const STAGE_COLORS: Record<MapQuote["stageTone"], string> = {
 };
 
 export function Heatmap() {
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
   const [province, setProvince] = useState("all");
   const [metric, setMetric] = useState<"count" | "value">("count");
   const [stage, setStage] = useState("all");
-  const moneyFmt = new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
+  const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
 
   const mapQuotes = useMemo(() => {
     let fallbackIndex = 0;
@@ -192,8 +195,8 @@ export function Heatmap() {
   return (
     <>
       <PageHeader
-        title="Heatmap secteurs"
-        description="Carte interactive avec zoom, déplacement et étapes CRM des soumissions Intimura."
+        title={isEn ? "Sector heatmap" : "Heatmap secteurs"}
+        description={isEn ? "Interactive map with zoom, pan, and CRM stages for Intimura quotes." : "Carte interactive avec zoom, déplacement et étapes CRM des soumissions Intimura."}
         action={
           <div className="flex flex-wrap gap-2">
             <Select value={province} onValueChange={setProvince}>
@@ -206,21 +209,21 @@ export function Heatmap() {
             <Select value={metric} onValueChange={(v) => setMetric(v as "count" | "value")}>
               <SelectTrigger className="w-[160px]" data-testid="select-heatmap-metric"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="count">Intensité volume</SelectItem>
-                <SelectItem value="value">Intensité valeur</SelectItem>
+                <SelectItem value="count">{isEn ? "Volume intensity" : "Intensité volume"}</SelectItem>
+                <SelectItem value="value">{isEn ? "Value intensity" : "Intensité valeur"}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={stage} onValueChange={setStage}>
               <SelectTrigger className="w-[180px]" data-testid="select-heatmap-stage"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes les étapes</SelectItem>
-                <SelectItem value="lead">Lead / nouveau</SelectItem>
-                <SelectItem value="sent">Soumission envoyée</SelectItem>
-                <SelectItem value="follow">Suivi</SelectItem>
-                <SelectItem value="appointment">Rendez-vous</SelectItem>
-                <SelectItem value="signed">Vente signée</SelectItem>
+                <SelectItem value="all">{isEn ? "All stages" : "Toutes les étapes"}</SelectItem>
+                <SelectItem value="lead">{isEn ? "Lead / new" : "Lead / nouveau"}</SelectItem>
+                <SelectItem value="sent">{isEn ? "Quote sent" : "Soumission envoyée"}</SelectItem>
+                <SelectItem value="follow">{isEn ? "Follow-up" : "Suivi"}</SelectItem>
+                <SelectItem value="appointment">{isEn ? "Appointment" : "Rendez-vous"}</SelectItem>
+                <SelectItem value="signed">{isEn ? "Sale signed" : "Vente signée"}</SelectItem>
                 <SelectItem value="install">Installation</SelectItem>
-                <SelectItem value="problem">Problème</SelectItem>
+                <SelectItem value="problem">{isEn ? "Problem" : "Problème"}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -229,16 +232,16 @@ export function Heatmap() {
 
       <div className="p-6 lg:p-8 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <KpiCard label="Zones chaudes" value={hotspots.length} icon={<Flame className="h-4 w-4" />} accent="warning" />
-          <KpiCard label="Soumissions sur carte" value={totalClients} icon={<Users className="h-4 w-4" />} />
-          <KpiCard label="Valeur détectée" value={moneyFmt.format(totalValue)} icon={<DollarSign className="h-4 w-4" />} accent="success" />
-          <KpiCard label="Top secteur" value={topHotspot ? topHotspot.city : "Aucun"} icon={<Target className="h-4 w-4" />} accent="info" />
+          <KpiCard label={isEn ? "Hot zones" : "Zones chaudes"} value={hotspots.length} icon={<Flame className="h-4 w-4" />} accent="warning" />
+          <KpiCard label={isEn ? "Quotes on map" : "Soumissions sur carte"} value={totalClients} icon={<Users className="h-4 w-4" />} />
+          <KpiCard label={isEn ? "Detected value" : "Valeur détectée"} value={moneyFmt.format(totalValue)} icon={<DollarSign className="h-4 w-4" />} accent="success" />
+          <KpiCard label={isEn ? "Top sector" : "Top secteur"} value={topHotspot ? topHotspot.city : (isEn ? "None" : "Aucun")} icon={<Target className="h-4 w-4" />} accent="info" />
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.55fr_0.85fr] gap-6">
           <Card className="overflow-hidden">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" /> Carte réelle avec zoom</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" /> {isEn ? "Interactive map with zoom" : "Carte réelle avec zoom"}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[650px] overflow-hidden rounded-xl border border-border">
@@ -273,7 +276,7 @@ export function Heatmap() {
                           <div className="min-w-[260px] space-y-2">
                             <div>
                               <div className="font-bold text-sm">{h.city}, {h.province}</div>
-                              <div className="text-xs text-slate-500">{h.count} soumission(s) · {moneyFmt.format(h.value)}</div>
+                              <div className="text-xs text-slate-500">{h.count} {isEn ? "quote(s)" : "soumission(s)"} · {moneyFmt.format(h.value)}</div>
                             </div>
                             <div className="space-y-2 max-h-[250px] overflow-y-auto">
                               {h.quotes.map(q => (
@@ -296,13 +299,13 @@ export function Heatmap() {
                 </MapContainer>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span className="font-semibold text-foreground">Légende étapes CRM :</span>
-                <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#0891b2]" />Soumission envoyée</span>
-                <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#d97706]" />Suivi</span>
-                <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#f97316]" />Rendez-vous</span>
-                <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#059669]" />Signée</span>
+                <span className="font-semibold text-foreground">{isEn ? "CRM stage legend:" : "Légende étapes CRM :"}</span>
+                <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#0891b2]" />{isEn ? "Quote sent" : "Soumission envoyée"}</span>
+                <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#d97706]" />{isEn ? "Follow-up" : "Suivi"}</span>
+                <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#f97316]" />{isEn ? "Appointment" : "Rendez-vous"}</span>
+                <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#059669]" />{isEn ? "Signed" : "Signée"}</span>
                 <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#7c3aed]" />Installation</span>
-                <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#dc2626]" />Problème</span>
+                <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#dc2626]" />{isEn ? "Problem" : "Problème"}</span>
               </div>
             </CardContent>
           </Card>
@@ -310,7 +313,7 @@ export function Heatmap() {
           <div className="space-y-6">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2"><Flame className="h-4 w-4" /> Soumissions par secteur</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><Flame className="h-4 w-4" /> {isEn ? "Quotes by sector" : "Soumissions par secteur"}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
@@ -324,9 +327,9 @@ export function Heatmap() {
                         <Badge variant="outline" className="text-[10px]">{h.province}</Badge>
                       </div>
                       <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
-                        <div><span className="text-muted-foreground">Soumissions</span><div className="font-bold tabular">{h.count}</div></div>
-                        <div><span className="text-muted-foreground">À installer</span><div className="font-bold tabular">{h.installReady}</div></div>
-                        <div><span className="text-muted-foreground">Valeur</span><div className="font-bold tabular">{moneyFmt.format(h.value)}</div></div>
+                        <div><span className="text-muted-foreground">{isEn ? "Quotes" : "Soumissions"}</span><div className="font-bold tabular">{h.count}</div></div>
+                        <div><span className="text-muted-foreground">{isEn ? "To install" : "À installer"}</span><div className="font-bold tabular">{h.installReady}</div></div>
+                        <div><span className="text-muted-foreground">{isEn ? "Value" : "Valeur"}</span><div className="font-bold tabular">{moneyFmt.format(h.value)}</div></div>
                       </div>
                       <div className="mt-2 space-y-1">
                         {h.quotes.slice(0, 4).map(q => (
@@ -344,7 +347,7 @@ export function Heatmap() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2"><Route className="h-4 w-4" /> Journées terrain suggérées</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><Route className="h-4 w-4" /> {isEn ? "Suggested field days" : "Journées terrain suggérées"}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -352,9 +355,9 @@ export function Heatmap() {
                     <div key={day.zone} className="rounded-lg border border-border bg-card p-3" data-testid={`route-day-${index}`}>
                       <div className="flex items-center justify-between gap-2">
                         <div className="font-semibold text-[13px]">{day.zone}</div>
-                        <Badge variant={day.installReady ? "default" : "secondary"} className="text-[10px]">{day.installReady} à planifier</Badge>
+                        <Badge variant={day.installReady ? "default" : "secondary"} className="text-[10px]">{day.installReady} {isEn ? "to schedule" : "à planifier"}</Badge>
                       </div>
-                      <div className="mt-1 text-[11px] text-muted-foreground">{day.clients} soumission(s) dans le même secteur · {moneyFmt.format(day.value)}</div>
+                      <div className="mt-1 text-[11px] text-muted-foreground">{day.clients} {isEn ? "quote(s) in the same sector" : "soumission(s) dans le même secteur"} · {moneyFmt.format(day.value)}</div>
                     </div>
                   ))}
                 </div>
@@ -363,11 +366,11 @@ export function Heatmap() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Note de précision</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><CalendarDays className="h-4 w-4" /> {isEn ? "Precision note" : "Note de précision"}</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground space-y-2">
-                <p>La carte est maintenant interactive avec zoom et déplacement. Les marqueurs sont positionnés par ville, car Intimura ne fournit pas encore les adresses complètes dans la donnée synchronisée.</p>
-                <p>Prochaine étape : si on récupère l’adresse complète de chaque soumission Intimura, j’ajoute le géocodage exact et les routes optimisées par installateur.</p>
+                <p>{isEn ? "The map is now interactive with zoom and pan. Markers are positioned by city because Intimura does not yet provide full addresses in synchronized data." : "La carte est maintenant interactive avec zoom et déplacement. Les marqueurs sont positionnés par ville, car Intimura ne fournit pas encore les adresses complètes dans la donnée synchronisée."}</p>
+                <p>{isEn ? "Next step: if we receive full addresses for each Intimura quote, I can add precise geocoding and installer-optimized routes." : "Prochaine étape : si on récupère l’adresse complète de chaque soumission Intimura, j’ajoute le géocodage exact et les routes optimisées par installateur."}</p>
               </CardContent>
             </Card>
           </div>

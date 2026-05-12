@@ -75,10 +75,11 @@ export function Layout({ children }: { children: ReactNode }) {
   const { language, setLanguage, t } = useLanguage();
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Sidebar */}
-      <aside className="hidden md:flex md:w-64 lg:w-72 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
-        <div className="px-5 pt-5 pb-4 border-b border-sidebar-border space-y-3">
+      <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:z-40 md:flex md:w-60 lg:w-64 md:h-screen overflow-hidden bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
+        <div className="flex h-full min-h-0 w-full flex-col">
+        <div className="shrink-0 px-4 pt-4 pb-3 border-b border-sidebar-border space-y-2.5">
           <Logo />
           <div>
             <div className="text-[10px] uppercase tracking-[0.14em] text-sidebar-foreground/40 mb-1.5">
@@ -111,12 +112,12 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-3 px-3">
+        <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2.5 px-2.5">
           {NAV_SECTIONS.map((section) => {
             const visible = section.items.filter((it) => !it.perm || can(it.perm));
             if (visible.length === 0) return null;
             return (
-              <div key={section.labelKey} className="mb-5">
+              <div key={section.labelKey} className="mb-4">
                 <div className="px-2 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
                   {t(section.labelKey)}
                 </div>
@@ -131,7 +132,7 @@ export function Layout({ children }: { children: ReactNode }) {
                           <div
                             data-testid={`nav-${item.href.replace(/\//g, "-")}`}
                             className={cn(
-                              "group flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium cursor-pointer transition-colors hover-elevate",
+                              "group flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[12.5px] font-medium cursor-pointer transition-colors hover-elevate",
                               isActive
                                 ? "bg-sidebar-accent text-sidebar-accent-foreground"
                                 : "text-sidebar-foreground/80 hover:text-sidebar-foreground"
@@ -155,7 +156,7 @@ export function Layout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        <div className="px-4 py-3 border-t border-sidebar-border space-y-2">
+        <div className="shrink-0 px-3.5 py-2.5 border-t border-sidebar-border space-y-1.5">
           {/* Admin-only: impersonate another user */}
           {role === "admin" && (
             <div>
@@ -181,10 +182,11 @@ export function Layout({ children }: { children: ReactNode }) {
             </button>
           </div>
         </div>
+        </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 min-w-0 flex flex-col">
+      <main className="min-w-0 flex min-h-screen flex-col md:ml-60 lg:ml-64">
         <header className="md:hidden border-b border-border bg-sidebar text-sidebar-foreground px-4 py-3 flex items-center justify-between gap-2">
           <Logo />
           <div className="flex items-center gap-1.5">

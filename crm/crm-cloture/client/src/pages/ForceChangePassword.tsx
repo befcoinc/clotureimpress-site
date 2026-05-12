@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/lib/language-context";
 import { Eye, EyeOff } from "lucide-react";
 
 export function ForceChangePassword() {
   const { user, logout } = useAuth();
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showNew, setShowNew] = useState(false);
@@ -15,11 +18,11 @@ export function ForceChangePassword() {
     e.preventDefault();
     setError("");
     if (newPassword.length < 8) {
-      setError("Le mot de passe doit contenir au moins 8 caractères.");
+      setError(isEn ? "Password must contain at least 8 characters." : "Le mot de passe doit contenir au moins 8 caractères.");
       return;
     }
     if (newPassword !== confirm) {
-      setError("Les mots de passe ne correspondent pas.");
+      setError(isEn ? "Passwords do not match." : "Les mots de passe ne correspondent pas.");
       return;
     }
     setLoading(true);
@@ -32,14 +35,14 @@ export function ForceChangePassword() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(data.error || "Erreur lors du changement de mot de passe.");
+        setError(data.error || (isEn ? "Error while changing password." : "Erreur lors du changement de mot de passe."));
         setLoading(false);
         return;
       }
       // Reload to trigger /api/auth/me which will now return mustChangePassword: false
       window.location.reload();
     } catch {
-      setError("Erreur réseau. Veuillez réessayer.");
+      setError(isEn ? "Network error. Please try again." : "Erreur réseau. Veuillez réessayer.");
       setLoading(false);
     }
   };
@@ -90,14 +93,14 @@ export function ForceChangePassword() {
             marginBottom: "0.5rem",
             color: "#f5f0e8",
           }}>
-            Créez votre mot de passe
+            {isEn ? "Create your password" : "Créez votre mot de passe"}
           </h1>
           <div style={{ width: 36, height: 1, background: "#c9a35a", margin: "0 auto 1rem" }} />
           <p style={{ textAlign: "center", color: "#777", fontSize: "0.82rem", marginBottom: "0.5rem" }}>
-            Bonjour <strong style={{ color: "#f5f0e8" }}>{user?.name}</strong>
+            {isEn ? "Hello" : "Bonjour"} <strong style={{ color: "#f5f0e8" }}>{user?.name}</strong>
           </p>
           <p style={{ textAlign: "center", color: "#777", fontSize: "0.82rem", marginBottom: "2rem" }}>
-            Pour continuer, choisissez un mot de passe personnel.
+            {isEn ? "To continue, choose a personal password." : "Pour continuer, choisissez un mot de passe personnel."}
           </p>
 
           {error && (
@@ -120,7 +123,7 @@ export function ForceChangePassword() {
                 display: "block", fontSize: "0.72rem", letterSpacing: "0.1em",
                 textTransform: "uppercase", color: "#777", marginBottom: "0.4rem",
               }}>
-                Nouveau mot de passe
+                {isEn ? "New password" : "Nouveau mot de passe"}
               </label>
               <div style={{ position: "relative" }}>
                 <input
@@ -128,7 +131,7 @@ export function ForceChangePassword() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
-                  placeholder="8 caractères minimum"
+                  placeholder={isEn ? "8 characters minimum" : "8 caractères minimum"}
                   style={inputStyle}
                   onFocus={(e) => e.target.style.borderColor = "#c9a35a"}
                   onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.1)"}
@@ -145,7 +148,7 @@ export function ForceChangePassword() {
                 display: "block", fontSize: "0.72rem", letterSpacing: "0.1em",
                 textTransform: "uppercase", color: "#777", marginBottom: "0.4rem",
               }}>
-                Confirmer le mot de passe
+                {isEn ? "Confirm password" : "Confirmer le mot de passe"}
               </label>
               <div style={{ position: "relative" }}>
                 <input
@@ -185,7 +188,7 @@ export function ForceChangePassword() {
                 transition: "opacity 0.2s",
               }}
             >
-              {loading ? "Enregistrement..." : "Enregistrer mon mot de passe"}
+              {loading ? (isEn ? "Saving..." : "Enregistrement...") : (isEn ? "Save my password" : "Enregistrer mon mot de passe")}
             </button>
           </form>
 
@@ -206,7 +209,7 @@ export function ForceChangePassword() {
             onMouseOver={(e) => (e.currentTarget.style.color = "#c9a35a")}
             onMouseOut={(e) => (e.currentTarget.style.color = "#777")}
           >
-            ← Se déconnecter
+            {isEn ? "<- Log out" : "← Se déconnecter"}
           </button>
         </div>
       </div>

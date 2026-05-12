@@ -201,11 +201,20 @@ export async function registerRoutes(
       return res.status(403).send("Acces refuse");
     }
 
-    const candidates = [
-      path.resolve(process.cwd(), "fiche_sous_traitant_interactive (1).html"),
-      path.resolve(process.cwd(), "..", "fiche_sous_traitant_interactive (1).html"),
-      path.resolve(process.cwd(), "..", "..", "fiche_sous_traitant_interactive (1).html"),
-    ];
+    const formNames = ["fiche_sous_traitant_interactive (1).html", "fiche_sous_traitant_interactive.html"];
+    const candidates: string[] = [];
+
+    // Resolve from current working directory and up to 5 parent levels to survive different deploy cwd values.
+    let cursor = process.cwd();
+    for (let i = 0; i < 6; i += 1) {
+      for (const name of formNames) {
+        candidates.push(path.resolve(cursor, name));
+      }
+      const parent = path.resolve(cursor, "..");
+      if (parent === cursor) break;
+      cursor = parent;
+    }
+
     const formPath = candidates.find((p) => existsSync(p));
     if (!formPath) {
       return res.status(404).send("Fiche sous-traitant introuvable");

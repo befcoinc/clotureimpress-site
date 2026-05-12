@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useRole } from "@/lib/role-context";
+import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
 import type { Crew, Quote, User } from "@shared/schema";
 import { FENCE_TYPES, INSTALL_STATUSES, PROVINCES, SALES_STATUSES } from "@shared/schema";
@@ -20,6 +21,8 @@ type QuoteDialogState = { mode: "create" | "edit"; quote?: Quote } | null;
 
 export function Soumissions() {
   const { currentUser, role, can } = useRole();
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const { toast } = useToast();
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
@@ -56,7 +59,7 @@ export function Soumissions() {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       setQuoteDialog(null);
-      toast({ title: "Soumission créée" });
+      toast({ title: isEn ? "Quote created" : "Soumission créée" });
     },
   });
 
@@ -66,13 +69,13 @@ export function Soumissions() {
       _userId: currentUser?.id,
       _userName: currentUser?.name,
       _userRole: currentUser?.role,
-      _note: "Soumission modifiée manuellement",
+      _note: isEn ? "Quote manually edited" : "Soumission modifiée manuellement",
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       setQuoteDialog(null);
-      toast({ title: "Soumission modifiée" });
+      toast({ title: isEn ? "Quote updated" : "Soumission modifiée" });
     },
   });
 
@@ -81,28 +84,28 @@ export function Soumissions() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
-      toast({ title: "Soumission supprimée" });
+      toast({ title: isEn ? "Quote deleted" : "Soumission supprimée" });
     },
   });
 
   const columns = Object.entries(SALES_STATUSES).filter(([k]) => k !== "perdue");
-  const moneyFmt = new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
+  const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
 
   return (
     <>
       <PageHeader
-        title="Soumissions"
-        description="Pipeline complet de chaque soumission, avec création, modification et suppression manuelle."
+        title={isEn ? "Quotes" : "Soumissions"}
+        description={isEn ? "Full quote pipeline with manual create, update and delete." : "Pipeline complet de chaque soumission, avec création, modification et suppression manuelle."}
         action={canManageQuotes && (
           <Button size="sm" className="gap-1.5" onClick={() => setQuoteDialog({ mode: "create" })} data-testid="button-create-quote">
-            <Plus className="h-4 w-4" /> Nouvelle soumission
+            <Plus className="h-4 w-4" /> {isEn ? "New quote" : "Nouvelle soumission"}
           </Button>
         )}
       />
       <div className="p-6 lg:p-8 space-y-4">
         <div className="flex items-center gap-2">
-          <Input placeholder="Rechercher client, téléphone ou ville..." className="max-w-sm" value={search} onChange={e => setSearch(e.target.value)} data-testid="input-search-quotes" />
-          <div className="ml-auto text-xs text-muted-foreground">{visible.length} soumission(s)</div>
+          <Input placeholder={isEn ? "Search client, phone or city..." : "Rechercher client, téléphone ou ville..."} className="max-w-sm" value={search} onChange={e => setSearch(e.target.value)} data-testid="input-search-quotes" />
+          <div className="ml-auto text-xs text-muted-foreground">{visible.length} {isEn ? "quote(s)" : "soumission(s)"}</div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -137,7 +140,7 @@ export function Soumissions() {
                           <div className="mt-2 flex gap-1.5 border-t border-border pt-2">
                             {canManageQuotes && (
                               <Button size="sm" variant="outline" className="h-7 flex-1 gap-1" onClick={() => setQuoteDialog({ mode: "edit", quote: q })} data-testid={`button-edit-quote-${q.id}`}>
-                                <Pencil className="h-3.5 w-3.5" /> Modifier
+                                <Pencil className="h-3.5 w-3.5" /> {isEn ? "Edit" : "Modifier"}
                               </Button>
                             )}
                             {canDeleteQuotes && (
@@ -146,11 +149,11 @@ export function Soumissions() {
                                 variant="outline"
                                 className="h-7 flex-1 gap-1 text-destructive hover:text-destructive"
                                 onClick={() => {
-                                  if (window.confirm(`Supprimer la soumission de ${q.clientName}? Cette action supprime aussi son activité.`)) deleteQuote.mutate(q.id);
+                                  if (window.confirm(isEn ? `Delete quote for ${q.clientName}? This also deletes its activity.` : `Supprimer la soumission de ${q.clientName}? Cette action supprime aussi son activité.`)) deleteQuote.mutate(q.id);
                                 }}
                                 data-testid={`button-delete-quote-${q.id}`}
                               >
-                                <Trash2 className="h-3.5 w-3.5" /> Supprimer
+                                <Trash2 className="h-3.5 w-3.5" /> {isEn ? "Delete" : "Supprimer"}
                               </Button>
                             )}
                           </div>
@@ -158,7 +161,7 @@ export function Soumissions() {
                       </div>
                     );
                   })}
-                  {items.length === 0 && <div className="text-[10px] text-muted-foreground text-center py-4">Vide</div>}
+                  {items.length === 0 && <div className="text-[10px] text-muted-foreground text-center py-4">{isEn ? "Empty" : "Vide"}</div>}
                 </div>
               </div>
             );
@@ -169,8 +172,8 @@ export function Soumissions() {
       <Dialog open={!!quoteDialog} onOpenChange={(open) => !open && setQuoteDialog(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{quoteDialog?.mode === "edit" ? "Modifier la soumission" : "Créer une soumission"}</DialogTitle>
-            <DialogDescription>Soumission manuelle pour un client qui n’est pas encore synchronisé depuis Intimura.</DialogDescription>
+            <DialogTitle>{quoteDialog?.mode === "edit" ? (isEn ? "Edit quote" : "Modifier la soumission") : (isEn ? "Create quote" : "Créer une soumission")}</DialogTitle>
+            <DialogDescription>{isEn ? "Manual quote for a client not yet synchronized from Intimura." : "Soumission manuelle pour un client qui n’est pas encore synchronisé depuis Intimura."}</DialogDescription>
           </DialogHeader>
           {quoteDialog && (
             <QuoteForm

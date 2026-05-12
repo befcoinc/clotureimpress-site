@@ -9,11 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useRole } from "@/lib/role-context";
+import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
 import type { Lead, User, Quote } from "@shared/schema";
 
 export function DispatchVendeur() {
   const { currentUser, can } = useRole();
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const { toast } = useToast();
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
@@ -30,7 +33,7 @@ export function DispatchVendeur() {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
-      toast({ title: "Lead assigné" });
+      toast({ title: isEn ? "Lead assigned" : "Lead assigné" });
     },
   });
 
@@ -46,19 +49,19 @@ export function DispatchVendeur() {
   }, [salesReps, leads, quotes]);
 
   const unassigned = leads.filter(l => !l.assignedSalesId);
-  const moneyFmt = new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
+  const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
 
   return (
     <>
       <PageHeader
-        title="Dispatch vendeur"
-        description="Assigner les leads entrants à un vendeur selon la charge et le secteur géographique."
+        title={isEn ? "Sales dispatch" : "Dispatch vendeur"}
+        description={isEn ? "Assign incoming leads to a sales rep based on workload and territory." : "Assigner les leads entrants à un vendeur selon la charge et le secteur géographique."}
       />
       <div className="p-6 lg:p-8 space-y-6">
         {/* Charge par vendeur */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4" /> Charge par vendeur</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4" /> {isEn ? "Workload by sales rep" : "Charge par vendeur"}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -69,13 +72,13 @@ export function DispatchVendeur() {
                       <div className="font-semibold text-[13px] truncate">{rep.name}</div>
                       <div className="text-[11px] text-muted-foreground">{rep.region} · {(rep.cities ? JSON.parse(rep.cities) : []).join(", ")}</div>
                     </div>
-                    <Badge variant="outline" className="text-[10px]">{active.length} actifs</Badge>
+                    <Badge variant="outline" className="text-[10px]">{active.length} {isEn ? "active" : "actifs"}</Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-[12px]">
-                    <div><div className="text-muted-foreground">Pipeline</div><div className="font-bold tabular">{moneyFmt.format(pipelineValue)}</div></div>
-                    <div><div className="text-muted-foreground">Capacité</div>
+                    <div><div className="text-muted-foreground">{isEn ? "Pipeline" : "Pipeline"}</div><div className="font-bold tabular">{moneyFmt.format(pipelineValue)}</div></div>
+                    <div><div className="text-muted-foreground">{isEn ? "Capacity" : "Capacité"}</div>
                       <div className={`font-bold tabular ${active.length > 8 ? "text-rose-600" : active.length > 5 ? "text-amber-600" : "text-emerald-600"}`}>
-                        {active.length > 8 ? "Saturé" : active.length > 5 ? "Élevée" : "OK"}
+                        {active.length > 8 ? (isEn ? "Saturated" : "Saturé") : active.length > 5 ? (isEn ? "High" : "Élevée") : "OK"}
                       </div>
                     </div>
                   </div>
@@ -88,11 +91,11 @@ export function DispatchVendeur() {
         {/* Unassigned leads */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2"><UserCheck className="h-4 w-4" /> Leads à assigner ({unassigned.length})</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2"><UserCheck className="h-4 w-4" /> {isEn ? "Leads to assign" : "Leads à assigner"} ({unassigned.length})</CardTitle>
           </CardHeader>
           <CardContent>
             {unassigned.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucun lead en attente d'assignation.</p>
+              <p className="text-sm text-muted-foreground">{isEn ? "No lead waiting for assignment." : "Aucun lead en attente d'assignation."}</p>
             ) : (
               <div className="space-y-2">
                 {unassigned.map(lead => {
@@ -117,13 +120,13 @@ export function DispatchVendeur() {
                       <div className="flex items-center gap-2">
                         {recommended.length > 0 && (
                           <div className="hidden md:flex flex-col items-end text-[10px] text-muted-foreground">
-                            <span>Recommandé :</span>
+                            <span>{isEn ? "Recommended:" : "Recommandé :"}</span>
                             <span className="font-medium text-foreground">{recommended[0].name}</span>
                           </div>
                         )}
                         <Select onValueChange={(val) => can("assign_sales") && assignMut.mutate({ id: lead.id, salesId: Number(val) })}>
                           <SelectTrigger className="w-[200px] h-9" data-testid={`select-assign-${lead.id}`}>
-                            <SelectValue placeholder="Assigner à..." />
+                            <SelectValue placeholder={isEn ? "Assign to..." : "Assigner à..."} />
                           </SelectTrigger>
                           <SelectContent>
                             {salesReps.map(r => (

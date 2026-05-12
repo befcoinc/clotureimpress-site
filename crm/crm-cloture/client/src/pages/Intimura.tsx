@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useRole } from "@/lib/role-context";
+import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
 
 type ParsedLead = {
@@ -78,6 +79,8 @@ function parseIntimuraExport(raw: string): ParsedLead[] {
 
 export function Intimura() {
   const { currentUser } = useRole();
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const { toast } = useToast();
   const [raw, setRaw] = useState(sample);
   const parsed = useMemo(() => parseIntimuraExport(raw), [raw]);
@@ -99,7 +102,7 @@ export function Intimura() {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
-      toast({ title: "Import Intimura terminé", description: `${parsed.length} lead(s) ajouté(s) au CRM.` });
+      toast({ title: isEn ? "Intimura import completed" : "Import Intimura terminé", description: isEn ? `${parsed.length} lead(s) added to CRM.` : `${parsed.length} lead(s) ajouté(s) au CRM.` });
     },
   });
 
@@ -111,14 +114,14 @@ export function Intimura() {
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
       toast({
-        title: "Synchronisation Intimura terminée",
-        description: `${data.createdLeads} nouveau(x) lead(s), ${data.skipped} doublon(s) ignoré(s).`,
+        title: isEn ? "Intimura sync completed" : "Synchronisation Intimura terminée",
+        description: isEn ? `${data.createdLeads} new lead(s), ${data.skipped} duplicate(s) skipped.` : `${data.createdLeads} nouveau(x) lead(s), ${data.skipped} doublon(s) ignoré(s).`,
       });
     },
     onError: (err: any) => {
       toast({
-        title: "Synchronisation non disponible",
-        description: err?.message || "Session Intimura manquante ou expirée.",
+        title: isEn ? "Synchronization unavailable" : "Synchronisation non disponible",
+        description: err?.message || (isEn ? "Intimura session missing or expired." : "Session Intimura manquante ou expirée."),
         variant: "destructive",
       });
     },
@@ -127,13 +130,13 @@ export function Intimura() {
   return (
     <>
       <PageHeader
-        title="Source des leads — Intimura"
-        description="Les leads proviennent de crm.intimura.com. Cette page prépare l’import réel et permet déjà d’entrer les exports Intimura dans le pipeline."
+        title={isEn ? "Lead source - Intimura" : "Source des leads — Intimura"}
+        description={isEn ? "Leads come from crm.intimura.com. This page prepares real import and already supports CSV exports into pipeline." : "Les leads proviennent de crm.intimura.com. Cette page prépare l’import réel et permet déjà d’entrer les exports Intimura dans le pipeline."}
         action={<div className="flex gap-2">
           <Button data-testid="button-sync-intimura" disabled={syncMut.isPending} onClick={() => syncMut.mutate()} className="gap-2">
-            <Workflow className="h-4 w-4" />{syncMut.isPending ? "Synchronisation..." : "Synchroniser Intimura"}
+            <Workflow className="h-4 w-4" />{syncMut.isPending ? (isEn ? "Synchronizing..." : "Synchronisation...") : (isEn ? "Sync Intimura" : "Synchroniser Intimura")}
           </Button>
-          <Button data-testid="button-import-intimura" variant="outline" disabled={!parsed.length || importMut.isPending} onClick={() => importMut.mutate()} className="gap-2"><UploadCloud className="h-4 w-4" />Importer CSV</Button>
+          <Button data-testid="button-import-intimura" variant="outline" disabled={!parsed.length || importMut.isPending} onClick={() => importMut.mutate()} className="gap-2"><UploadCloud className="h-4 w-4" />{isEn ? "Import CSV" : "Importer CSV"}</Button>
         </div>}
       />
 
@@ -141,11 +144,11 @@ export function Intimura() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           <Card className="xl:col-span-2">
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2"><Copy className="h-4 w-4" /> Import temporaire par export CSV</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><Copy className="h-4 w-4" /> {isEn ? "Temporary CSV export import" : "Import temporaire par export CSV"}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Colle ici un export Intimura en CSV. Le CRM crée les leads avec la source <Badge variant="outline">intimura</Badge>, puis classe chaque client par province, ville, quartier et code postal.
+                {isEn ? "Paste an Intimura CSV export here. CRM creates leads with source" : "Colle ici un export Intimura en CSV. Le CRM crée les leads avec la source"} <Badge variant="outline">intimura</Badge>{isEn ? ", then classifies each client by province, city, neighborhood and postal code." : ", puis classe chaque client par province, ville, quartier et code postal."}
               </p>
               <Textarea
                 data-testid="textarea-intimura-import"
@@ -155,8 +158,8 @@ export function Intimura() {
                 className="font-mono text-xs"
               />
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{parsed.length} lead(s) détecté(s)</span>
-                <span>Colonnes reconnues : nom, téléphone, email, adresse, ville, province, code postal, quartier, type, message.</span>
+                <span>{parsed.length} {isEn ? "lead(s) detected" : "lead(s) détecté(s)"}</span>
+                <span>{isEn ? "Recognized columns: name, phone, email, address, city, province, postal code, neighborhood, type, message." : "Colonnes reconnues : nom, téléphone, email, adresse, ville, province, code postal, quartier, type, message."}</span>
               </div>
             </CardContent>
           </Card>
@@ -164,17 +167,24 @@ export function Intimura() {
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><Workflow className="h-4 w-4" /> Workflow cible</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><Workflow className="h-4 w-4" /> {isEn ? "Target workflow" : "Workflow cible"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                {[
+                {(isEn ? [
+                  "Lead created in Intimura",
+                  "Export, webhook, or API into this CRM",
+                  "Automatic sector detection",
+                  "Assign to sales rep",
+                  "Quote, follow-up, signature",
+                  "Installation dispatch by sector",
+                ] : [
                   "Lead créé dans Intimura",
                   "Export, webhook ou API vers ce CRM",
                   "Détection automatique du secteur",
                   "Assignation au vendeur",
                   "Soumission, suivi, signature",
                   "Dispatch installation par secteur",
-                ].map((step, i) => (
+                ]).map((step, i) => (
                   <div key={step} className="flex items-center gap-2">
                     <Badge variant="secondary" className="w-6 justify-center">{i + 1}</Badge>
                     <span>{step}</span>
@@ -185,12 +195,12 @@ export function Intimura() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2"><KeyRound className="h-4 w-4" /> Connexion Intimura</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><KeyRound className="h-4 w-4" /> {isEn ? "Intimura connection" : "Connexion Intimura"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
-                <div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5" /><span>Le bouton de synchronisation lit les données Intimura authentifiées et bloque les doublons avec l’ID Intimura.</span></div>
-                <div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5" /><span>Si Intimura permet un export CSV, ce module peut devenir un import fichier automatisé.</span></div>
-                <div className="flex gap-2"><AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" /><span>Pour une sync 24/7, il faut remplacer la session temporaire par un Service Token Cloudflare ou une API Intimura.</span></div>
+                <div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5" /><span>{isEn ? "Sync button reads authenticated Intimura data and blocks duplicates by Intimura ID." : "Le bouton de synchronisation lit les données Intimura authentifiées et bloque les doublons avec l’ID Intimura."}</span></div>
+                <div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5" /><span>{isEn ? "If Intimura provides CSV export, this module can become an automated file import." : "Si Intimura permet un export CSV, ce module peut devenir un import fichier automatisé."}</span></div>
+                <div className="flex gap-2"><AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" /><span>{isEn ? "For 24/7 sync, temporary session must be replaced by a Cloudflare Service Token or Intimura API." : "Pour une sync 24/7, il faut remplacer la session temporaire par un Service Token Cloudflare ou une API Intimura."}</span></div>
               </CardContent>
             </Card>
           </div>
@@ -198,7 +208,7 @@ export function Intimura() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Aperçu des leads détectés</CardTitle>
+            <CardTitle className="text-base">{isEn ? "Detected leads preview" : "Aperçu des leads détectés"}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -213,7 +223,7 @@ export function Intimura() {
                   </div>
                 </div>
               ))}
-              {!parsed.length && <div className="text-sm text-muted-foreground">Aucun lead détecté. Garde la première ligne comme en-têtes CSV.</div>}
+              {!parsed.length && <div className="text-sm text-muted-foreground">{isEn ? "No lead detected. Keep first row as CSV headers." : "Aucun lead détecté. Garde la première ligne comme en-têtes CSV."}</div>}
             </div>
           </CardContent>
         </Card>

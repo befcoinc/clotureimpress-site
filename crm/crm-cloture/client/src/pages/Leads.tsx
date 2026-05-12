@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useRole } from "@/lib/role-context";
+import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
 import type { Lead, User } from "@shared/schema";
 import { LEAD_STATUSES, FENCE_TYPES, PROVINCES, insertLeadSchema } from "@shared/schema";
@@ -27,6 +28,8 @@ const formSchema = insertLeadSchema.extend({
 
 export function Leads() {
   const { currentUser, can } = useRole();
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -64,7 +67,7 @@ export function Leads() {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
-      toast({ title: "Lead créé", description: "Le secteur a été détecté automatiquement." });
+      toast({ title: isEn ? "Lead created" : "Lead créé", description: isEn ? "Sector was detected automatically." : "Le secteur a été détecté automatiquement." });
       form.reset();
       setOpen(false);
     },
@@ -82,39 +85,39 @@ export function Leads() {
   return (
     <>
       <PageHeader
-        title="Leads entrants — Intimura"
-        description="Centralisation des leads provenant de crm.intimura.com. Classification automatique par province, ville, quartier et code postal."
+        title={isEn ? "Incoming leads - Intimura" : "Leads entrants — Intimura"}
+        description={isEn ? "Centralized leads from crm.intimura.com. Automatic classification by province, city, neighborhood and postal code." : "Centralisation des leads provenant de crm.intimura.com. Classification automatique par province, ville, quartier et code postal."}
         action={can("edit_lead") ? (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button data-testid="button-new-lead" className="gap-2">
-                <Plus className="h-4 w-4" /> Ajouter un lead Intimura
+                <Plus className="h-4 w-4" /> {isEn ? "Add Intimura lead" : "Ajouter un lead Intimura"}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Nouveau lead Intimura</DialogTitle>
+                <DialogTitle>{isEn ? "New Intimura lead" : "Nouveau lead Intimura"}</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit((data) => createMut.mutate(data))} className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <FormField control={form.control} name="clientName" render={({ field }) => (
-                      <FormItem><FormLabel>Nom du client *</FormLabel><FormControl><Input data-testid="input-clientName" {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>{isEn ? "Client name *" : "Nom du client *"}</FormLabel><FormControl><Input data-testid="input-clientName" {...field} /></FormControl><FormMessage /></FormItem>
                     )}/>
                     <FormField control={form.control} name="phone" render={({ field }) => (
-                      <FormItem><FormLabel>Téléphone</FormLabel><FormControl><Input data-testid="input-phone" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+                      <FormItem><FormLabel>{isEn ? "Phone" : "Téléphone"}</FormLabel><FormControl><Input data-testid="input-phone" {...field} value={field.value ?? ""} /></FormControl></FormItem>
                     )}/>
                     <FormField control={form.control} name="email" render={({ field }) => (
-                      <FormItem><FormLabel>Courriel</FormLabel><FormControl><Input data-testid="input-email" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+                      <FormItem><FormLabel>{isEn ? "Email" : "Courriel"}</FormLabel><FormControl><Input data-testid="input-email" {...field} value={field.value ?? ""} /></FormControl></FormItem>
                     )}/>
                     <FormField control={form.control} name="address" render={({ field }) => (
-                      <FormItem><FormLabel>Adresse</FormLabel><FormControl><Input data-testid="input-address" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+                      <FormItem><FormLabel>{isEn ? "Address" : "Adresse"}</FormLabel><FormControl><Input data-testid="input-address" {...field} value={field.value ?? ""} /></FormControl></FormItem>
                     )}/>
                     <FormField control={form.control} name="city" render={({ field }) => (
-                      <FormItem><FormLabel>Ville</FormLabel><FormControl><Input data-testid="input-city" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+                      <FormItem><FormLabel>{isEn ? "City" : "Ville"}</FormLabel><FormControl><Input data-testid="input-city" {...field} value={field.value ?? ""} /></FormControl></FormItem>
                     )}/>
                     <FormField control={form.control} name="province" render={({ field }) => (
-                      <FormItem><FormLabel>Province *</FormLabel>
+                      <FormItem><FormLabel>{isEn ? "Province *" : "Province *"}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value ?? "QC"}>
                           <FormControl><SelectTrigger data-testid="select-province"><SelectValue /></SelectTrigger></FormControl>
                           <SelectContent>{PROVINCES.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
@@ -122,13 +125,13 @@ export function Leads() {
                       </FormItem>
                     )}/>
                     <FormField control={form.control} name="postalCode" render={({ field }) => (
-                      <FormItem><FormLabel>Code postal</FormLabel><FormControl><Input data-testid="input-postal" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+                      <FormItem><FormLabel>{isEn ? "Postal code" : "Code postal"}</FormLabel><FormControl><Input data-testid="input-postal" {...field} value={field.value ?? ""} /></FormControl></FormItem>
                     )}/>
                     <FormField control={form.control} name="neighborhood" render={({ field }) => (
-                      <FormItem><FormLabel>Quartier</FormLabel><FormControl><Input data-testid="input-neighborhood" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+                      <FormItem><FormLabel>{isEn ? "Neighborhood" : "Quartier"}</FormLabel><FormControl><Input data-testid="input-neighborhood" {...field} value={field.value ?? ""} /></FormControl></FormItem>
                     )}/>
                     <FormField control={form.control} name="fenceType" render={({ field }) => (
-                      <FormItem className="col-span-2"><FormLabel>Type de clôture</FormLabel>
+                      <FormItem className="col-span-2"><FormLabel>{isEn ? "Fence type" : "Type de clôture"}</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value ?? "Bois traité"}>
                           <FormControl><SelectTrigger data-testid="select-fenceType"><SelectValue /></SelectTrigger></FormControl>
                           <SelectContent>{FENCE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
@@ -137,11 +140,11 @@ export function Leads() {
                     )}/>
                   </div>
                   <FormField control={form.control} name="message" render={({ field }) => (
-                    <FormItem><FormLabel>Message du client</FormLabel><FormControl><Textarea rows={3} data-testid="input-message" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+                    <FormItem><FormLabel>{isEn ? "Client message" : "Message du client"}</FormLabel><FormControl><Textarea rows={3} data-testid="input-message" {...field} value={field.value ?? ""} /></FormControl></FormItem>
                   )}/>
                   <DialogFooter>
                     <Button type="submit" disabled={createMut.isPending} data-testid="button-submit-lead">
-                      {createMut.isPending ? "Création..." : "Créer le lead"}
+                      {createMut.isPending ? (isEn ? "Creating..." : "Création...") : (isEn ? "Create lead" : "Créer le lead")}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -155,27 +158,27 @@ export function Leads() {
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
           <Input
-            placeholder="Rechercher nom, ville, courriel..."
+            placeholder={isEn ? "Search name, city, email..." : "Rechercher nom, ville, courriel..."}
             className="max-w-xs"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             data-testid="input-search-leads"
           />
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[200px]" data-testid="select-filter-status"><SelectValue placeholder="Statut" /></SelectTrigger>
+            <SelectTrigger className="w-[200px]" data-testid="select-filter-status"><SelectValue placeholder={isEn ? "Status" : "Statut"} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous les statuts</SelectItem>
+              <SelectItem value="all">{isEn ? "All statuses" : "Tous les statuts"}</SelectItem>
               {Object.entries(LEAD_STATUSES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterProvince} onValueChange={setFilterProvince}>
-            <SelectTrigger className="w-[140px]" data-testid="select-filter-province"><SelectValue placeholder="Province" /></SelectTrigger>
+            <SelectTrigger className="w-[140px]" data-testid="select-filter-province"><SelectValue placeholder={isEn ? "Province" : "Province"} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes</SelectItem>
+              <SelectItem value="all">{isEn ? "All" : "Toutes"}</SelectItem>
               {PROVINCES.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
             </SelectContent>
           </Select>
-          <div className="ml-auto text-xs text-muted-foreground">{filtered.length} lead(s)</div>
+          <div className="ml-auto text-xs text-muted-foreground">{filtered.length} {isEn ? "lead(s)" : "lead(s)"}</div>
         </div>
 
         {/* Lead list */}
@@ -207,10 +210,10 @@ export function Leads() {
                   <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
                     <div className="text-[11px]">
                       {lead.fenceType && <Badge variant="secondary" className="text-[10px]">{lead.fenceType}</Badge>}
-                      {lead.estimatedValue && <span className="ml-2 tabular font-semibold">{Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(lead.estimatedValue)}</span>}
+                      {lead.estimatedValue && <span className="ml-2 tabular font-semibold">{Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(lead.estimatedValue)}</span>}
                     </div>
                     <div className="text-[11px] text-muted-foreground">
-                      {rep ? <>Vendeur: <span className="font-medium text-foreground">{rep.name}</span></> : <span className="text-amber-600">Non assigné</span>}
+                      {rep ? <>{isEn ? "Sales rep" : "Vendeur"}: <span className="font-medium text-foreground">{rep.name}</span></> : <span className="text-amber-600">{isEn ? "Unassigned" : "Non assigné"}</span>}
                     </div>
                   </div>
 
@@ -230,7 +233,7 @@ export function Leads() {
             );
           })}
           {filtered.length === 0 && (
-            <div className="col-span-full text-center py-12 text-muted-foreground text-sm">Aucun lead ne correspond aux filtres.</div>
+            <div className="col-span-full text-center py-12 text-muted-foreground text-sm">{isEn ? "No lead matches the current filters." : "Aucun lead ne correspond aux filtres."}</div>
           )}
         </div>
       </div>

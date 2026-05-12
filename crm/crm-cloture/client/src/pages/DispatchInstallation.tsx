@@ -10,19 +10,22 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useRole } from "@/lib/role-context";
+import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
 import type { Quote, User, Crew } from "@shared/schema";
 import { INSTALL_STATUSES } from "@shared/schema";
 
 export function DispatchInstallation() {
   const { currentUser, can } = useRole();
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const { toast } = useToast();
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const { data: crews = [] } = useQuery<Crew[]>({ queryKey: ["/api/crews"] });
 
   const installers = users.filter(u => u.role === "installer");
-  const moneyFmt = new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
+  const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
 
   const assignMut = useMutation({
     mutationFn: async ({ id, installerId }: { id: number; installerId: number }) =>
@@ -34,7 +37,7 @@ export function DispatchInstallation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
-      toast({ title: "Installateur assigné" });
+      toast({ title: isEn ? "Installer assigned" : "Installateur assigné" });
     },
   });
 
@@ -45,13 +48,13 @@ export function DispatchInstallation() {
   const groupedBySector = useMemo(() => {
     const map = new Map<string, Quote[]>();
     for (const q of quotes.filter(q => q.installStatus !== "terminee" && q.salesStatus === "signee")) {
-      const key = q.sector || "Non classé";
+      const key = q.sector || (isEn ? "Uncategorized" : "Non classé");
       const list = map.get(key) || [];
       list.push(q);
       map.set(key, list);
     }
     return Array.from(map.entries()).sort((a, b) => b[1].length - a[1].length);
-  }, [quotes]);
+  }, [quotes, isEn]);
 
   // Group by date for next 7 days
   const groupedByDate = useMemo(() => {
@@ -67,13 +70,13 @@ export function DispatchInstallation() {
   return (
     <>
       <PageHeader
-        title="Dispatch installation"
-        description="Planifier les installations, assigner les équipes/sous-traitants et regrouper par secteur/journée."
+        title={isEn ? "Installation dispatch" : "Dispatch installation"}
+        description={isEn ? "Plan installations, assign teams/subcontractors, and group by sector/day." : "Planifier les installations, assigner les équipes/sous-traitants et regrouper par secteur/journée."}
       />
       <div className="p-6 lg:p-8 space-y-6">
         {/* Available crews */}
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> Équipes et sous-traitants</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> {isEn ? "Teams and subcontractors" : "Équipes et sous-traitants"}</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {crews.map(c => (
@@ -89,8 +92,8 @@ export function DispatchInstallation() {
                   </div>
                   <div className="text-[11px] text-muted-foreground line-clamp-1">{c.cities ? JSON.parse(c.cities).join(", ") : ""}</div>
                   <div className="flex items-center gap-3 text-[11px] mt-1.5 text-muted-foreground">
-                    <span>Capacité: <span className="font-semibold text-foreground tabular">{c.capacity}</span></span>
-                    <span>Note: <span className="font-semibold text-foreground tabular">{c.rating?.toFixed(1)}</span> ★</span>
+                    <span>{isEn ? "Capacity" : "Capacité"}: <span className="font-semibold text-foreground tabular">{c.capacity}</span></span>
+                    <span>{isEn ? "Rating" : "Note"}: <span className="font-semibold text-foreground tabular">{c.rating?.toFixed(1)}</span> ★</span>
                   </div>
                 </div>
               ))}
@@ -100,10 +103,10 @@ export function DispatchInstallation() {
 
         {/* To schedule */}
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Wrench className="h-4 w-4" /> À planifier ({toSchedule.length})</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Wrench className="h-4 w-4" /> {isEn ? "To schedule" : "À planifier"} ({toSchedule.length})</CardTitle></CardHeader>
           <CardContent>
             {toSchedule.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucune installation en attente.</p>
+              <p className="text-sm text-muted-foreground">{isEn ? "No installation pending." : "Aucune installation en attente."}</p>
             ) : (
               <div className="space-y-2">
                 {toSchedule.map(q => (
@@ -114,11 +117,11 @@ export function DispatchInstallation() {
                       </Link>
                       <div className="text-[11px] text-muted-foreground mt-0.5">
                         <Badge variant="outline" className="text-[10px] mr-1">{q.province}</Badge>
-                        {q.sector} · {q.fenceType} · {q.estimatedLength} pi · {q.estimatedPrice ? moneyFmt.format(q.estimatedPrice) : "—"}
+                        {q.sector} · {q.fenceType} · {q.estimatedLength} {isEn ? "ft" : "pi"} · {q.estimatedPrice ? moneyFmt.format(q.estimatedPrice) : "—"}
                       </div>
                     </div>
                     <Select onValueChange={(v) => can("assign_installer") && assignMut.mutate({ id: q.id, installerId: Number(v) })}>
-                      <SelectTrigger className="w-[220px] h-9" data-testid={`select-installer-${q.id}`}><SelectValue placeholder="Assigner installateur" /></SelectTrigger>
+                      <SelectTrigger className="w-[220px] h-9" data-testid={`select-installer-${q.id}`}><SelectValue placeholder={isEn ? "Assign installer" : "Assigner installateur"} /></SelectTrigger>
                       <SelectContent>
                         {installers.map(i => <SelectItem key={i.id} value={i.id.toString()}>{i.name} ({i.region})</SelectItem>)}
                       </SelectContent>
@@ -133,7 +136,7 @@ export function DispatchInstallation() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* By sector */}
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" /> Par secteur</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" /> {isEn ? "By sector" : "Par secteur"}</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
                 {groupedBySector.map(([sector, qs]) => (
@@ -154,20 +157,20 @@ export function DispatchInstallation() {
                     </ul>
                   </div>
                 ))}
-                {groupedBySector.length === 0 && <p className="text-sm text-muted-foreground">Aucun travail planifié.</p>}
+                {groupedBySector.length === 0 && <p className="text-sm text-muted-foreground">{isEn ? "No scheduled work." : "Aucun travail planifié."}</p>}
               </div>
             </CardContent>
           </Card>
 
           {/* By date */}
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Calendar className="h-4 w-4" /> Calendrier</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Calendar className="h-4 w-4" /> {isEn ? "Calendar" : "Calendrier"}</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
                 {groupedByDate.map(([date, qs]) => (
                   <div key={date} className="rounded-md border border-card-border bg-muted/30 p-2.5">
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-semibold text-[12px]">{new Date(date).toLocaleDateString("fr-CA", { weekday: "short", year: "numeric", month: "short", day: "numeric" })}</span>
+                      <span className="font-semibold text-[12px]">{new Date(date).toLocaleDateString(isEn ? "en-CA" : "fr-CA", { weekday: "short", year: "numeric", month: "short", day: "numeric" })}</span>
                       <Badge variant="outline" className="text-[10px]">{qs.length}</Badge>
                     </div>
                     <ul className="space-y-1">
@@ -185,7 +188,7 @@ export function DispatchInstallation() {
                     </ul>
                   </div>
                 ))}
-                {groupedByDate.length === 0 && <p className="text-sm text-muted-foreground">Aucune date planifiée.</p>}
+                {groupedByDate.length === 0 && <p className="text-sm text-muted-foreground">{isEn ? "No planned date." : "Aucune date planifiée."}</p>}
               </div>
             </CardContent>
           </Card>

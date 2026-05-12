@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/lib/language-context";
 import { Eye, EyeOff } from "lucide-react";
 
 export function Login() {
   const { login } = useAuth();
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberEmail, setRememberEmail] = useState(false);
@@ -31,7 +34,7 @@ export function Login() {
       }
       await login(email, password);
     } catch (err: any) {
-      setError(err.message || "Identifiants incorrects");
+      setError(err.message || (isEn ? "Incorrect credentials" : "Identifiants incorrects"));
     } finally {
       setLoading(false);
     }
@@ -59,7 +62,7 @@ export function Login() {
           {/* Logo */}
           <img
             src="https://clotureimpress.com/logo.png"
-            alt="Clôture Impress"
+            alt={isEn ? "Cloture Impress" : "Clôture Impress"}
             style={{ display: "block", margin: "0 auto 2rem", height: 60, width: "auto" }}
           />
 
@@ -72,11 +75,11 @@ export function Login() {
             marginBottom: "0.5rem",
             color: "#f5f0e8",
           }}>
-            Espace équipe
+            {isEn ? "Team area" : "Espace équipe"}
           </h1>
           <div style={{ width: 36, height: 1, background: "#c9a35a", margin: "0 auto 1.5rem" }} />
           <p style={{ textAlign: "center", color: "#777", fontSize: "0.82rem", marginBottom: "2rem" }}>
-            Accès réservé au personnel autorisé
+            {isEn ? "Access restricted to authorized staff" : "Accès réservé au personnel autorisé"}
           </p>
 
           {/* Error */}
@@ -105,7 +108,7 @@ export function Login() {
                 color: "#777",
                 marginBottom: "0.4rem",
               }}>
-                Courriel
+                {isEn ? "Email" : "Courriel"}
               </label>
               <input
                 type="email"
@@ -140,7 +143,7 @@ export function Login() {
                 color: "#777",
                 marginBottom: "0.4rem",
               }}>
-                Mot de passe
+                {isEn ? "Password" : "Mot de passe"}
               </label>
               <div style={{ position: "relative" }}>
                 <input
@@ -203,7 +206,7 @@ export function Login() {
                 onChange={(e) => setRememberEmail(e.target.checked)}
                 style={{ width: 16, height: 16, accentColor: "#c9a35a" }}
               />
-              Mémoriser mon courriel sur cet appareil
+              {isEn ? "Remember my email on this device" : "Mémoriser mon courriel sur cet appareil"}
             </label>
 
             <button
@@ -226,7 +229,7 @@ export function Login() {
                 transition: "opacity 0.2s",
               }}
             >
-              {loading ? "Connexion..." : "Se connecter"}
+              {loading ? (isEn ? "Signing in..." : "Connexion...") : (isEn ? "Sign in" : "Se connecter")}
             </button>
           </form>
 
@@ -244,7 +247,7 @@ export function Login() {
             onMouseOver={(e) => (e.currentTarget.style.color = "#c9a35a")}
             onMouseOut={(e) => (e.currentTarget.style.color = "#777")}
           >
-            ← Retour au site
+            {isEn ? "<- Back to website" : "← Retour au site"}
           </a>
         </div>
       </div>

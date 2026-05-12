@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/language-context";
 import { LEAD_STATUSES, SALES_STATUSES, INSTALL_STATUSES } from "@shared/schema";
 
 const COLORS: Record<string, string> = {
@@ -36,7 +37,35 @@ const LABELS: Record<string, string> = {
   ...INSTALL_STATUSES,
 };
 
+const LABELS_EN: Record<string, string> = {
+  nouveau: "New",
+  a_qualifier: "To qualify",
+  assigne: "Assigned",
+  en_cours: "In progress",
+  gagne: "Won",
+  perdu: "Lost",
+
+  contacte: "Contacted",
+  rdv_mesure: "Measurement appointment",
+  envoyee: "Sent",
+  suivi: "Follow-up",
+  rendez_vous: "Appointment",
+  signee: "Signed",
+  perdue: "Lost",
+
+  a_planifier: "To schedule",
+  planifiee: "Scheduled",
+  materiel: "Material",
+  en_route: "On route",
+  terminee: "Completed",
+  inspection: "Inspection",
+  probleme: "Issue",
+};
+
 export function StatusBadge({ status, className }: { status: string; className?: string }) {
+  const { language } = useLanguage();
+  const labels = language === "en" ? LABELS_EN : LABELS;
+
   return (
     <Badge
       variant="outline"
@@ -46,7 +75,7 @@ export function StatusBadge({ status, className }: { status: string; className?:
         className
       )}
     >
-      {LABELS[status] || status}
+      {labels[status] || status}
     </Badge>
   );
 }

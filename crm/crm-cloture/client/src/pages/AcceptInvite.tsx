@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
+import { useLanguage } from "@/lib/language-context";
 
-const ROLE_LABELS: Record<string, string> = {
+const ROLE_LABELS_FR: Record<string, string> = {
   admin: "Administrateur",
   sales_director: "Directeur/trice des ventes",
   install_director: "Directeur des installations",
   sales_rep: "Vendeur / Représentant",
   installer: "Installateur / Sous-traitant",
+};
+
+const ROLE_LABELS_EN: Record<string, string> = {
+  admin: "Administrator",
+  sales_director: "Sales Director",
+  install_director: "Installation Director",
+  sales_rep: "Sales Rep",
+  installer: "Installer / Subcontractor",
 };
 
 type InviteInfo = { name: string; email: string; role: string };
@@ -21,6 +30,8 @@ function getToken() {
 }
 
 export function AcceptInvite() {
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const token = getToken();
   const [pageState, setPageState] = useState<PageState>("loading");
   const [info, setInfo] = useState<InviteInfo | null>(null);
@@ -42,8 +53,8 @@ export function AcceptInvite() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length < 6) { setErrorMsg("Le mot de passe doit contenir au moins 6 caractères."); return; }
-    if (password !== confirm) { setErrorMsg("Les mots de passe ne correspondent pas."); return; }
+    if (password.length < 6) { setErrorMsg(isEn ? "Password must contain at least 6 characters." : "Le mot de passe doit contenir au moins 6 caractères."); return; }
+    if (password !== confirm) { setErrorMsg(isEn ? "Passwords do not match." : "Les mots de passe ne correspondent pas."); return; }
     setErrorMsg("");
     setPageState("submitting");
     try {
@@ -54,12 +65,12 @@ export function AcceptInvite() {
         body: JSON.stringify({ token, password }),
       });
       const data = await res.json();
-      if (!res.ok) { setErrorMsg(data.error || "Une erreur s'est produite."); setPageState("ready"); return; }
+      if (!res.ok) { setErrorMsg(data.error || (isEn ? "An error occurred." : "Une erreur s'est produite.")); setPageState("ready"); return; }
       setPageState("done");
       // Redirect to CRM after short delay
       setTimeout(() => { window.location.href = "/"; }, 1500);
     } catch {
-      setErrorMsg("Erreur réseau. Réessaie.");
+      setErrorMsg(isEn ? "Network error. Try again." : "Erreur réseau. Réessaie.");
       setPageState("ready");
     }
   }
@@ -80,24 +91,24 @@ export function AcceptInvite() {
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-8 pt-8 pb-6 border-b border-slate-100">
-            <h1 className="text-xl font-semibold text-slate-900">Crée ton mot de passe</h1>
-            <p className="mt-1 text-sm text-slate-500">Finalise la création de ton compte CRM</p>
+            <h1 className="text-xl font-semibold text-slate-900">{isEn ? "Create your password" : "Crée ton mot de passe"}</h1>
+            <p className="mt-1 text-sm text-slate-500">{isEn ? "Finish creating your CRM account" : "Finalise la création de ton compte CRM"}</p>
           </div>
 
           <div className="px-8 py-6">
             {pageState === "loading" && (
-              <p className="text-sm text-slate-500 text-center py-4">Vérification du lien…</p>
+              <p className="text-sm text-slate-500 text-center py-4">{isEn ? "Checking link..." : "Vérification du lien…"}</p>
             )}
 
             {pageState === "invalid" && (
               <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-700">
-                Ce lien est invalide ou a expiré. Demande à ton administrateur de te renvoyer une invitation.
+                {isEn ? "This link is invalid or expired. Ask your administrator to send a new invite." : "Ce lien est invalide ou a expiré. Demande à ton administrateur de te renvoyer une invitation."}
               </div>
             )}
 
             {pageState === "done" && (
               <div className="rounded-lg bg-green-50 border border-green-200 p-4 text-sm text-green-700 text-center">
-                ✅ Mot de passe créé ! Redirection vers le CRM…
+                {isEn ? "Password created! Redirecting to CRM..." : "✅ Mot de passe créé ! Redirection vers le CRM…"}
               </div>
             )}
 
@@ -105,19 +116,19 @@ export function AcceptInvite() {
               <>
                 {/* Account info (read-only) */}
                 <div className="rounded-lg bg-slate-50 border border-slate-200 p-4 mb-5">
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Ton compte</p>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">{isEn ? "Your account" : "Ton compte"}</p>
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Nom</span>
+                      <span className="text-slate-500">{isEn ? "Name" : "Nom"}</span>
                       <span className="font-medium text-slate-800">{info.name}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Courriel</span>
+                      <span className="text-slate-500">{isEn ? "Email" : "Courriel"}</span>
                       <span className="font-medium text-slate-800">{info.email}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Rôle</span>
-                      <span className="font-medium text-teal-700">{ROLE_LABELS[info.role] ?? info.role}</span>
+                      <span className="text-slate-500">{isEn ? "Role" : "Rôle"}</span>
+                      <span className="font-medium text-teal-700">{(isEn ? ROLE_LABELS_EN : ROLE_LABELS_FR)[info.role] ?? info.role}</span>
                     </div>
                   </div>
                 </div>
@@ -125,7 +136,7 @@ export function AcceptInvite() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
-                      Nouveau mot de passe
+                      {isEn ? "New password" : "Nouveau mot de passe"}
                     </label>
                     <div className="relative">
                       <input
@@ -134,7 +145,7 @@ export function AcceptInvite() {
                         minLength={6}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Au moins 6 caractères"
+                        placeholder={isEn ? "At least 6 characters" : "Au moins 6 caractères"}
                         className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent pr-10"
                       />
                       <button
@@ -154,7 +165,7 @@ export function AcceptInvite() {
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1.5">
-                      Confirmer le mot de passe
+                      {isEn ? "Confirm password" : "Confirmer le mot de passe"}
                     </label>
                     <input
                       type={showPwd ? "text" : "password"}
@@ -162,7 +173,7 @@ export function AcceptInvite() {
                       minLength={6}
                       value={confirm}
                       onChange={(e) => setConfirm(e.target.value)}
-                      placeholder="Répète le mot de passe"
+                      placeholder={isEn ? "Repeat password" : "Répète le mot de passe"}
                       className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     />
                   </div>
@@ -178,7 +189,7 @@ export function AcceptInvite() {
                     disabled={pageState === "submitting"}
                     className="w-full rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-60 transition-colors"
                   >
-                    {pageState === "submitting" ? "Création…" : "Créer mon compte →"}
+                    {pageState === "submitting" ? (isEn ? "Creating..." : "Création…") : (isEn ? "Create my account ->" : "Créer mon compte →")}
                   </button>
                 </form>
               </>
