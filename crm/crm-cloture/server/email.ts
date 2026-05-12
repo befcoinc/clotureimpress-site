@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 
 const SMTP_HOST = process.env.SMTP_HOST || "mail.privateemail.com";
-const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_USER = process.env.SMTP_USER || "noreply@clotureimpress.com";
 const SMTP_PASS = process.env.SMTP_PASS;
 const FROM = `Clôture Impress CRM <${SMTP_USER}>`;
@@ -13,7 +13,11 @@ if (!SMTP_PASS) {
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
   port: SMTP_PORT,
-  secure: SMTP_PORT === 465, // true for 465, false for 587
+  secure: SMTP_PORT === 465, // true for 465 (SSL), false for 587 (STARTTLS)
+  requireTLS: SMTP_PORT === 587,
+  connectionTimeout: 15000,
+  greetingTimeout: 15000,
+  socketTimeout: 20000,
   auth: SMTP_PASS ? { user: SMTP_USER, pass: SMTP_PASS } : undefined,
 });
 
