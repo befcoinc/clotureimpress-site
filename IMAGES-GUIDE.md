@@ -36,21 +36,21 @@ hero-background.jpg
 
 ### Étape 3 : Publiez les changements
 
-1. Ouvrez **PowerShell** (clic droit sur dossier → "Ouvrir dans Windows Terminal")
-2. Copiez-collez ces 3 commandes une par une :
+1. Ouvrez **PowerShell** 
+2. Allez dans le bon dossier avec cette commande :
 
-```powershell
+cd C:\Users\math6\Documents\GitHub\clotureimpress-site
+
+3. Ensuite, copiez-collez ces 3 commandes **UNE PAR UNE** (sans les backticks ``` !) :
+
 git add images/
-```
-```powershell
-git commit -m "Ajout de nouvelles photos"
-```
-```powershell
-git push
-```
 
-3. Attendez 30-60 secondes ⏱️
-4. Allez sur https://clotureimpress.com/ et appuyez sur **Ctrl + F5** pour rafraîchir
+git commit -m "Ajout de nouvelles photos"
+
+git push
+
+4. Attendez 30-60 secondes ⏱️
+5. Allez sur https://clotureimpress.com/ et appuyez sur **Ctrl + F5** pour rafraîchir
 
 **C'EST TOUT ! ✅** Vos images sont en ligne !
 

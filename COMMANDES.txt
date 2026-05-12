@@ -1,0 +1,22 @@
+COMMANDES À COPIER-COLLER (sans les backticks!)
+================================================
+
+1. D'ABORD, ALLEZ DANS LE BON DOSSIER :
+   
+   cd C:\Users\math6\Documents\GitHub\clotureimpress-site
+
+
+2. ENSUITE, CES 3 COMMANDES UNE PAR UNE :
+
+   git add images/
+
+   git commit -m "Ajout de nouvelles photos"
+
+   git push
+
+
+IMPORTANT : 
+- Ne copiez PAS les lignes avec ```
+- Copiez SEULEMENT les commandes (git add, git commit, git push)
+- Une commande à la fois
+- Appuyez sur ENTER après chaque commande
