@@ -3,6 +3,10 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "ClôturePro CRM <noreply@clotureimpress.com>";
 
+if (!process.env.RESEND_API_KEY) {
+  console.warn("[email] WARNING: RESEND_API_KEY is not set — invite emails will NOT be sent.");
+}
+
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrateur",
   sales_director: "Directeur/trice des ventes",
@@ -104,6 +108,8 @@ export async function sendInviteEmail(
 
   if (error) {
     // Log but don't throw — user creation should not fail if email fails
-    console.error("[email] Failed to send invite:", error);
+    console.error("[email] Failed to send invite to", to, ":", JSON.stringify(error));
+  } else {
+    console.log("[email] Invite sent successfully to", to);
   }
 }

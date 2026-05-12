@@ -188,6 +188,21 @@ export async function registerRoutes(
       res.status(400).json({ error: error?.message || "Impossible de créer l'utilisateur" });
     }
   });
+  app.post("/api/users/:id/resend-invite", async (req, res) => {
+    try {
+      const user = await storage.getUser(Number(req.params.id));
+      if (!user) return res.status(404).json({ error: "Utilisateur introuvable" });
+      const token = randomBytes(32).toString("hex");
+      const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+      await storage.setInviteToken(user.id, token, expiresAt);
+      const baseUrl = process.env.APP_URL || "https://cloture-crm.onrender.com";
+      const inviteUrl = `${baseUrl}/#/accept-invite?token=${token}`;
+      await sendInviteEmail(user.email, user.name, user.role, inviteUrl);
+      res.json({ ok: true, inviteUrl });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Erreur lors du renvoi" });
+    }
+  });
   app.patch("/api/users/:id", async (req, res) => {
     const parsed = insertUserSchema.partial().safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
