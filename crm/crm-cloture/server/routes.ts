@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import type { Server } from "node:http";
 import { existsSync, readFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
+import path from "node:path";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage, detectSector, seed, hashPassword, verifyPassword } from "./storage";
@@ -173,6 +174,45 @@ export async function registerRoutes(
       next(err);
     }
   });
+
+  // POST /api/auth/installer-profile-complete — installer confirms subcontractor form completion
+  app.post("/api/auth/installer-profile-complete", requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      if (!user || user.role !== "installer") {
+        return res.status(403).json({ error: "Acces reserve aux installateurs" });
+      }
+      await storage.setInstallerProfileCompleted(user.id, true);
+      const refreshed = await storage.getUserByEmailWithHash(user.email);
+      return res.json({ ok: true, installerProfileCompleted: refreshed?.installerProfileCompleted ?? true });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  // Serve subcontractor onboarding form HTML used after installer password creation
+  app.get("/installer-sous-traitant-form", (req, res) => {
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).send("Authentification requise");
+    }
+
+    const user = req.user as any;
+    if (user.role !== "installer" && user.role !== "admin") {
+      return res.status(403).send("Acces refuse");
+    }
+
+    const candidates = [
+      path.resolve(process.cwd(), "fiche_sous_traitant_interactive (1).html"),
+      path.resolve(process.cwd(), "..", "fiche_sous_traitant_interactive (1).html"),
+      path.resolve(process.cwd(), "..", "..", "fiche_sous_traitant_interactive (1).html"),
+    ];
+    const formPath = candidates.find((p) => existsSync(p));
+    if (!formPath) {
+      return res.status(404).send("Fiche sous-traitant introuvable");
+    }
+
+    return res.sendFile(formPath);
+  });
   // ───────────────────────────────────────────────────────────────────
 
   // -------- Users --------
@@ -183,7 +223,10 @@ export async function registerRoutes(
     const parsed = insertUserSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
     try {
-      const user = await storage.createUser(parsed.data);
+      const user = await storage.createUser({
+        ...parsed.data,
+        installerProfileCompleted: parsed.data.role === "installer" ? false : true,
+      });
       // Generate invite token (7-day expiry) and send welcome email
       const token = randomBytes(32).toString("hex");
       const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;

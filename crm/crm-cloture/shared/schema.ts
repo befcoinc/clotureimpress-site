@@ -14,6 +14,7 @@ export const users = pgTable("users", {
   smsCarrier: text("sms_carrier"),
   active: boolean("active").notNull().default(true),
   mustChangePassword: boolean("must_change_password").notNull().default(true),
+  installerProfileCompleted: boolean("installer_profile_completed").notNull().default(true),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, mustChangePassword: true });

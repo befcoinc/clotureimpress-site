@@ -26,6 +26,7 @@ import { Heatmap } from "@/pages/Heatmap";
 import { Utilisateurs } from "@/pages/Utilisateurs";
 import { Architecture } from "@/pages/Architecture";
 import { LanguageProvider, useLanguage } from "@/lib/language-context";
+import { InstallerOnboarding } from "@/pages/InstallerOnboarding";
 
 function AppRouter() {
   return (
@@ -74,6 +75,10 @@ function AppWithAuth() {
 
   if ((user as any).mustChangePassword) {
     return <ForceChangePassword />;
+  }
+
+  if ((user as any).role === "installer" && (user as any).installerProfileCompleted === false) {
+    return <InstallerOnboarding />;
   }
 
   return (

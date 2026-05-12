@@ -81,6 +81,8 @@ async function migrate() {
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS sms_carrier TEXT;`);
   // Force password change on first login
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT TRUE;`);
+  // Require subcontractor profile onboarding for newly-created installers
+  await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS installer_profile_completed BOOLEAN NOT NULL DEFAULT TRUE;`);
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS leads (
       id SERIAL PRIMARY KEY,
@@ -276,6 +278,7 @@ export interface IStorage {
   deleteUser(id: number): Promise<User | undefined>;
   getUserByEmailWithHash(email: string): Promise<(User & { passwordHash: string | null }) | undefined>;
   setUserPassword(id: number, passwordHash: string): Promise<void>;
+  setInstallerProfileCompleted(id: number, completed: boolean): Promise<void>;
   setInviteToken(userId: number, token: string, expiresAt: number): Promise<void>;
   getUserByInviteToken(token: string): Promise<User | undefined>;
   clearInviteToken(userId: number): Promise<void>;
@@ -321,7 +324,7 @@ export class DatabaseStorage implements IStorage {
     return existing;
   }
   async getUserByEmailWithHash(email: string) {
-    const rows = await db.execute(sql`SELECT id, name, email, role, region, cities, phone, sms_carrier, active, password_hash, must_change_password FROM users WHERE email = ${email} LIMIT 1`);
+    const rows = await db.execute(sql`SELECT id, name, email, role, region, cities, phone, sms_carrier, active, password_hash, must_change_password, installer_profile_completed FROM users WHERE email = ${email} LIMIT 1`);
     if (!rows[0]) return undefined;
     const row = rows[0] as any;
     return {
@@ -332,19 +335,40 @@ export class DatabaseStorage implements IStorage {
       active: row.active ?? true,
       passwordHash: row.password_hash ?? null,
       mustChangePassword: row.must_change_password ?? true,
+      installerProfileCompleted: row.installer_profile_completed ?? true,
     };
   }
   async setUserPassword(id: number, passwordHash: string): Promise<void> {
     await db.execute(sql`UPDATE users SET password_hash = ${passwordHash}, must_change_password = FALSE WHERE id = ${id}`);
   }
+  async setInstallerProfileCompleted(id: number, completed: boolean): Promise<void> {
+    await db.execute(sql`UPDATE users SET installer_profile_completed = ${completed} WHERE id = ${id}`);
+  }
   async setInviteToken(userId: number, token: string, expiresAt: number): Promise<void> {
     await db.execute(sql`UPDATE users SET invite_token = ${token}, invite_expires_at = ${expiresAt} WHERE id = ${userId}`);
   }
   async getUserByInviteToken(token: string): Promise<User | undefined> {
-    const rows = await db.execute(sql`SELECT id, name, email, role, region, cities, phone, active FROM users WHERE invite_token = ${token} AND invite_expires_at > ${Date.now()} LIMIT 1`);
+    const rows = await db.execute(sql`
+      SELECT id, name, email, role, region, cities, phone, sms_carrier, active, must_change_password, installer_profile_completed
+      FROM users
+      WHERE invite_token = ${token} AND invite_expires_at > ${Date.now()}
+      LIMIT 1
+    `);
     if (!rows[0]) return undefined;
     const r = rows[0] as any;
-    return { id: r.id, name: r.name, email: r.email, role: r.role, region: r.region ?? null, cities: r.cities ?? null, phone: r.phone ?? null, active: r.active ?? true };
+    return {
+      id: r.id,
+      name: r.name,
+      email: r.email,
+      role: r.role,
+      region: r.region ?? null,
+      cities: r.cities ?? null,
+      phone: r.phone ?? null,
+      smsCarrier: r.sms_carrier ?? null,
+      active: r.active ?? true,
+      mustChangePassword: r.must_change_password ?? true,
+      installerProfileCompleted: r.installer_profile_completed ?? true,
+    };
   }
   async clearInviteToken(userId: number): Promise<void> {
     await db.execute(sql`UPDATE users SET invite_token = NULL, invite_expires_at = NULL WHERE id = ${userId}`);
