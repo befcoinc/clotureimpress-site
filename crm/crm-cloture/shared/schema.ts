@@ -17,7 +17,11 @@ export const users = pgTable("users", {
   installerProfileCompleted: boolean("installer_profile_completed").notNull().default(true),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, mustChangePassword: true });
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  mustChangePassword: true,
+  installerProfileCompleted: true,
+});
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 

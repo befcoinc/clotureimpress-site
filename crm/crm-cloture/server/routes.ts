@@ -223,22 +223,23 @@ export async function registerRoutes(
     const parsed = insertUserSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
     try {
-      const user = await storage.createUser({
-        ...parsed.data,
-        installerProfileCompleted: parsed.data.role === "installer" ? false : true,
-      });
+      const user = await storage.createUser(parsed.data);
+      if (user.role === "installer") {
+        await storage.setInstallerProfileCompleted(user.id, false);
+      }
+      const freshUser = (await storage.getUser(user.id)) || user;
       // Generate invite token (7-day expiry) and send welcome email
       const token = randomBytes(32).toString("hex");
       const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
-      await storage.setInviteToken(user.id, token, expiresAt);
+      await storage.setInviteToken(freshUser.id, token, expiresAt);
       const baseUrl = process.env.APP_URL || `https://cloture-crm.onrender.com`;
       const inviteUrl = `${baseUrl}/i/${token}`;
       const [emailResult, smsResult] = await Promise.all([
-        sendInviteEmail(user.email, user.name, user.role, inviteUrl),
-        sendInviteSms(user.phone ?? "", user.smsCarrier ?? "", user.name, user.role, inviteUrl),
+        sendInviteEmail(freshUser.email, freshUser.name, freshUser.role, inviteUrl),
+        sendInviteSms(freshUser.phone ?? "", freshUser.smsCarrier ?? "", freshUser.name, freshUser.role, inviteUrl),
       ]);
       res.json({
-        ...user,
+        ...freshUser,
         inviteUrl,
         emailSent: emailResult.ok,
         emailError: emailResult.error,
