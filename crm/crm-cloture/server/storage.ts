@@ -73,6 +73,9 @@ async function migrate() {
   `);
   // Add password_hash column for existing deployments (idempotent)
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;`);
+  // Invite token columns
+  await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_token TEXT;`);
+  await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_expires_at BIGINT;`);
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS leads (
       id SERIAL PRIMARY KEY,
@@ -268,6 +271,9 @@ export interface IStorage {
   deleteUser(id: number): Promise<User | undefined>;
   getUserByEmailWithHash(email: string): Promise<(User & { passwordHash: string | null }) | undefined>;
   setUserPassword(id: number, passwordHash: string): Promise<void>;
+  setInviteToken(userId: number, token: string, expiresAt: number): Promise<void>;
+  getUserByInviteToken(token: string): Promise<User | undefined>;
+  clearInviteToken(userId: number): Promise<void>;
   // Leads
   getLeads(): Promise<Lead[]>;
   getLead(id: number): Promise<Lead | undefined>;
@@ -322,6 +328,18 @@ export class DatabaseStorage implements IStorage {
   }
   async setUserPassword(id: number, passwordHash: string): Promise<void> {
     await db.execute(sql`UPDATE users SET password_hash = ${passwordHash} WHERE id = ${id}`);
+  }
+  async setInviteToken(userId: number, token: string, expiresAt: number): Promise<void> {
+    await db.execute(sql`UPDATE users SET invite_token = ${token}, invite_expires_at = ${expiresAt} WHERE id = ${userId}`);
+  }
+  async getUserByInviteToken(token: string): Promise<User | undefined> {
+    const rows = await db.execute(sql`SELECT id, name, email, role, region, cities, phone, active FROM users WHERE invite_token = ${token} AND invite_expires_at > ${Date.now()} LIMIT 1`);
+    if (!rows[0]) return undefined;
+    const r = rows[0] as any;
+    return { id: r.id, name: r.name, email: r.email, role: r.role, region: r.region ?? null, cities: r.cities ?? null, phone: r.phone ?? null, active: r.active ?? true };
+  }
+  async clearInviteToken(userId: number): Promise<void> {
+    await db.execute(sql`UPDATE users SET invite_token = NULL, invite_expires_at = NULL WHERE id = ${userId}`);
   }
 
   async getLeads() { return db.select().from(leads).orderBy(desc(leads.id)); }

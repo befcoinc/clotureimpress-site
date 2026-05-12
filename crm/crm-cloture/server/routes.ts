@@ -2,9 +2,11 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "node:http";
 import type { Server } from "node:http";
 import { existsSync, readFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage, detectSector, seed, hashPassword, verifyPassword } from "./storage";
+import { sendInviteEmail } from "./email";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema } from "@shared/schema";
 
 function decodeSvelteData(data: any[]) {
@@ -132,6 +134,36 @@ export async function registerRoutes(
   });
   // ───────────────────────────────────────────────────────────────────
 
+  // ── Public invite routes ────────────────────────────────────────────
+  // GET /api/auth/invite/:token — check token, return user info (no sensitive data)
+  app.get("/api/auth/invite/:token", async (req, res) => {
+    const user = await storage.getUserByInviteToken(req.params.token);
+    if (!user) return res.status(404).json({ error: "Lien invalide ou expiré" });
+    res.json({ name: user.name, email: user.email, role: user.role });
+  });
+
+  // POST /api/auth/accept-invite — set password, clear token, log user in
+  app.post("/api/auth/accept-invite", async (req, res, next) => {
+    try {
+      const { token, password } = req.body;
+      if (!token || !password) return res.status(400).json({ error: "Données manquantes" });
+      if (typeof password !== "string" || password.length < 6)
+        return res.status(400).json({ error: "Le mot de passe doit contenir au moins 6 caractères" });
+      const user = await storage.getUserByInviteToken(token);
+      if (!user) return res.status(404).json({ error: "Lien invalide ou expiré" });
+      await storage.setUserPassword(user.id, hashPassword(password));
+      await storage.clearInviteToken(user.id);
+      // Log the user in automatically
+      req.logIn(user, (err) => {
+        if (err) return next(err);
+        res.json(user);
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+  // ───────────────────────────────────────────────────────────────────
+
   // -------- Users --------
   app.get("/api/users", async (_req, res) => {
     res.json(await storage.getUsers());
@@ -140,7 +172,15 @@ export async function registerRoutes(
     const parsed = insertUserSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
     try {
-      res.json(await storage.createUser(parsed.data));
+      const user = await storage.createUser(parsed.data);
+      // Generate invite token (7-day expiry) and send welcome email
+      const token = randomBytes(32).toString("hex");
+      const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+      await storage.setInviteToken(user.id, token, expiresAt);
+      const baseUrl = process.env.APP_URL || `https://cloture-crm.onrender.com`;
+      const inviteUrl = `${baseUrl}/#/accept-invite?token=${token}`;
+      sendInviteEmail(user.email, user.name, user.role, inviteUrl); // fire and forget
+      res.json(user);
     } catch (error: any) {
       res.status(400).json({ error: error?.message || "Impossible de créer l'utilisateur" });
     }

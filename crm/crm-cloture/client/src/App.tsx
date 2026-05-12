@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { RoleProvider } from "@/lib/role-context";
 import { Layout } from "@/components/Layout";
 import { Login } from "@/pages/Login";
+import { AcceptInvite } from "@/pages/AcceptInvite";
 import NotFound from "@/pages/not-found";
 import { Dashboard } from "@/pages/Dashboard";
 import { Leads } from "@/pages/Leads";
@@ -50,6 +51,11 @@ function AppRouter() {
 
 function AppWithAuth() {
   const { user, isLoading } = useAuth();
+
+  // Accept-invite page is accessible without login
+  if (window.location.hash.startsWith("#/accept-invite")) {
+    return <AcceptInvite />;
+  }
 
   if (isLoading) {
     return (
