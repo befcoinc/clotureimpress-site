@@ -5,12 +5,15 @@ const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_USER = process.env.SMTP_USER || "noreply@clotureimpress.com";
 const SMTP_PASS = process.env.SMTP_PASS;
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || SMTP_USER;
+const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "befcoinc@gmail.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "Cloture Impress CRM";
 const FROM = `Clôture Impress CRM <${SMTP_USER}>`;
 
 if (!SMTP_PASS) {
-  console.warn("[email] WARNING: SMTP_PASS is not set — invite emails will NOT be sent.");
+  console.warn("[email] WARNING: SMTP_PASS is not set — SMTP fallback DISABLED.");
+}
+if (!BREVO_API_KEY) {
+  console.warn("[email] WARNING: BREVO_API_KEY is not set — Brevo email will be skipped.");
 }
 
 const transporter = nodemailer.createTransport({
