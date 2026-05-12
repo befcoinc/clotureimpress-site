@@ -7,6 +7,7 @@ const SMTP_PASS = process.env.SMTP_PASS;
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "befcoinc@gmail.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "Cloture Impress CRM";
+const BREVO_REPLY_TO = process.env.BREVO_REPLY_TO || BREVO_SENDER_EMAIL;
 const FROM = `Clôture Impress CRM <${SMTP_USER}>`;
 
 if (!SMTP_PASS) {
@@ -44,6 +45,17 @@ export async function sendInviteEmail(
   const roleLabel = ROLE_LABELS[role] ?? role;
   const firstName = name.split(" ")[0];
   const subject = "Finalise la création de ton compte — Clôture Impress CRM";
+  const textContent = [
+    `Bonjour ${firstName},`,
+    "",
+    `Un administrateur t'a cree un compte sur le CRM CloturePro avec le role ${roleLabel}.`,
+    "",
+    "Finalise ton compte ici:",
+    inviteUrl,
+    "",
+    "Ce lien est valide pendant 7 jours.",
+    "Si tu n'as pas demande ce compte, ignore cet email.",
+  ].join("\n");
   const html = `
 <!DOCTYPE html>
 <html lang="fr">
@@ -124,6 +136,8 @@ export async function sendInviteEmail(
   // Preferred provider on Render: Brevo API (HTTPS, no SMTP port dependency)
   if (BREVO_API_KEY) {
     try {
+      const senderDomain = BREVO_SENDER_EMAIL.split("@")[1] || "clotureimpress.com";
+      const messageId = `<invite.${Date.now()}.${Math.random().toString(36).slice(2)}@${senderDomain}>`;
       const response = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
         headers: {
@@ -132,9 +146,15 @@ export async function sendInviteEmail(
         },
         body: JSON.stringify({
           sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
+          replyTo: { email: BREVO_REPLY_TO, name: BREVO_SENDER_NAME },
           to: [{ email: to, name }],
           subject,
+          textContent,
           htmlContent: html,
+          headers: {
+            "X-Mailin-custom": `source:crm-invite|type:account-invite|role:${role}`,
+            "Message-ID": messageId,
+          },
         }),
       });
       const payload = (await response.json()) as any;
