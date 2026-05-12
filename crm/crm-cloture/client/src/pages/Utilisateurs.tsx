@@ -13,7 +13,7 @@ import { useRole } from "@/lib/role-context";
 import { useToast } from "@/hooks/use-toast";
 import type { Crew, User } from "@shared/schema";
 import { PROVINCES, ROLES } from "@shared/schema";
-import { Pencil, Plus, ShieldCheck, Trash2, UsersRound, Wrench } from "lucide-react";
+import { Mail, Pencil, Plus, ShieldCheck, Trash2, UsersRound, Wrench } from "lucide-react";
 
 const PERMISSIONS_TABLE: Array<{ perm: string; admin: boolean; sdir: boolean; idir: boolean; sales: boolean; install: boolean }> = [
   { perm: "Voir toutes les soumissions", admin: true, sdir: true, idir: true, sales: false, install: false },
@@ -77,6 +77,15 @@ export function Utilisateurs() {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       toast({ title: "Utilisateur supprimé" });
+    },
+    onError: onMutationError,
+  });
+
+  const resendInvite = useMutation({
+    mutationFn: async (id: number) => (await apiRequest("POST", `/api/users/${id}/resend-invite`, {})).json(),
+    onSuccess: (_data, id) => {
+      const u = users.find(x => x.id === id);
+      toast({ title: "Invitation renvoyée", description: u ? `Email envoyé à ${u.email}` : undefined });
     },
     onError: onMutationError,
   });
@@ -173,9 +182,19 @@ export function Utilisateurs() {
                           {u.cities && <span className="text-[10px] text-muted-foreground truncate">{formatCities(u.cities)}</span>}
                         </div>
                         {canManage && (
-                          <div className="mt-3 flex gap-2">
+                          <div className="mt-3 flex flex-wrap gap-2">
                             <Button size="sm" variant="outline" className="h-7 gap-1.5" onClick={() => setUserDialog({ mode: "edit", user: u })} data-testid={`button-edit-user-${u.id}`}>
                               <Pencil className="h-3.5 w-3.5" /> Modifier
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 gap-1.5"
+                              disabled={resendInvite.isPending}
+                              onClick={() => resendInvite.mutate(u.id)}
+                              data-testid={`button-resend-invite-${u.id}`}
+                            >
+                              <Mail className="h-3.5 w-3.5" /> Renvoyer l'invitation
                             </Button>
                             <Button
                               size="sm"
