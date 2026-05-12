@@ -185,6 +185,14 @@
     }
     .nav-phone:hover { color: var(--color-gold-hover); }
     .nav-cta { display: flex; align-items: center; gap: var(--space-2); }
+    .btn-login-nav {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: 50%;
+      background: rgba(201,163,90,0.1); border: 1px solid rgba(201,163,90,0.25);
+      font-size: 0.9rem; text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-login-nav:hover { background: rgba(201,163,90,0.2); }
     .hamburger { display: none; flex-direction: column; gap: 5px; padding: var(--space-2); }
     .hamburger span { display: block; width: 24px; height: 2px; background: var(--color-text); border-radius: 2px; transition: all var(--transition); }
     .mobile-menu {
@@ -611,6 +619,7 @@
       <div class="nav-cta">
         <a href="tel:4506240821" class="nav-phone" aria-label="Appeler Clôture Impress">450.624.0821</a>
         <a href="#soumission" class="btn btn-gold">Soumission gratuite</a>
+        <a href="/login.html" class="btn-login-nav" aria-label="Connexion équipe">🔐</a>
       </div>
       <button class="hamburger" aria-label="Menu" id="hamburger" aria-expanded="false">
         <span></span><span></span><span></span>
