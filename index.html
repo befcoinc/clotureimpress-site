@@ -270,25 +270,22 @@
     }
     .service-card-img {
       aspect-ratio: 4/3; width: 100%;
-      background:
-        linear-gradient(135deg, #1a1208 0%, #0a0a0a 100%);
-      display: flex; align-items: center; justify-content: center;
-      color: var(--color-gold);
-      position: relative; overflow: hidden;
+      object-fit: cover; display: block;
+      background: var(--color-surface-3);
+      transition: transform 0.5s ease;
     }
-    .service-card-img::before {
+    .service-card:hover .service-card-img { transform: scale(1.04); }
+    .service-card-media {
+      aspect-ratio: 4/3; width: 100%;
+      overflow: hidden; position: relative;
+      background: linear-gradient(135deg, #1a1208 0%, #0a0a0a 100%);
+    }
+    .service-card-media::after {
       content: '';
       position: absolute; inset: 0;
-      background: radial-gradient(circle at 50% 100%, rgba(201,163,90,0.18) 0%, transparent 60%);
+      background: linear-gradient(to bottom, transparent 50%, rgba(10,10,10,0.4) 100%);
+      pointer-events: none;
     }
-    .service-card-img svg {
-      width: 80px; height: 80px;
-      position: relative; z-index: 1;
-      stroke: var(--color-gold);
-      filter: drop-shadow(0 2px 8px rgba(201,163,90,0.3));
-      transition: transform var(--transition);
-    }
-    .service-card:hover .service-card-img svg { transform: scale(1.08); }
     .service-card-body { padding: var(--space-6); }
     .service-card h3 {
       font-family: var(--font-display); font-size: var(--text-xl);
@@ -347,7 +344,7 @@
       text-transform: uppercase; color: var(--color-text-muted);
     }
 
-    /* ===== GALLERY (placeholders stylés) ===== */
+    /* ===== GALLERY ===== */
     .gallery-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -355,37 +352,32 @@
     }
     .gallery-item {
       border-radius: var(--radius-md); overflow: hidden;
-      background: linear-gradient(135deg, #1a1208 0%, #0a0a0a 100%);
-      border: 1px solid var(--color-border);
-      display: flex; align-items: center; justify-content: center;
       position: relative;
       aspect-ratio: 4/3;
-      transition: border-color var(--transition);
+      background: var(--color-surface-2);
     }
-    .gallery-item:hover { border-color: rgba(201,163,90,0.3); }
-    .gallery-item::before {
+    .gallery-item img {
+      width: 100%; height: 100%; object-fit: cover;
+      display: block;
+      transition: transform 0.5s ease;
+    }
+    .gallery-item:hover img { transform: scale(1.06); }
+    .gallery-item::after {
       content: '';
       position: absolute; inset: 0;
-      background: radial-gradient(circle at 50% 80%, rgba(201,163,90,0.12) 0%, transparent 60%);
+      background: linear-gradient(to top, rgba(10,10,10,0.85) 0%, transparent 50%);
+      pointer-events: none;
     }
-    .gallery-item svg {
-      width: 65%; height: auto; max-width: 220px;
-      stroke: var(--color-gold); opacity: 0.85;
-      position: relative; z-index: 1;
-      transition: transform 0.4s ease, opacity var(--transition);
-    }
-    .gallery-item:hover svg { transform: scale(1.05); opacity: 1; }
     .gallery-item-label {
-      position: absolute; bottom: var(--space-3); left: var(--space-4);
+      position: absolute; bottom: var(--space-4); left: var(--space-4); right: var(--space-4);
       font-size: var(--text-xs); letter-spacing: 0.1em;
-      text-transform: uppercase; color: var(--color-text-muted);
-      z-index: 2;
+      text-transform: uppercase; color: var(--color-text);
+      font-weight: 500; z-index: 2;
     }
     .gallery-item:first-child {
       grid-column: span 2; grid-row: span 2;
       aspect-ratio: unset; min-height: 420px;
     }
-    .gallery-item:first-child svg { max-width: 380px; }
 
     /* ===== TESTIMONIALS ===== */
     .testimonials-grid {
@@ -646,12 +638,8 @@
     </div>
     <div class="services-grid">
       <article class="service-card reveal reveal-delay-1">
-        <div class="service-card-img" aria-hidden="true">
-          <svg viewBox="0 0 80 80" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10 70V25M22 70V25M34 70V25M46 70V25M58 70V25M70 70V25"/>
-            <path d="M10 25l6-8 6 8M22 25l6-8 6 8M34 25l6-8 6 8M46 25l6-8 6 8M58 25l6-8 6 8"/>
-            <path d="M5 35h70M5 50h70"/>
-          </svg>
+        <div class="service-card-media">
+          <img class="service-card-img" src="https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Clôture ornementale en fer forgé noir" loading="lazy" width="800" height="600">
         </div>
         <div class="service-card-body">
           <h3>Clôture ornementale</h3>
@@ -659,12 +647,8 @@
         </div>
       </article>
       <article class="service-card reveal reveal-delay-2">
-        <div class="service-card-img" aria-hidden="true">
-          <svg viewBox="0 0 80 80" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M15 20l10 10-10 10 10 10-10 10M25 20l10 10-10 10 10 10-10 10M35 20l10 10-10 10 10 10-10 10M45 20l10 10-10 10 10 10-10 10M55 20l10 10-10 10 10 10-10 10"/>
-            <path d="M15 20l10 10-10 10 10 10-10 10" transform="translate(10,0)"/>
-            <path d="M10 15h60M10 65h60"/>
-          </svg>
+        <div class="service-card-media">
+          <img class="service-card-img" src="https://images.pexels.com/photos/2098624/pexels-photo-2098624.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Clôture maille de chaîne métallique" loading="lazy" width="800" height="600">
         </div>
         <div class="service-card-body">
           <h3>Maille de chaîne</h3>
@@ -672,16 +656,8 @@
         </div>
       </article>
       <article class="service-card reveal reveal-delay-3">
-        <div class="service-card-img" aria-hidden="true">
-          <svg viewBox="0 0 80 80" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="12" y="20" width="7" height="50"/>
-            <rect x="22" y="20" width="7" height="50"/>
-            <rect x="32" y="20" width="7" height="50"/>
-            <rect x="42" y="20" width="7" height="50"/>
-            <rect x="52" y="20" width="7" height="50"/>
-            <rect x="62" y="20" width="7" height="50"/>
-            <path d="M8 20h64"/>
-          </svg>
+        <div class="service-card-media">
+          <img class="service-card-img" src="https://images.pexels.com/photos/2287310/pexels-photo-2287310.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Clôture d'intimité en bois vertical" loading="lazy" width="800" height="600">
         </div>
         <div class="service-card-body">
           <h3>Clôture d'intimité</h3>
@@ -689,14 +665,8 @@
         </div>
       </article>
       <article class="service-card reveal">
-        <div class="service-card-img" aria-hidden="true">
-          <svg viewBox="0 0 80 80" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10 70V30M20 70V30M30 70V30M40 70V30M50 70V30M60 70V30M70 70V30"/>
-            <path d="M5 30h70M5 45h70M5 60h70"/>
-            <circle cx="15" cy="22" r="3"/>
-            <circle cx="35" cy="22" r="3"/>
-            <circle cx="55" cy="22" r="3"/>
-          </svg>
+        <div class="service-card-media">
+          <img class="service-card-img" src="https://images.pexels.com/photos/2098427/pexels-photo-2098427.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Clôture commerciale industrielle" loading="lazy" width="800" height="600">
         </div>
         <div class="service-card-body">
           <h3>Commercial &amp; industriel</h3>
@@ -704,15 +674,8 @@
         </div>
       </article>
       <article class="service-card reveal reveal-delay-1">
-        <div class="service-card-img" aria-hidden="true">
-          <svg viewBox="0 0 80 80" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M8 70V20h28v50M44 70V20h28v50"/>
-            <path d="M8 70h64"/>
-            <path d="M14 30v32M22 30v32M30 30v32M50 30v32M58 30v32M66 30v32"/>
-            <path d="M8 32h28M44 32h28"/>
-            <circle cx="36" cy="45" r="2"/>
-            <circle cx="44" cy="45" r="2"/>
-          </svg>
+        <div class="service-card-media">
+          <img class="service-card-img" src="https://images.pexels.com/photos/1115804/pexels-photo-1115804.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Portail d'entrée en fer forgé" loading="lazy" width="800" height="600">
         </div>
         <div class="service-card-body">
           <h3>Portails &amp; accès</h3>
@@ -720,12 +683,8 @@
         </div>
       </article>
       <article class="service-card reveal reveal-delay-2">
-        <div class="service-card-img" aria-hidden="true">
-          <svg viewBox="0 0 80 80" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10 70V35M22 70V28M34 70V22M46 70V22M58 70V28M70 70V35"/>
-            <path d="M10 35l12-7 12-6 12 0 12 6 12 7"/>
-            <path d="M5 50h70M5 60h70"/>
-          </svg>
+        <div class="service-card-media">
+          <img class="service-card-img" src="https://images.pexels.com/photos/2079439/pexels-photo-2079439.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Installation de clôture sur mesure" loading="lazy" width="800" height="600">
         </div>
         <div class="service-card-body">
           <h3>Installation sur mesure</h3>
@@ -778,18 +737,7 @@
         </ul>
       </div>
       <div class="why-visual reveal">
-        <svg viewBox="0 0 200 250" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <!-- ground line -->
-          <path d="M5 220h190" stroke-width="2"/>
-          <!-- fence posts (vertical) -->
-          <path d="M20 220V60M50 220V60M80 220V60M110 220V60M140 220V60M170 220V60"/>
-          <!-- horizontal rails -->
-          <path d="M5 80h190M5 180h190"/>
-          <!-- ornamental tops (fleur de lis style) -->
-          <path d="M20 60l-6-12 6-6 6 6-6 12M50 60l-6-12 6-6 6 6-6 12M80 60l-6-12 6-6 6 6-6 12M110 60l-6-12 6-6 6 6-6 12M140 60l-6-12 6-6 6 6-6 12M170 60l-6-12 6-6 6 6-6 12"/>
-          <!-- decorative scrollwork between posts -->
-          <path d="M30 130c5-10 15-10 20 0M60 130c5-10 15-10 20 0M90 130c5-10 15-10 20 0M120 130c5-10 15-10 20 0M150 130c5-10 15-10 20 0" stroke-width="1"/>
-        </svg>
+        <img src="https://images.pexels.com/photos/1115804/pexels-photo-1115804.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Belle propriété avec clôture installée par Clôture Impress" loading="lazy" width="900" height="1100" style="width:100%; height:100%; object-fit:cover; position:relative; z-index:1;">
         <div class="why-visual-badge">
           <span class="badge-value">+500</span>
           <span class="badge-label">projets complétés</span>
@@ -809,67 +757,24 @@
     </div>
     <div class="gallery-grid reveal">
       <div class="gallery-item">
-        <svg viewBox="0 0 240 180" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M5 160h230" stroke-width="2"/>
-          <path d="M25 160V50M55 160V50M85 160V50M115 160V50M145 160V50M175 160V50M205 160V50"/>
-          <path d="M5 70h230M5 130h230"/>
-          <path d="M25 50l-5-10 5-5 5 5-5 10M55 50l-5-10 5-5 5 5-5 10M85 50l-5-10 5-5 5 5-5 10M115 50l-5-10 5-5 5 5-5 10M145 50l-5-10 5-5 5 5-5 10M175 50l-5-10 5-5 5 5-5 10M205 50l-5-10 5-5 5 5-5 10"/>
-        </svg>
+        <img src="https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="Résidence avec clôture ornementale installée à Montréal" loading="lazy" width="1200" height="800">
         <span class="gallery-item-label">Clôture ornementale · Montréal</span>
       </div>
       <div class="gallery-item">
-        <svg viewBox="0 0 200 150" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M5 130h190" stroke-width="2"/>
-          <rect x="15" y="30" width="10" height="100"/>
-          <rect x="35" y="30" width="10" height="100"/>
-          <rect x="55" y="30" width="10" height="100"/>
-          <rect x="75" y="30" width="10" height="100"/>
-          <rect x="95" y="30" width="10" height="100"/>
-          <rect x="115" y="30" width="10" height="100"/>
-          <rect x="135" y="30" width="10" height="100"/>
-          <rect x="155" y="30" width="10" height="100"/>
-          <rect x="175" y="30" width="10" height="100"/>
-          <path d="M5 30h190"/>
-        </svg>
-        <span class="gallery-item-label">Clôture d'intimité · Rive-Nord</span>
+        <img src="https://images.pexels.com/photos/2287310/pexels-photo-2287310.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Clôture d'intimité bois" loading="lazy" width="800" height="600">
+        <span class="gallery-item-label">Intimité · Rive-Nord</span>
       </div>
       <div class="gallery-item">
-        <svg viewBox="0 0 200 150" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M5 130h190" stroke-width="2"/>
-          <path d="M30 130V40h60v90M110 130V40h60v90"/>
-          <path d="M40 50v75M50 50v75M60 50v75M70 50v75M80 50v75M120 50v75M130 50v75M140 50v75M150 50v75M160 50v75"/>
-          <path d="M30 50h60M110 50h60"/>
-          <circle cx="90" cy="90" r="3"/>
-          <circle cx="110" cy="90" r="3"/>
-        </svg>
+        <img src="https://images.pexels.com/photos/1115804/pexels-photo-1115804.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Portail d'entrée résidentiel" loading="lazy" width="800" height="600">
         <span class="gallery-item-label">Portail sur mesure</span>
       </div>
       <div class="gallery-item">
-        <svg viewBox="0 0 200 150" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M5 130h190" stroke-width="2"/>
-          <path d="M20 130V20M180 130V20"/>
-          <path d="M30 25l10 10-10 10 10 10-10 10 10 10-10 10 10 10-10 10 10 10M40 25l10 10-10 10 10 10-10 10 10 10-10 10 10 10-10 10 10 10M50 25l10 10-10 10 10 10-10 10 10 10-10 10 10 10-10 10 10 10M60 25l10 10-10 10 10 10-10 10 10 10-10 10 10 10-10 10 10 10M70 25l10 10-10 10 10 10-10 10 10 10-10 10 10 10-10 10 10 10M80 25l10 10-10 10 10 10-10 10 10 10-10 10 10 10-10 10 10 10M90 25l10 10-10 10 10 10-10 10 10 10-10 10 10 10-10 10 10 10M100 25l10 10-10 10 10 10-10 10 10 10-10 10 10 10-10 10 10 10M110 25l10 10-10 10 10 10-10 10 10 10-10 10 10 10-10 10 10 10M120 25l10 10-10 10 10 10-10 10 10 10-10 10 10 10-10 10 10 10M130 25l10 10-10 10 10 10-10 10 10 10-10 10 10 10-10 10 10 10M140 25l10 10-10 10 10 10-10 10 10 10-10 10 10 10-10 10 10 10M150 25l10 10-10 10 10 10-10 10 10 10-10 10 10 10-10 10 10 10M160 25l10 10-10 10 10 10-10 10 10 10-10 10 10 10-10 10 10 10"/>
-          <path d="M5 20h190"/>
-        </svg>
+        <img src="https://images.pexels.com/photos/2098624/pexels-photo-2098624.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Clôture maille de chaîne" loading="lazy" width="800" height="600">
         <span class="gallery-item-label">Maille de chaîne · Laval</span>
       </div>
       <div class="gallery-item">
-        <svg viewBox="0 0 200 150" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M5 130h190" stroke-width="2"/>
-          <rect x="20" y="40" width="8" height="90"/>
-          <rect x="35" y="40" width="8" height="90"/>
-          <rect x="50" y="40" width="8" height="90"/>
-          <rect x="65" y="40" width="8" height="90"/>
-          <rect x="80" y="40" width="8" height="90"/>
-          <rect x="95" y="40" width="8" height="90"/>
-          <rect x="110" y="40" width="8" height="90"/>
-          <rect x="125" y="40" width="8" height="90"/>
-          <rect x="140" y="40" width="8" height="90"/>
-          <rect x="155" y="40" width="8" height="90"/>
-          <rect x="170" y="40" width="8" height="90"/>
-          <path d="M5 40h190"/>
-        </svg>
-        <span class="gallery-item-label">Clôture intimité moderne</span>
+        <img src="https://images.pexels.com/photos/2079439/pexels-photo-2079439.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Clôture moderne résidentielle" loading="lazy" width="800" height="600">
+        <span class="gallery-item-label">Clôture moderne</span>
       </div>
     </div>
   </div>
