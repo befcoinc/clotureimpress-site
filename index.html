@@ -56,7 +56,7 @@
 
     /* ===== BASE ===== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; scroll-padding-top: 180px; -webkit-font-smoothing: antialiased; }
+    html { scroll-behavior: smooth; scroll-padding-top: 96px; -webkit-font-smoothing: antialiased; }
     body { font-family: var(--font-body); font-size: var(--text-base); color: var(--color-text); background: var(--color-bg); line-height: 1.65; }
     img { display: block; max-width: 100%; height: auto; }
     a { text-decoration: none; color: inherit; }
@@ -134,7 +134,7 @@
 
     /* ===== BANDEAU AFFILIATION ===== */
     .affiliation-banner {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 102;
+      position: relative; z-index: 102;
       background: #111;
       border-bottom: 1px solid var(--color-border);
       display: block;
@@ -149,7 +149,7 @@
 
     /* ===== HEADER / NAV ===== */
     .header {
-      position: fixed; top: 92px; left: 0; right: 0; z-index: 100;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
       background: rgba(10,10,10,0.92);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--color-border);
@@ -205,7 +205,7 @@
     .hero {
       min-height: 100vh;
       display: flex; flex-direction: column; justify-content: flex-end;
-      padding-top: 180px;
+      padding-top: 88px;
       position: relative; overflow: hidden;
     }
     .hero-bg {
