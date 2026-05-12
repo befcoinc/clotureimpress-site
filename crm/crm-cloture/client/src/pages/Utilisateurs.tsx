@@ -159,7 +159,14 @@ export function Utilisateurs() {
                             <div className="text-[11px] text-muted-foreground truncate">{u.email}</div>
                             <div className="text-[11px] text-muted-foreground">{u.phone || "Téléphone non défini"}</div>
                           </div>
-                          <Badge variant={u.active ? "outline" : "secondary"} className="shrink-0 text-[10px]">{u.active ? "Actif" : "Inactif"}</Badge>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <Badge variant={u.active ? "outline" : "secondary"} className="text-[10px]">{u.active ? "Actif" : "Inactif"}</Badge>
+                            {(u as any).mustChangePassword === false ? (
+                              <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white">✓ Compte complété</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-900 hover:bg-amber-100">⏳ En attente</Badge>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-1.5 mt-2">
                           {u.region && <Badge variant="outline" className="text-[10px]">{u.region}</Badge>}

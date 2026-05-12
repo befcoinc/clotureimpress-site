@@ -12,9 +12,10 @@ export const users = pgTable("users", {
   cities: text("cities"), // JSON array of cities
   phone: text("phone"),
   active: boolean("active").notNull().default(true),
+  mustChangePassword: boolean("must_change_password").notNull().default(true),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, mustChangePassword: true });
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
