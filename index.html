@@ -56,7 +56,7 @@
 
     /* ===== BASE ===== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; scroll-padding-top: 96px; -webkit-font-smoothing: antialiased; }
+    html { scroll-behavior: smooth; scroll-padding-top: 136px; -webkit-font-smoothing: antialiased; }
     body { font-family: var(--font-body); font-size: var(--text-base); color: var(--color-text); background: var(--color-bg); line-height: 1.65; }
     img { display: block; max-width: 100%; height: auto; }
     a { text-decoration: none; color: inherit; }
@@ -132,9 +132,25 @@
       background: var(--color-gold); margin-bottom: var(--space-6);
     }
 
+    /* ===== BANDEAU AFFILIATION ===== */
+    .affiliation-banner {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 102;
+      background: #111;
+      border-bottom: 1px solid var(--color-border);
+      display: flex; align-items: center; justify-content: center; gap: 1rem;
+      padding: 0.55rem 1rem;
+      font-size: 0.8rem; letter-spacing: 0.08em; color: var(--color-text-muted);
+    }
+    .affiliation-text { text-transform: uppercase; }
+    .affiliation-logo {
+      height: 28px; width: auto;
+      object-fit: contain; vertical-align: middle;
+      filter: brightness(0) invert(1);
+    }
+
     /* ===== HEADER / NAV ===== */
     .header {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      position: fixed; top: 40px; left: 0; right: 0; z-index: 100;
       background: rgba(10,10,10,0.92);
       backdrop-filter: blur(16px);
       border-bottom: 1px solid var(--color-border);
@@ -190,7 +206,7 @@
     .hero {
       min-height: 100vh;
       display: flex; flex-direction: column; justify-content: flex-end;
-      padding-top: 88px;
+      padding-top: 128px;
       position: relative; overflow: hidden;
     }
     .hero-bg {
@@ -575,6 +591,12 @@
   </style>
 </head>
 <body>
+
+<!-- ===== BANDEAU AFFILIATION ===== -->
+<div class="affiliation-banner">
+  <span class="affiliation-text">Nouveau partenaire officiel&nbsp;:</span>
+  <img src="images/hugo.png" alt="Partenaire Hugo" class="affiliation-logo">
+</div>
 
 <!-- ===== HEADER ===== -->
 <header class="header" id="header">
