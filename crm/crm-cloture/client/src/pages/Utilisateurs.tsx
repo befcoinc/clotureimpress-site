@@ -263,7 +263,7 @@ export function Utilisateurs() {
           </CardContent>
         </Card>
 
-        <Card>
+        {canManage && <Card>
           <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><UsersRound className="h-4 w-4" /> Matrice des permissions</CardTitle></CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -293,7 +293,7 @@ export function Utilisateurs() {
               </table>
             </div>
           </CardContent>
-        </Card>
+        </Card>}
       </div>
 
       <Dialog open={!!userDialog} onOpenChange={(open) => !open && setUserDialog(null)}>
