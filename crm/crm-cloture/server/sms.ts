@@ -3,6 +3,8 @@ import twilio from "twilio";
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_FROM = process.env.TWILIO_FROM;
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const BREVO_SMS_SENDER = process.env.BREVO_SMS_SENDER || "Cloture";
 const TEXTBELT_API_KEY = process.env.TEXTBELT_API_KEY || "textbelt";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -60,6 +62,36 @@ export async function sendInviteSms(
       const msg = err?.message || String(err);
       console.error("[sms] Twilio failed for", to, ":", msg);
       // Continue with fallback provider below.
+    }
+  }
+
+  // Secondary provider: Brevo transactional SMS API
+  if (BREVO_API_KEY) {
+    try {
+      const response = await fetch("https://api.brevo.com/v3/transactionalSMS/sms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": BREVO_API_KEY,
+          accept: "application/json",
+        },
+        body: JSON.stringify({
+          sender: BREVO_SMS_SENDER,
+          recipient: to,
+          content: body,
+          type: "transactional",
+        }),
+      });
+      const payload = (await response.json()) as any;
+      if (response.ok && payload?.messageId) {
+        console.log("[sms] Invite sent successfully to", to, "via brevo id:", payload.messageId);
+        return { ok: true, sid: String(payload.messageId) };
+      }
+      const msg = payload?.message || payload?.code || `Brevo SMS error (${response.status})`;
+      console.error("[sms] Brevo failed for", to, ":", msg);
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      console.error("[sms] Brevo exception for", to, ":", msg);
     }
   }
 

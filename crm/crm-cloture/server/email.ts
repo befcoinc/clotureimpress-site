@@ -4,6 +4,9 @@ const SMTP_HOST = process.env.SMTP_HOST || "mail.privateemail.com";
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_USER = process.env.SMTP_USER || "noreply@clotureimpress.com";
 const SMTP_PASS = process.env.SMTP_PASS;
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || SMTP_USER;
+const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "Cloture Impress CRM";
 const FROM = `Clôture Impress CRM <${SMTP_USER}>`;
 
 if (!SMTP_PASS) {
@@ -37,21 +40,8 @@ export async function sendInviteEmail(
 ): Promise<{ ok: boolean; error?: string; messageId?: string }> {
   const roleLabel = ROLE_LABELS[role] ?? role;
   const firstName = name.split(" ")[0];
-
-  if (!SMTP_PASS) {
-    const msg = "SMTP_PASS not configured";
-    console.error("[email] Cannot send to", to, "—", msg);
-    return { ok: false, error: msg };
-  }
-
-  console.log("[email] Attempting to send invite to", to, "via", SMTP_HOST + ":" + SMTP_PORT, "as", SMTP_USER);
-
-  try {
-    const info = await transporter.sendMail({
-      from: FROM,
-      to,
-      subject: "Finalise la création de ton compte — Clôture Impress CRM",
-      html: `
+  const subject = "Finalise la création de ton compte — Clôture Impress CRM";
+  const html = `
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -126,7 +116,51 @@ export async function sendInviteEmail(
     </tr>
   </table>
 </body>
-</html>`,
+</html>`;
+
+  // Preferred provider on Render: Brevo API (HTTPS, no SMTP port dependency)
+  if (BREVO_API_KEY) {
+    try {
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": BREVO_API_KEY,
+        },
+        body: JSON.stringify({
+          sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
+          to: [{ email: to, name }],
+          subject,
+          htmlContent: html,
+        }),
+      });
+      const payload = (await response.json()) as any;
+      if (response.ok && payload?.messageId) {
+        console.log("[email] Invite sent successfully to", to, "via brevo messageId:", payload.messageId);
+        return { ok: true, messageId: String(payload.messageId) };
+      }
+      const msg = payload?.message || payload?.code || `Brevo error (${response.status})`;
+      console.error("[email] Brevo failed to send invite to", to, ":", msg);
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      console.error("[email] Brevo exception for", to, ":", msg);
+    }
+  }
+
+  if (!SMTP_PASS) {
+    const msg = BREVO_API_KEY ? "SMTP_PASS not configured (Brevo fallback failed)" : "SMTP_PASS not configured";
+    console.error("[email] Cannot send to", to, "—", msg);
+    return { ok: false, error: msg };
+  }
+
+  console.log("[email] Attempting to send invite to", to, "via", SMTP_HOST + ":" + SMTP_PORT, "as", SMTP_USER);
+
+  try {
+    const info = await transporter.sendMail({
+      from: FROM,
+      to,
+      subject,
+      html,
     });
     console.log("[email] Invite sent successfully to", to, "messageId:", info.messageId);
     return { ok: true, messageId: info.messageId };
