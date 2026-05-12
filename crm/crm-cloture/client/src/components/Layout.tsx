@@ -78,8 +78,37 @@ export function Layout({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Sidebar */}
       <aside className="hidden md:flex md:w-64 lg:w-72 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
-        <div className="px-5 pt-5 pb-4 border-b border-sidebar-border">
+        <div className="px-5 pt-5 pb-4 border-b border-sidebar-border space-y-3">
           <Logo />
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.14em] text-sidebar-foreground/40 mb-1.5">
+              {t("lang.label")}
+            </div>
+            <div className="flex rounded-md border border-sidebar-border overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setLanguage("fr")}
+                data-testid="button-lang-fr"
+                className={cn(
+                  "h-8 flex-1 text-[11px] font-semibold",
+                  language === "fr" ? "bg-sidebar-primary text-sidebar-primary-foreground" : "bg-sidebar-accent text-sidebar-foreground/70"
+                )}
+              >
+                {t("lang.fr")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage("en")}
+                data-testid="button-lang-en"
+                className={cn(
+                  "h-8 flex-1 text-[11px] font-semibold border-l border-sidebar-border",
+                  language === "en" ? "bg-sidebar-primary text-sidebar-primary-foreground" : "bg-sidebar-accent text-sidebar-foreground/70"
+                )}
+              >
+                {t("lang.en")}
+              </button>
+            </div>
+          </div>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-3 px-3">
@@ -136,35 +165,6 @@ export function Layout({ children }: { children: ReactNode }) {
               <RoleSwitcher />
             </div>
           )}
-          <div>
-            <div className="text-[10px] uppercase tracking-[0.14em] text-sidebar-foreground/40 mb-1.5">
-              {t("lang.label")}
-            </div>
-            <div className="flex rounded-md border border-sidebar-border overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setLanguage("fr")}
-                data-testid="button-lang-fr"
-                className={cn(
-                  "h-8 flex-1 text-[11px] font-semibold",
-                  language === "fr" ? "bg-sidebar-primary text-sidebar-primary-foreground" : "bg-sidebar-accent text-sidebar-foreground/70"
-                )}
-              >
-                {t("lang.fr")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setLanguage("en")}
-                data-testid="button-lang-en"
-                className={cn(
-                  "h-8 flex-1 text-[11px] font-semibold border-l border-sidebar-border",
-                  language === "en" ? "bg-sidebar-primary text-sidebar-primary-foreground" : "bg-sidebar-accent text-sidebar-foreground/70"
-                )}
-              >
-                {t("lang.en")}
-              </button>
-            </div>
-          </div>
           {/* Current user + logout */}
           <div className="flex items-center gap-2 pt-1">
             <div className="flex-1 min-w-0">
