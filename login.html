@@ -109,8 +109,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const SUPABASE_URL = 'https://wngwtlcpxswyngyonkhg.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InduZ3d0bGNweHN3eW5neW9ua2hnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1OTUyMDIsImV4cCI6MjA5NDE3MTIwMn0.uVVsoU5r5GgNrVtAXvp6Rb3eP1CvHsSHfzowCBvsH4Q';
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     sb.auth.getSession().then(({ data: { session } }) => {
