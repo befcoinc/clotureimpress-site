@@ -1,0 +1,221 @@
+import {
+  users, leads, quotes, crews, activities,
+  type User, type InsertUser,
+  type Lead, type InsertLead,
+  type Quote, type InsertQuote,
+  type Crew, type InsertCrew,
+  type Activity, type InsertActivity,
+} from "@shared/schema";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { eq, desc } from "drizzle-orm";
+
+const client = postgres(process.env.DATABASE_URL!);
+export const db = drizzle(client);
+
+// =============== SECTOR DETECTION ===============
+function detectSector(lead: Partial<InsertLead>): string {
+  const pc = (lead.postalCode || "").toUpperCase().replace(/\s/g, "");
+  const city = (lead.city || "").trim();
+  const province = (lead.province || "").trim().toUpperCase();
+  const fsa = pc.slice(0, 3);
+  const hood = lead.neighborhood?.trim();
+
+  const parts = [province || "??", city || fsa || "??"];
+  if (hood) parts.push(hood);
+  else if (fsa) parts.push(fsa);
+  return parts.join(" › ");
+}
+
+// =============== SEED DATA ===============
+async function seed() {
+  const existing = await db.select().from(users).limit(1);
+  if (existing.length > 0) return;
+
+  const seedUsers: InsertUser[] = [
+    { name: "Marie Tremblay", email: "admin@cloturepro.ca", role: "admin", region: "Canada", phone: "514-555-0001", active: true },
+    { name: "Sophie Bergeron", email: "sophie@cloturepro.ca", role: "sales_director", region: "Canada", phone: "514-555-0002", active: true },
+    { name: "Marc Lavoie", email: "marc@cloturepro.ca", role: "install_director", region: "Canada", phone: "514-555-0003", active: true },
+    { name: "Julien Côté", email: "julien@cloturepro.ca", role: "sales_rep", region: "QC", cities: JSON.stringify(["Montréal", "Laval"]), phone: "514-555-1010", active: true },
+    { name: "Isabelle Roy", email: "isabelle@cloturepro.ca", role: "sales_rep", region: "QC", cities: JSON.stringify(["Québec", "Lévis"]), phone: "418-555-1020", active: true },
+    { name: "David Chen", email: "david@cloturepro.ca", role: "sales_rep", region: "ON", cities: JSON.stringify(["Toronto", "Mississauga"]), phone: "416-555-1030", active: true },
+    { name: "Amélie Gagnon", email: "amelie@cloturepro.ca", role: "sales_rep", region: "AB", cities: JSON.stringify(["Calgary", "Edmonton"]), phone: "403-555-1040", active: true },
+    { name: "Patrick Boivin", email: "patrick@cloturepro.ca", role: "installer", region: "QC", cities: JSON.stringify(["Montréal", "Laval", "Longueuil"]), phone: "514-555-2010", active: true },
+    { name: "Steve O'Brien", email: "steve@cloturepro.ca", role: "installer", region: "ON", cities: JSON.stringify(["Toronto", "Brampton"]), phone: "416-555-2020", active: true },
+    { name: "Luc Pelletier", email: "luc@cloturepro.ca", role: "installer", region: "QC", cities: JSON.stringify(["Québec", "Lévis", "Saguenay"]), phone: "418-555-2030", active: true },
+  ];
+  await db.insert(users).values(seedUsers).onConflictDoNothing();
+
+  const seedCrews: InsertCrew[] = [
+    { name: "Équipe Boivin & Fils", type: "interne", contactName: "Patrick Boivin", phone: "514-555-2010", province: "QC", cities: JSON.stringify(["Montréal", "Laval", "Longueuil"]), capacity: 2, rating: 4.8, status: "disponible" },
+    { name: "Clôtures Pelletier", type: "sous-traitant", contactName: "Luc Pelletier", phone: "418-555-2030", province: "QC", cities: JSON.stringify(["Québec", "Lévis", "Saguenay"]), capacity: 3, rating: 4.6, status: "disponible" },
+    { name: "O'Brien Fencing", type: "sous-traitant", contactName: "Steve O'Brien", phone: "416-555-2020", province: "ON", cities: JSON.stringify(["Toronto", "Brampton", "Mississauga"]), capacity: 2, rating: 4.9, status: "occupe" },
+    { name: "Prairie Fence Co.", type: "sous-traitant", contactName: "Tom Wilson", phone: "403-555-2040", province: "AB", cities: JSON.stringify(["Calgary", "Edmonton", "Red Deer"]), capacity: 2, rating: 4.5, status: "disponible" },
+    { name: "West Coast Fence", type: "sous-traitant", contactName: "Hannah Lee", phone: "604-555-2050", province: "BC", cities: JSON.stringify(["Vancouver", "Burnaby", "Surrey"]), capacity: 2, rating: 4.7, status: "disponible" },
+    { name: "Équipe Tremblay", type: "interne", contactName: "Jean Tremblay", phone: "514-555-2060", province: "QC", cities: JSON.stringify(["Montréal", "Laval"]), capacity: 1, rating: 4.4, status: "indisponible" },
+  ];
+  await db.insert(crews).values(seedCrews);
+
+  const seedLeadData: Array<Partial<InsertLead> & { clientName: string }> = [
+    { clientName: "Jean-François Dubois", phone: "514-222-1100", email: "jf.dubois@gmail.com", address: "1245 rue Saint-Denis", city: "Montréal", province: "QC", postalCode: "H2X 3K8", neighborhood: "Le Plateau", fenceType: "Bois traité", message: "J'aimerais une soumission pour clôturer mon arrière-cour, environ 40 pieds.", status: "nouveau", estimatedValue: 4200, estimatedLength: 40 },
+    { clientName: "Sarah Mitchell", phone: "416-333-2200", email: "smitchell@outlook.com", address: "88 King St W", city: "Toronto", province: "ON", postalCode: "M5H 1A1", neighborhood: "Financial District", fenceType: "Ornementale (aluminium)", message: "Need a quote for ornamental aluminum fence around front yard, ~60ft.", status: "a_qualifier", estimatedValue: 8400, estimatedLength: 60 },
+    { clientName: "Robert Lalonde", phone: "450-444-3300", email: "rlalonde@videotron.ca", address: "55 boul. des Laurentides", city: "Laval", province: "QC", postalCode: "H7G 2T8", neighborhood: "Pont-Viau", fenceType: "Mailles de chaîne", message: "Remplacement de la clôture actuelle, terrain commercial.", status: "assigne", assignedSalesId: 4, estimatedValue: 6800, estimatedLength: 120 },
+    { clientName: "Emma Thompson", phone: "403-555-4400", email: "ethompson@telus.net", address: "1200 6 Ave SW", city: "Calgary", province: "AB", postalCode: "T2P 0S4", neighborhood: "Beltline", fenceType: "Intimité PVC", message: "Looking for 50ft of privacy fencing, white PVC.", status: "en_cours", assignedSalesId: 7, estimatedValue: 5200, estimatedLength: 50 },
+    { clientName: "Mohammed Al-Hassan", phone: "604-666-5500", email: "m.alhassan@shaw.ca", address: "777 Robson St", city: "Vancouver", province: "BC", postalCode: "V6Z 1A1", neighborhood: "Downtown", fenceType: "Industrielle / commerciale", message: "Commercial property, industrial chain link fence with gates.", status: "en_cours", estimatedValue: 18500, estimatedLength: 250 },
+    { clientName: "Marie-Claude Lemieux", phone: "418-777-6600", email: "mclemieux@hotmail.com", address: "320 rue Saint-Jean", city: "Québec", province: "QC", postalCode: "G1R 1N8", neighborhood: "Vieux-Québec", fenceType: "Bois traité", message: "Petite cour arrière, environ 25 pieds.", status: "gagne", assignedSalesId: 5, estimatedValue: 2800, estimatedLength: 25 },
+    { clientName: "James Wilson", phone: "905-888-7700", email: "jwilson@bell.net", address: "150 Main St", city: "Mississauga", province: "ON", postalCode: "L5A 1B2", neighborhood: "Port Credit", fenceType: "Bois traité", message: "Side and back yard, two gates.", status: "perdu", assignedSalesId: 6, estimatedValue: 5600, estimatedLength: 80 },
+    { clientName: "Catherine Pageau", phone: "514-999-8800", email: "cpageau@gmail.com", address: "4500 rue Bélanger", city: "Montréal", province: "QC", postalCode: "H1T 1B6", neighborhood: "Rosemont", fenceType: "Ornementale (aluminium)", message: "Avant et côté, ~45 pieds, noir.", status: "nouveau", estimatedValue: 6300, estimatedLength: 45 },
+    { clientName: "David Park", phone: "780-111-9900", email: "dpark@gmail.com", address: "9999 Jasper Ave", city: "Edmonton", province: "AB", postalCode: "T5J 1N9", neighborhood: "Downtown", fenceType: "Mailles de chaîne", message: "Industrial yard fencing, ~200ft.", status: "a_qualifier", estimatedValue: 11000, estimatedLength: 200 },
+    { clientName: "Nathalie Goyer", phone: "450-222-3344", email: "ngoyer@videotron.ca", address: "200 ch. Chambly", city: "Longueuil", province: "QC", postalCode: "J4H 3L3", neighborhood: "Vieux-Longueuil", fenceType: "Intimité PVC", message: "Cour arrière, clôture d'intimité 6 pieds.", status: "gagne", assignedSalesId: 4, estimatedValue: 4800, estimatedLength: 35 },
+  ];
+  const insertedLeads = await db.insert(leads).values(
+    seedLeadData.map(l => ({ ...l, sector: detectSector(l), source: "email" as const }))
+  ).returning();
+
+  const now = Date.now();
+  const quoteSeeds = [
+    { leadIdx: 2, status: "envoyee", salesStatus: "envoyee", installStatus: "a_planifier", assignedSalesId: 4, assignedInstallerId: 8, fenceType: "Mailles de chaîne", estimatedLength: 120, estimatedPrice: 6800, salesNotes: "Client veut une réponse cette semaine.", scheduledDate: null as string | null, signedDate: null as string | null, finalPrice: null as number | null, installNotes: null as string | null },
+    { leadIdx: 3, status: "envoyee", salesStatus: "suivi", installStatus: "a_planifier", assignedSalesId: 7, assignedInstallerId: null, fenceType: "Intimité PVC", estimatedLength: 50, estimatedPrice: 5200, salesNotes: "Suivi prévu vendredi.", scheduledDate: null, signedDate: null, finalPrice: null, installNotes: null },
+    { leadIdx: 4, status: "envoyee", salesStatus: "rdv_mesure", installStatus: "a_planifier", assignedSalesId: null, assignedInstallerId: null, fenceType: "Industrielle / commerciale", estimatedLength: 250, estimatedPrice: 18500, salesNotes: "Mesure à programmer.", scheduledDate: null, signedDate: null, finalPrice: null, installNotes: null },
+    { leadIdx: 5, status: "signee", salesStatus: "signee", installStatus: "planifiee", assignedSalesId: 5, assignedInstallerId: 10, fenceType: "Bois traité", estimatedLength: 25, estimatedPrice: 2800, finalPrice: 2750, salesNotes: "Signé. Acompte reçu.", installNotes: "Prévu mardi prochain, matin.", scheduledDate: new Date(now + 5 * 86400000).toISOString().slice(0, 10), signedDate: new Date(now - 3 * 86400000).toISOString().slice(0, 10) },
+    { leadIdx: 9, status: "signee", salesStatus: "signee", installStatus: "a_planifier", assignedSalesId: 4, assignedInstallerId: null, fenceType: "Intimité PVC", estimatedLength: 35, estimatedPrice: 4800, finalPrice: 4750, salesNotes: "Signé hier soir, à planifier.", scheduledDate: null, signedDate: new Date(now - 1 * 86400000).toISOString().slice(0, 10), installNotes: null },
+    { leadIdx: 0, status: "signee", salesStatus: "signee", installStatus: "en_cours", assignedSalesId: 4, assignedInstallerId: 8, fenceType: "Bois traité", estimatedLength: 40, estimatedPrice: 4200, finalPrice: 4100, salesNotes: "Signé.", installNotes: "Installation en cours aujourd'hui.", scheduledDate: new Date(now).toISOString().slice(0, 10), signedDate: new Date(now - 10 * 86400000).toISOString().slice(0, 10) },
+  ];
+  for (const q of quoteSeeds) {
+    const lead = insertedLeads[q.leadIdx];
+    if (!lead) continue;
+    const timeline = JSON.stringify([
+      { step: "Lead reçu", date: lead.createdAt, note: "Lead créé depuis email" },
+      ...(q.salesStatus !== "nouveau" ? [{ step: "Contacté", date: new Date(now - 7 * 86400000).toISOString() }] : []),
+      ...(["rdv_mesure","envoyee","signee"].includes(q.salesStatus) ? [{ step: "Rendez-vous mesure", date: new Date(now - 5 * 86400000).toISOString() }] : []),
+      ...(["envoyee","signee"].includes(q.salesStatus) ? [{ step: "Soumission envoyée", date: new Date(now - 3 * 86400000).toISOString() }] : []),
+      ...(q.salesStatus === "signee" ? [{ step: "Signée", date: q.signedDate }] : []),
+      ...(q.installStatus === "planifiee" ? [{ step: "Planifiée", date: q.scheduledDate }] : []),
+      ...(q.installStatus === "en_cours" ? [{ step: "Planifiée", date: q.scheduledDate }, { step: "En cours", date: new Date(now).toISOString() }] : []),
+    ]);
+    await db.insert(quotes).values({
+      leadId: lead.id, clientName: lead.clientName, address: lead.address, city: lead.city,
+      province: lead.province, sector: lead.sector, status: q.status as any,
+      salesStatus: q.salesStatus as any, installStatus: q.installStatus as any,
+      assignedSalesId: q.assignedSalesId, assignedInstallerId: q.assignedInstallerId,
+      fenceType: q.fenceType, estimatedLength: q.estimatedLength, estimatedPrice: q.estimatedPrice,
+      finalPrice: q.finalPrice, salesNotes: q.salesNotes, installNotes: q.installNotes,
+      scheduledDate: q.scheduledDate, signedDate: q.signedDate, timeline,
+    });
+  }
+
+  await db.insert(activities).values([
+    { quoteId: 1, userId: 4, userName: "Julien Côté", userRole: "sales_rep", action: "status_change", note: "Soumission envoyée par courriel." },
+    { quoteId: 4, userId: 5, userName: "Isabelle Roy", userRole: "sales_rep", action: "status_change", note: "Contrat signé, acompte reçu." },
+    { quoteId: 4, userId: 3, userName: "Marc Lavoie", userRole: "install_director", action: "assignment", note: "Assigné à Clôtures Pelletier." },
+    { leadId: 1, userId: 2, userName: "Sophie Bergeron", userRole: "sales_director", action: "note", note: "Lead à fort potentiel, à qualifier rapidement." },
+    { quoteId: 6, userId: 8, userName: "Patrick Boivin", userRole: "installer", action: "status_change", note: "Équipe en route ce matin." },
+  ]);
+}
+
+// =============== STORAGE INTERFACE ===============
+export interface IStorage {
+  // Users
+  getUsers(): Promise<User[]>;
+  getUser(id: number): Promise<User | undefined>;
+  getUsersByRole(role: string): Promise<User[]>;
+  createUser(data: InsertUser): Promise<User>;
+  updateUser(id: number, data: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<User | undefined>;
+  // Leads
+  getLeads(): Promise<Lead[]>;
+  getLead(id: number): Promise<Lead | undefined>;
+  getLeadByIntimuraId(intimuraId: string): Promise<Lead | undefined>;
+  createLead(data: InsertLead): Promise<Lead>;
+  updateLead(id: number, data: Partial<InsertLead>): Promise<Lead | undefined>;
+  // Quotes
+  getQuotes(): Promise<Quote[]>;
+  getQuote(id: number): Promise<Quote | undefined>;
+  getQuoteByIntimuraId(intimuraId: string): Promise<Quote | undefined>;
+  createQuote(data: InsertQuote): Promise<Quote>;
+  updateQuote(id: number, data: Partial<InsertQuote>): Promise<Quote | undefined>;
+  deleteQuote(id: number): Promise<Quote | undefined>;
+  // Crews
+  getCrews(): Promise<Crew[]>;
+  createCrew(data: InsertCrew): Promise<Crew>;
+  updateCrew(id: number, data: Partial<InsertCrew>): Promise<Crew | undefined>;
+  deleteCrew(id: number): Promise<Crew | undefined>;
+  // Activities
+  getActivities(filter?: { quoteId?: number; leadId?: number }): Promise<Activity[]>;
+  createActivity(data: InsertActivity): Promise<Activity>;
+}
+
+export class DatabaseStorage implements IStorage {
+  async getUsers() { return db.select().from(users); }
+  async getUser(id: number) { return (await db.select().from(users).where(eq(users.id, id)))[0]; }
+  async getUsersByRole(role: string) { return db.select().from(users).where(eq(users.role, role)); }
+  async createUser(data: InsertUser) {
+    return (await db.insert(users).values(data).returning())[0];
+  }
+  async updateUser(id: number, data: Partial<InsertUser>) {
+    return (await db.update(users).set(data).where(eq(users.id, id)).returning())[0];
+  }
+  async deleteUser(id: number) {
+    const existing = await this.getUser(id);
+    if (!existing) return undefined;
+    await db.update(quotes).set({ assignedSalesId: null }).where(eq(quotes.assignedSalesId, id));
+    await db.update(quotes).set({ assignedInstallerId: null }).where(eq(quotes.assignedInstallerId, id));
+    await db.delete(users).where(eq(users.id, id));
+    return existing;
+  }
+
+  async getLeads() { return db.select().from(leads).orderBy(desc(leads.id)); }
+  async getLead(id: number) { return (await db.select().from(leads).where(eq(leads.id, id)))[0]; }
+  async getLeadByIntimuraId(intimuraId: string) { return (await db.select().from(leads).where(eq(leads.intimuraId, intimuraId)))[0]; }
+  async createLead(data: InsertLead) {
+    const sector = data.sector || detectSector(data);
+    return (await db.insert(leads).values({ ...data, sector }).returning())[0];
+  }
+  async updateLead(id: number, data: Partial<InsertLead>) {
+    return (await db.update(leads).set(data).where(eq(leads.id, id)).returning())[0];
+  }
+
+  async getQuotes() { return db.select().from(quotes).orderBy(desc(quotes.id)); }
+  async getQuote(id: number) { return (await db.select().from(quotes).where(eq(quotes.id, id)))[0]; }
+  async getQuoteByIntimuraId(intimuraId: string) { return (await db.select().from(quotes).where(eq(quotes.intimuraId, intimuraId)))[0]; }
+  async createQuote(data: InsertQuote) {
+    return (await db.insert(quotes).values(data).returning())[0];
+  }
+  async updateQuote(id: number, data: Partial<InsertQuote>) {
+    return (await db.update(quotes).set(data).where(eq(quotes.id, id)).returning())[0];
+  }
+  async deleteQuote(id: number) {
+    const existing = await this.getQuote(id);
+    if (!existing) return undefined;
+    await db.delete(activities).where(eq(activities.quoteId, id));
+    await db.delete(quotes).where(eq(quotes.id, id));
+    return existing;
+  }
+
+  async getCrews() { return db.select().from(crews); }
+  async createCrew(data: InsertCrew) {
+    return (await db.insert(crews).values(data).returning())[0];
+  }
+  async updateCrew(id: number, data: Partial<InsertCrew>) {
+    return (await db.update(crews).set(data).where(eq(crews.id, id)).returning())[0];
+  }
+  async deleteCrew(id: number) {
+    const existing = (await db.select().from(crews).where(eq(crews.id, id)))[0];
+    if (!existing) return undefined;
+    await db.update(quotes).set({ assignedCrewId: null }).where(eq(quotes.assignedCrewId, id));
+    await db.delete(crews).where(eq(crews.id, id));
+    return existing;
+  }
+
+  async getActivities(filter?: { quoteId?: number; leadId?: number }) {
+    if (filter?.quoteId) return db.select().from(activities).where(eq(activities.quoteId, filter.quoteId)).orderBy(desc(activities.id));
+    if (filter?.leadId) return db.select().from(activities).where(eq(activities.leadId, filter.leadId)).orderBy(desc(activities.id));
+    return db.select().from(activities).orderBy(desc(activities.id));
+  }
+  async createActivity(data: InsertActivity) {
+    return (await db.insert(activities).values(data).returning())[0];
+  }
+}
+
+export const storage = new DatabaseStorage();
+export { detectSector, seed };
