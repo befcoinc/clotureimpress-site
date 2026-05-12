@@ -137,14 +137,14 @@
       position: fixed; top: 0; left: 0; right: 0; z-index: 102;
       background: #111;
       border-bottom: 1px solid var(--color-border);
-      display: flex; align-items: center; justify-content: center; gap: 1rem;
-      padding: 0.55rem 1rem;
-      font-size: 0.8rem; letter-spacing: 0.08em; color: var(--color-text-muted);
+      display: block;
+      padding: 0; line-height: 0;
     }
     .affiliation-text { text-transform: uppercase; }
     .affiliation-logo {
-      height: 80px; width: auto;
-      object-fit: contain; vertical-align: middle;
+      width: 100%; height: auto;
+      display: block;
+      object-fit: cover;
     }
 
     /* ===== HEADER / NAV ===== */
