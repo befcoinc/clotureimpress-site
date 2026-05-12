@@ -139,6 +139,13 @@ export async function registerRoutes(
   // ───────────────────────────────────────────────────────────────────
 
   // ── Public invite routes ────────────────────────────────────────────
+  // GET /i/:token — short redirect used in invite emails and SMS gateways
+  app.get("/i/:token", async (req, res) => {
+    const user = await storage.getUserByInviteToken(req.params.token);
+    if (!user) return res.status(404).send("Lien invalide ou expiré");
+    res.redirect(`${process.env.APP_URL || "https://cloture-crm.onrender.com"}/#/accept-invite?token=${req.params.token}`);
+  });
+
   // GET /api/auth/invite/:token — check token, return user info (no sensitive data)
   app.get("/api/auth/invite/:token", async (req, res) => {
     const user = await storage.getUserByInviteToken(req.params.token);
@@ -182,10 +189,10 @@ export async function registerRoutes(
       const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
       await storage.setInviteToken(user.id, token, expiresAt);
       const baseUrl = process.env.APP_URL || `https://cloture-crm.onrender.com`;
-      const inviteUrl = `${baseUrl}/#/accept-invite?token=${token}`;
+      const inviteUrl = `${baseUrl}/i/${token}`;
       const [emailResult, smsResult] = await Promise.all([
         sendInviteEmail(user.email, user.name, user.role, inviteUrl),
-        sendInviteSms(user.phone ?? "", user.name, user.role, inviteUrl),
+        sendInviteSms(user.phone ?? "", user.smsCarrier ?? "", user.name, user.role, inviteUrl),
       ]);
       res.json({
         ...user,
@@ -207,10 +214,10 @@ export async function registerRoutes(
       const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
       await storage.setInviteToken(user.id, token, expiresAt);
       const baseUrl = process.env.APP_URL || "https://cloture-crm.onrender.com";
-      const inviteUrl = `${baseUrl}/#/accept-invite?token=${token}`;
+      const inviteUrl = `${baseUrl}/i/${token}`;
       const [emailResult, smsResult] = await Promise.all([
         sendInviteEmail(user.email, user.name, user.role, inviteUrl),
-        sendInviteSms(user.phone ?? "", user.name, user.role, inviteUrl),
+        sendInviteSms(user.phone ?? "", user.smsCarrier ?? "", user.name, user.role, inviteUrl),
       ]);
       res.json({
         ok: true,

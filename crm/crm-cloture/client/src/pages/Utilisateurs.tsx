@@ -29,6 +29,19 @@ const PERMISSIONS_TABLE: Array<{ perm: string; admin: boolean; sdir: boolean; id
 type UserDialogState = { mode: "create" | "edit"; user?: User } | null;
 type CrewDialogState = { mode: "create" | "edit"; crew?: Crew } | null;
 
+type SmsCarrier = "bell" | "bell_mts" | "fido" | "koodo" | "telus" | "public_mobile" | "pc_mobile" | "sasktel";
+
+const SMS_CARRIER_LABELS: Array<{ value: SmsCarrier; label: string; hint: string }> = [
+  { value: "bell", label: "Bell Canada", hint: "txt.bell.ca" },
+  { value: "bell_mts", label: "Bell MTS", hint: "text.mts.net" },
+  { value: "fido", label: "Fido", hint: "fido.ca" },
+  { value: "koodo", label: "Koodo", hint: "msg.telus.com" },
+  { value: "telus", label: "TELUS", hint: "msg.telus.com" },
+  { value: "public_mobile", label: "Public Mobile", hint: "msg.telus.com" },
+  { value: "pc_mobile", label: "PC Mobile", hint: "mobiletxt.ca" },
+  { value: "sasktel", label: "SaskTel", hint: "sms.sasktel.com" },
+];
+
 export function Utilisateurs() {
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const { data: crews = [] } = useQuery<Crew[]>({ queryKey: ["/api/crews"] });
@@ -424,6 +437,7 @@ function UserForm({ user, isPending, onCancel, onSubmit }: { user?: User; isPend
   const [role, setRole] = useState(user?.role || "sales_rep");
   const [region, setRegion] = useState(user?.region || "Canada");
   const [phone, setPhone] = useState(user?.phone || "");
+  const [smsCarrier, setSmsCarrier] = useState((user as any)?.smsCarrier || "__none__");
   const [active, setActive] = useState(user?.active === false ? "false" : "true");
   const [cities, setCities] = useState(citiesText(user?.cities));
 
@@ -436,6 +450,7 @@ function UserForm({ user, isPending, onCancel, onSubmit }: { user?: User; isPend
       region: region || null,
       cities: citiesJson(cities),
       phone: phone.trim() || null,
+      smsCarrier: smsCarrier === "__none__" ? null : smsCarrier,
       active: active === "true",
     });
   }
@@ -461,6 +476,17 @@ function UserForm({ user, isPending, onCancel, onSubmit }: { user?: User; isPend
           </Select>
         </Field>
         <Field label="Téléphone"><Input value={phone} onChange={e => setPhone(e.target.value)} data-testid="input-user-phone" /></Field>
+        <Field label="Transporteur mobile (SMS gratuit)">
+          <Select value={smsCarrier} onValueChange={setSmsCarrier}>
+            <SelectTrigger data-testid="select-user-sms-carrier"><SelectValue placeholder="Choisir le transporteur" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Aucun</SelectItem>
+              {SMS_CARRIER_LABELS.map((carrier) => (
+                <SelectItem key={carrier.value} value={carrier.value}>{carrier.label} · {carrier.hint}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
         <Field label="Statut">
           <Select value={active} onValueChange={setActive}>
             <SelectTrigger data-testid="select-user-active"><SelectValue /></SelectTrigger>

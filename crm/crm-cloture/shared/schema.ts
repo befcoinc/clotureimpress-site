@@ -11,6 +11,7 @@ export const users = pgTable("users", {
   region: text("region"), // province/region of responsibility
   cities: text("cities"), // JSON array of cities
   phone: text("phone"),
+  smsCarrier: text("sms_carrier"),
   active: boolean("active").notNull().default(true),
   mustChangePassword: boolean("must_change_password").notNull().default(true),
 });

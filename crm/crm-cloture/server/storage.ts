@@ -68,6 +68,7 @@ async function migrate() {
       region TEXT,
       cities TEXT,
       phone TEXT,
+      sms_carrier TEXT,
       active BOOLEAN NOT NULL DEFAULT TRUE
     )
   `);
@@ -76,6 +77,8 @@ async function migrate() {
   // Invite token columns
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_token TEXT;`);
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_expires_at BIGINT;`);
+  // Add mobile carrier for free email-to-SMS gateway delivery
+  await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS sms_carrier TEXT;`);
   // Force password change on first login
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT TRUE;`);
   await db.execute(sql`
@@ -318,13 +321,15 @@ export class DatabaseStorage implements IStorage {
     return existing;
   }
   async getUserByEmailWithHash(email: string) {
-    const rows = await db.execute(sql`SELECT id, name, email, role, region, cities, phone, active, password_hash, must_change_password FROM users WHERE email = ${email} LIMIT 1`);
+    const rows = await db.execute(sql`SELECT id, name, email, role, region, cities, phone, sms_carrier, active, password_hash, must_change_password FROM users WHERE email = ${email} LIMIT 1`);
     if (!rows[0]) return undefined;
     const row = rows[0] as any;
     return {
       id: row.id, name: row.name, email: row.email, role: row.role,
       region: row.region ?? null, cities: row.cities ?? null,
-      phone: row.phone ?? null, active: row.active ?? true,
+      phone: row.phone ?? null,
+      smsCarrier: row.sms_carrier ?? null,
+      active: row.active ?? true,
       passwordHash: row.password_hash ?? null,
       mustChangePassword: row.must_change_password ?? true,
     };

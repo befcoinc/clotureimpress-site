@@ -6,6 +6,7 @@ const TWILIO_FROM = process.env.TWILIO_FROM;
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_SMS_SENDER = process.env.BREVO_SMS_SENDER || "Cloture";
 const TEXTBELT_API_KEY = process.env.TEXTBELT_API_KEY || "textbelt";
+const INVITE_GATEWAY_SENDER = process.env.BREVO_SENDER_EMAIL || process.env.SMTP_USER || "noreply@clotureimpress.com";
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrateur",
@@ -13,6 +14,17 @@ const ROLE_LABELS: Record<string, string> = {
   install_director: "Directeur des installations",
   sales_rep: "Vendeur / Représentant",
   installer: "Installateur / Sous-traitant",
+};
+
+const SMS_GATEWAYS: Record<string, string> = {
+  bell: "txt.bell.ca",
+  bell_mts: "text.mts.net",
+  fido: "fido.ca",
+  koodo: "msg.telus.com",
+  telus: "msg.telus.com",
+  public_mobile: "msg.telus.com",
+  pc_mobile: "mobiletxt.ca",
+  sasktel: "sms.sasktel.com",
 };
 
 function normalizePhone(raw: string): string | null {
@@ -32,6 +44,7 @@ function normalizePhone(raw: string): string | null {
 
 export async function sendInviteSms(
   toRaw: string,
+  carrierRaw: string,
   name: string,
   role: string,
   inviteUrl: string
@@ -43,9 +56,40 @@ export async function sendInviteSms(
     return { ok: false, error: msg };
   }
 
+  const carrier = (carrierRaw || "").trim().toLowerCase();
+  const gateway = SMS_GATEWAYS[carrier];
   const firstName = (name || "").split(" ")[0] || "Bonjour";
   const roleLabel = ROLE_LABELS[role] ?? role;
-  const body = `Cloture Impress CRM: Bonjour ${firstName}, votre compte (${roleLabel}) est pret. Creez votre mot de passe ici: ${inviteUrl} (valide 7 jours).`;
+  const body = `Cloture Impress CRM: Bonjour ${firstName}, votre compte (${roleLabel}) est pret. Creez votre mot de passe ici: ${inviteUrl}`;
+
+  if (gateway) {
+    try {
+      const recipient = `${to.replace(/^\+1/, "").replace(/\D/g, "")}@${gateway}`;
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": process.env.BREVO_API_KEY || "",
+        },
+        body: JSON.stringify({
+          sender: { name: "Cloture Impress CRM", email: INVITE_GATEWAY_SENDER },
+          to: [{ email: recipient }],
+          subject: "",
+          textContent: body,
+        }),
+      });
+      const payload = (await response.json()) as any;
+      if (response.ok && payload?.messageId) {
+        console.log("[sms] Invite sent successfully to", recipient, "via email-to-sms gateway messageId:", payload.messageId);
+        return { ok: true, sid: String(payload.messageId) };
+      }
+      const msg = payload?.message || payload?.code || `Gateway email error (${response.status})`;
+      console.error("[sms] Gateway email failed for", recipient, ":", msg);
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      console.error("[sms] Gateway email exception for", to, ":", msg);
+    }
+  }
 
   // Preferred provider: Twilio (if configured)
   if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_FROM) {
