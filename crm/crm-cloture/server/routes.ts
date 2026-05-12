@@ -91,7 +91,7 @@ export async function registerRoutes(
       req.logIn(user, (loginErr) => {
         if (loginErr) return next(loginErr);
         const { passwordHash, ...safeUser } = user;
-        res.json(safeUser);
+        res.json({ ...safeUser, mustChangePassword: user.mustChangePassword ?? true });
       });
     })(req, res, next);
   });
@@ -106,7 +106,10 @@ export async function registerRoutes(
   app.get("/api/auth/me", (req, res) => {
     if (!req.isAuthenticated() || !req.user) return res.status(401).json({ error: "Non authentifié" });
     const { passwordHash, ...safeUser } = req.user as any;
-    res.json(safeUser);
+    // Re-fetch mustChangePassword fresh from DB
+    storage.getUserByEmailWithHash((req.user as any).email).then(u => {
+      res.json({ ...safeUser, mustChangePassword: u?.mustChangePassword ?? true });
+    }).catch(() => res.json(safeUser));
   });
 
   app.post("/api/auth/change-password", requireAuth, async (req, res, next) => {
@@ -156,7 +159,7 @@ export async function registerRoutes(
       // Log the user in automatically
       req.logIn(user, (err) => {
         if (err) return next(err);
-        res.json(user);
+        res.json({ ...user, mustChangePassword: false });
       });
     } catch (err) {
       next(err);

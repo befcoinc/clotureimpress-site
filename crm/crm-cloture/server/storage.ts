@@ -76,6 +76,8 @@ async function migrate() {
   // Invite token columns
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_token TEXT;`);
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_expires_at BIGINT;`);
+  // Force password change on first login
+  await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT TRUE;`);
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS leads (
       id SERIAL PRIMARY KEY,
@@ -316,7 +318,7 @@ export class DatabaseStorage implements IStorage {
     return existing;
   }
   async getUserByEmailWithHash(email: string) {
-    const rows = await db.execute(sql`SELECT id, name, email, role, region, cities, phone, active, password_hash FROM users WHERE email = ${email} LIMIT 1`);
+    const rows = await db.execute(sql`SELECT id, name, email, role, region, cities, phone, active, password_hash, must_change_password FROM users WHERE email = ${email} LIMIT 1`);
     if (!rows[0]) return undefined;
     const row = rows[0] as any;
     return {
@@ -324,10 +326,11 @@ export class DatabaseStorage implements IStorage {
       region: row.region ?? null, cities: row.cities ?? null,
       phone: row.phone ?? null, active: row.active ?? true,
       passwordHash: row.password_hash ?? null,
+      mustChangePassword: row.must_change_password ?? true,
     };
   }
   async setUserPassword(id: number, passwordHash: string): Promise<void> {
-    await db.execute(sql`UPDATE users SET password_hash = ${passwordHash} WHERE id = ${id}`);
+    await db.execute(sql`UPDATE users SET password_hash = ${passwordHash}, must_change_password = FALSE WHERE id = ${id}`);
   }
   async setInviteToken(userId: number, token: string, expiresAt: number): Promise<void> {
     await db.execute(sql`UPDATE users SET invite_token = ${token}, invite_expires_at = ${expiresAt} WHERE id = ${userId}`);
