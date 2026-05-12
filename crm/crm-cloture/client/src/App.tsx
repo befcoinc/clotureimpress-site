@@ -25,6 +25,7 @@ import { Secteurs } from "@/pages/Secteurs";
 import { Heatmap } from "@/pages/Heatmap";
 import { Utilisateurs } from "@/pages/Utilisateurs";
 import { Architecture } from "@/pages/Architecture";
+import { LanguageProvider, useLanguage } from "@/lib/language-context";
 
 function AppRouter() {
   return (
@@ -52,6 +53,7 @@ function AppRouter() {
 
 function AppWithAuth() {
   const { user, isLoading } = useAuth();
+  const { t } = useLanguage();
 
   // Accept-invite page is accessible without login
   if (window.location.hash.startsWith("#/accept-invite")) {
@@ -61,7 +63,7 @@ function AppWithAuth() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-foreground">
-        Chargement…
+        {t("layout.loading")}
       </div>
     );
   }
@@ -88,9 +90,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <AuthProvider>
-          <AppWithAuth />
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <AppWithAuth />
+          </AuthProvider>
+        </LanguageProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

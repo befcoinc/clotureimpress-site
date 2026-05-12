@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRole } from "@/lib/role-context";
+import { useLanguage } from "@/lib/language-context";
 import type { User } from "@shared/schema";
 import { ROLES } from "@shared/schema";
 
 export function RoleSwitcher({ compact = false }: { compact?: boolean }) {
   const { currentUser, setCurrentUser } = useRole();
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
+  const { t } = useLanguage();
 
   return (
     <Select
@@ -20,11 +22,11 @@ export function RoleSwitcher({ compact = false }: { compact?: boolean }) {
         data-testid="select-role"
         className={
           compact
-            ? "w-[180px] bg-sidebar-accent border-sidebar-border text-sidebar-foreground"
+            ? "w-[140px] bg-sidebar-accent border-sidebar-border text-sidebar-foreground"
             : "w-full bg-sidebar-accent border-sidebar-border text-sidebar-foreground hover-elevate"
         }
       >
-        <SelectValue placeholder="Choisir un utilisateur" />
+        <SelectValue placeholder={t("roleSwitcher.placeholder")} />
       </SelectTrigger>
       <SelectContent>
         {users.map((u) => (

@@ -9,6 +9,7 @@ import { Logo } from "./Logo";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { useRole } from "@/lib/role-context";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/lib/language-context";
 import { cn } from "@/lib/utils";
 import type { Permission } from "@/lib/role-context";
 import type { Quote } from "@shared/schema";
@@ -17,39 +18,52 @@ import { Badge } from "@/components/ui/badge";
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey:
+    | "nav.dashboard"
+    | "nav.leads"
+    | "nav.intimuraImport"
+    | "nav.salesDispatch"
+    | "nav.quotes"
+    | "nav.sharedCalendar"
+    | "nav.installDispatch"
+    | "nav.sectorHeatmap"
+    | "nav.salesBoard"
+    | "nav.installBoard"
+    | "nav.sectorsPlanning"
+    | "nav.usersRoles"
+    | "nav.architecture";
   icon: any;
   perm?: Permission;
   badge?: string;
 }
 
-const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
+const NAV_SECTIONS: { labelKey: "nav.operations" | "nav.pilotage" | "nav.system"; items: NavItem[] }[] = [
   {
-    label: "Opérations",
+    labelKey: "nav.operations",
     items: [
-      { href: "/", label: "Tableau de bord", icon: LayoutDashboard, perm: "view_admin" },
-      { href: "/leads", label: "Leads Intimura", icon: Inbox, perm: "view_sales" },
-      { href: "/intimura", label: "Import Intimura", icon: UploadCloud, perm: "edit_lead", badge: "source" },
-      { href: "/dispatch-vendeur", label: "Dispatch vendeur", icon: UserCheck, perm: "assign_sales" },
-      { href: "/soumissions", label: "Soumissions", icon: FileText, perm: "view_sales" },
-      { href: "/calendrier", label: "Calendrier partagé", icon: CalendarDays, badge: "team" },
-      { href: "/dispatch-installation", label: "Dispatch installation", icon: Wrench, perm: "view_install" },
-      { href: "/heatmap", label: "Heatmap secteurs", icon: Flame, perm: "view_sectors", badge: "hot" },
+      { href: "/", labelKey: "nav.dashboard", icon: LayoutDashboard, perm: "view_admin" },
+      { href: "/leads", labelKey: "nav.leads", icon: Inbox, perm: "view_sales" },
+      { href: "/intimura", labelKey: "nav.intimuraImport", icon: UploadCloud, perm: "edit_lead", badge: "source" },
+      { href: "/dispatch-vendeur", labelKey: "nav.salesDispatch", icon: UserCheck, perm: "assign_sales" },
+      { href: "/soumissions", labelKey: "nav.quotes", icon: FileText, perm: "view_sales" },
+      { href: "/calendrier", labelKey: "nav.sharedCalendar", icon: CalendarDays, badge: "team" },
+      { href: "/dispatch-installation", labelKey: "nav.installDispatch", icon: Wrench, perm: "view_install" },
+      { href: "/heatmap", labelKey: "nav.sectorHeatmap", icon: Flame, perm: "view_sectors", badge: "hot" },
     ],
   },
   {
-    label: "Pilotage",
+    labelKey: "nav.pilotage",
     items: [
-      { href: "/tableau-ventes", label: "Tableau ventes", icon: ShieldCheck, perm: "view_sales" },
-      { href: "/tableau-installation", label: "Tableau installation", icon: Hammer, perm: "view_install" },
-      { href: "/secteurs", label: "Secteurs & planification", icon: MapPin, perm: "view_sectors" },
+      { href: "/tableau-ventes", labelKey: "nav.salesBoard", icon: ShieldCheck, perm: "view_sales" },
+      { href: "/tableau-installation", labelKey: "nav.installBoard", icon: Hammer, perm: "view_install" },
+      { href: "/secteurs", labelKey: "nav.sectorsPlanning", icon: MapPin, perm: "view_sectors" },
     ],
   },
   {
-    label: "Système",
+    labelKey: "nav.system",
     items: [
-      { href: "/utilisateurs", label: "Utilisateurs & rôles", icon: Users },
-      { href: "/architecture", label: "Architecture CRM", icon: Network },
+      { href: "/utilisateurs", labelKey: "nav.usersRoles", icon: Users },
+      { href: "/architecture", labelKey: "nav.architecture", icon: Network },
     ],
   },
 ];
@@ -58,6 +72,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { can, role, currentUser } = useRole();
   const { logout } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -72,9 +87,9 @@ export function Layout({ children }: { children: ReactNode }) {
             const visible = section.items.filter((it) => !it.perm || can(it.perm));
             if (visible.length === 0) return null;
             return (
-              <div key={section.label} className="mb-5">
+              <div key={section.labelKey} className="mb-5">
                 <div className="px-2 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
-                  {section.label}
+                  {t(section.labelKey)}
                 </div>
                 <ul className="space-y-0.5">
                   {visible.map((item) => {
@@ -94,7 +109,7 @@ export function Layout({ children }: { children: ReactNode }) {
                             )}
                           >
                             <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-                            <span className="truncate">{item.label}</span>
+                            <span className="truncate">{t(item.labelKey)}</span>
                             {item.badge && (
                               <span className="ml-auto rounded-full bg-sidebar-primary px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-primary-foreground">
                                 {item.badge}
@@ -116,11 +131,40 @@ export function Layout({ children }: { children: ReactNode }) {
           {role === "admin" && (
             <div>
               <div className="text-[10px] uppercase tracking-[0.14em] text-sidebar-foreground/40 mb-1.5">
-                Vue simulée
+                {t("layout.simulatedView")}
               </div>
               <RoleSwitcher />
             </div>
           )}
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.14em] text-sidebar-foreground/40 mb-1.5">
+              {t("lang.label")}
+            </div>
+            <div className="flex rounded-md border border-sidebar-border overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setLanguage("fr")}
+                data-testid="button-lang-fr"
+                className={cn(
+                  "h-8 flex-1 text-[11px] font-semibold",
+                  language === "fr" ? "bg-sidebar-primary text-sidebar-primary-foreground" : "bg-sidebar-accent text-sidebar-foreground/70"
+                )}
+              >
+                {t("lang.fr")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage("en")}
+                data-testid="button-lang-en"
+                className={cn(
+                  "h-8 flex-1 text-[11px] font-semibold border-l border-sidebar-border",
+                  language === "en" ? "bg-sidebar-primary text-sidebar-primary-foreground" : "bg-sidebar-accent text-sidebar-foreground/70"
+                )}
+              >
+                {t("lang.en")}
+              </button>
+            </div>
+          </div>
           {/* Current user + logout */}
           <div className="flex items-center gap-2 pt-1">
             <div className="flex-1 min-w-0">
@@ -129,7 +173,7 @@ export function Layout({ children }: { children: ReactNode }) {
             </div>
             <button
               type="button"
-              title="Se déconnecter"
+              title={t("layout.logout")}
               onClick={() => logout()}
               className="shrink-0 rounded-md p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
             >
@@ -141,9 +185,33 @@ export function Layout({ children }: { children: ReactNode }) {
 
       {/* Main content */}
       <main className="flex-1 min-w-0 flex flex-col">
-        <header className="md:hidden border-b border-border bg-sidebar text-sidebar-foreground px-4 py-3 flex items-center justify-between">
+        <header className="md:hidden border-b border-border bg-sidebar text-sidebar-foreground px-4 py-3 flex items-center justify-between gap-2">
           <Logo />
-          <RoleSwitcher compact />
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setLanguage("fr")}
+              data-testid="button-lang-fr-mobile"
+              className={cn(
+                "h-8 rounded-md px-2 text-[10px] font-semibold border border-sidebar-border",
+                language === "fr" ? "bg-sidebar-primary text-sidebar-primary-foreground" : "bg-sidebar-accent text-sidebar-foreground/70"
+              )}
+            >
+              {t("lang.fr")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage("en")}
+              data-testid="button-lang-en-mobile"
+              className={cn(
+                "h-8 rounded-md px-2 text-[10px] font-semibold border border-sidebar-border",
+                language === "en" ? "bg-sidebar-primary text-sidebar-primary-foreground" : "bg-sidebar-accent text-sidebar-foreground/70"
+              )}
+            >
+              {t("lang.en")}
+            </button>
+            <RoleSwitcher compact />
+          </div>
         </header>
         <div className="flex-1 min-w-0 overflow-x-hidden">{children}</div>
         <UpdateReminderPopup canViewSales={can("view_sales")} currentUserId={currentUser?.id} role={role} />
@@ -155,6 +223,7 @@ export function Layout({ children }: { children: ReactNode }) {
 function UpdateReminderPopup({ canViewSales, currentUserId, role }: { canViewSales: boolean; currentUserId?: number; role: string }) {
   const [dismissed, setDismissed] = useState(false);
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"], enabled: canViewSales });
+  const { language, t } = useLanguage();
 
   const reminders = useMemo(() => {
     if (!canViewSales) return [];
@@ -180,9 +249,9 @@ function UpdateReminderPopup({ canViewSales, currentUserId, role }: { canViewSal
           <AlertTriangle className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold">Dossiers à mettre à jour</div>
+          <div className="text-sm font-semibold">{t("reminder.title")}</div>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Ces soumissions ouvertes n’ont pas été mises à jour depuis plus de 24 h.
+            {t("reminder.description")}
           </p>
         </div>
         <button
@@ -201,13 +270,15 @@ function UpdateReminderPopup({ canViewSales, currentUserId, role }: { canViewSal
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold">{quote.clientName}</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">{quote.city || "Ville non définie"} · dernière mise à jour : {lastUpdate ? lastUpdate.toLocaleDateString("fr-CA") : "à confirmer"}</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {quote.city || t("reminder.cityUndefined")} · {t("reminder.lastUpdate")} : {lastUpdate ? lastUpdate.toLocaleDateString(language === "fr" ? "fr-CA" : "en-CA") : t("reminder.toConfirm")}
+                  </div>
                 </div>
-                <Badge variant="outline" className="shrink-0 text-[10px]">Relance</Badge>
+                <Badge variant="outline" className="shrink-0 text-[10px]">{t("reminder.followup")}</Badge>
               </div>
               <Link href={`/soumissions/${quote.id}`}>
                 <Button size="sm" className="mt-2 h-8 w-full" data-testid={`button-open-reminder-${quote.id}`}>
-                  Ouvrir et cocher l’étape
+                  {t("reminder.openAndCheck")}
                 </Button>
               </Link>
             </div>
