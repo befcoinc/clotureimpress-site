@@ -42,6 +42,12 @@ const SMS_CARRIER_LABELS: Array<{ value: SmsCarrier; label: string; hint: string
   { value: "sasktel", label: "SaskTel", hint: "sms.sasktel.com" },
 ];
 
+function getCarrierLabel(carrier: string | null | undefined): string | null {
+  if (!carrier) return null;
+  const match = SMS_CARRIER_LABELS.find(c => c.value === carrier);
+  return match ? match.label : null;
+}
+
 export function Utilisateurs() {
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const { data: crews = [] } = useQuery<Crew[]>({ queryKey: ["/api/crews"] });
@@ -223,6 +229,9 @@ export function Utilisateurs() {
                               <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white">✓ Compte complété</Badge>
                             ) : (
                               <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-900 hover:bg-amber-100">⏳ En attente</Badge>
+                            )}
+                            {getCarrierLabel((u as any).smsCarrier) && (
+                              <Badge variant="outline" className="text-[10px] text-blue-600 border-blue-200">📱 {getCarrierLabel((u as any).smsCarrier)}</Badge>
                             )}
                           </div>
                         </div>
