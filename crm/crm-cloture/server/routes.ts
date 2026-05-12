@@ -182,8 +182,8 @@ export async function registerRoutes(
       await storage.setInviteToken(user.id, token, expiresAt);
       const baseUrl = process.env.APP_URL || `https://cloture-crm.onrender.com`;
       const inviteUrl = `${baseUrl}/#/accept-invite?token=${token}`;
-      sendInviteEmail(user.email, user.name, user.role, inviteUrl); // fire and forget
-      res.json(user);
+      const emailResult = await sendInviteEmail(user.email, user.name, user.role, inviteUrl);
+      res.json({ ...user, inviteUrl, emailSent: emailResult.ok, emailError: emailResult.error });
     } catch (error: any) {
       res.status(400).json({ error: error?.message || "Impossible de créer l'utilisateur" });
     }
@@ -197,8 +197,8 @@ export async function registerRoutes(
       await storage.setInviteToken(user.id, token, expiresAt);
       const baseUrl = process.env.APP_URL || "https://cloture-crm.onrender.com";
       const inviteUrl = `${baseUrl}/#/accept-invite?token=${token}`;
-      await sendInviteEmail(user.email, user.name, user.role, inviteUrl);
-      res.json({ ok: true, inviteUrl });
+      const emailResult = await sendInviteEmail(user.email, user.name, user.role, inviteUrl);
+      res.json({ ok: true, inviteUrl, emailSent: emailResult.ok, emailError: emailResult.error });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Erreur lors du renvoi" });
     }

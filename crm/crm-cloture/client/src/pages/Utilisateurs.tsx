@@ -36,6 +36,7 @@ export function Utilisateurs() {
   const { toast } = useToast();
   const [userDialog, setUserDialog] = useState<UserDialogState>(null);
   const [crewDialog, setCrewDialog] = useState<CrewDialogState>(null);
+  const [inviteResult, setInviteResult] = useState<null | { email: string; name: string; inviteUrl: string; emailSent: boolean; emailError?: string }>(null);
 
   const canManage = role === "admin";
 
@@ -53,10 +54,14 @@ export function Utilisateurs() {
 
   const createUser = useMutation({
     mutationFn: async (payload: Partial<User>) => (await apiRequest("POST", "/api/users", payload)).json(),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setUserDialog(null);
-      toast({ title: "Utilisateur créé" });
+      if (data?.inviteUrl) {
+        setInviteResult({ email: data.email, name: data.name, inviteUrl: data.inviteUrl, emailSent: !!data.emailSent, emailError: data.emailError });
+      } else {
+        toast({ title: "Utilisateur créé" });
+      }
     },
     onError: onMutationError,
   });
@@ -83,9 +88,13 @@ export function Utilisateurs() {
 
   const resendInvite = useMutation({
     mutationFn: async (id: number) => (await apiRequest("POST", `/api/users/${id}/resend-invite`, {})).json(),
-    onSuccess: (_data, id) => {
+    onSuccess: (data: any, id) => {
       const u = users.find(x => x.id === id);
-      toast({ title: "Invitation renvoyée", description: u ? `Email envoyé à ${u.email}` : undefined });
+      if (data?.inviteUrl && u) {
+        setInviteResult({ email: u.email, name: u.name, inviteUrl: data.inviteUrl, emailSent: !!data.emailSent, emailError: data.emailError });
+      } else {
+        toast({ title: "Invitation renvoyée" });
+      }
     },
     onError: onMutationError,
   });
@@ -309,6 +318,54 @@ export function Utilisateurs() {
               onCancel={() => setUserDialog(null)}
               onSubmit={(payload) => userDialog.mode === "edit" && userDialog.user ? updateUser.mutate({ id: userDialog.user.id, payload }) : createUser.mutate(payload)}
             />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!inviteResult} onOpenChange={(open) => !open && setInviteResult(null)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Lien d'invitation pour {inviteResult?.name}</DialogTitle>
+            <DialogDescription>
+              {inviteResult?.emailSent
+                ? `Un email a été envoyé à ${inviteResult.email}. S'il ne le reçoit pas (vérifie le spam), copie le lien ci-dessous et envoie-le par SMS, WhatsApp ou tout autre moyen.`
+                : `⚠️ L'email n'a PAS pu être envoyé automatiquement à ${inviteResult?.email}. Copie le lien ci-dessous et envoie-le manuellement (SMS, WhatsApp, autre courriel...).`}
+            </DialogDescription>
+          </DialogHeader>
+          {inviteResult && (
+            <div className="space-y-3">
+              <div className="rounded-md border border-border bg-muted/50 p-3 break-all text-[13px] font-mono select-all">
+                {inviteResult.inviteUrl}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(inviteResult.inviteUrl);
+                    toast({ title: "Lien copié dans le presse-papiers" });
+                  }}
+                >
+                  📋 Copier le lien
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const subject = encodeURIComponent("Ton accès au CRM Clôture Impress");
+                    const body = encodeURIComponent(`Bonjour ${inviteResult.name},\n\nVoici le lien pour créer ton mot de passe et accéder au CRM Clôture Impress :\n\n${inviteResult.inviteUrl}\n\nCe lien est valide 7 jours.\n\nMerci !`);
+                    window.location.href = `mailto:${inviteResult.email}?subject=${subject}&body=${body}`;
+                  }}
+                >
+                  ✉️ Envoyer par courriel manuellement
+                </Button>
+              </div>
+              {inviteResult.emailError && (
+                <p className="text-[12px] text-muted-foreground">Détail technique : {inviteResult.emailError}</p>
+              )}
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setInviteResult(null)}>Fermer</Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

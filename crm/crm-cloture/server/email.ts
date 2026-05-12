@@ -34,14 +34,17 @@ export async function sendInviteEmail(
   name: string,
   role: string,
   inviteUrl: string
-) {
+): Promise<{ ok: boolean; error?: string; messageId?: string }> {
   const roleLabel = ROLE_LABELS[role] ?? role;
   const firstName = name.split(" ")[0];
 
   if (!SMTP_PASS) {
-    console.error("[email] Cannot send to", to, "— SMTP_PASS not configured");
-    return;
+    const msg = "SMTP_PASS not configured";
+    console.error("[email] Cannot send to", to, "—", msg);
+    return { ok: false, error: msg };
   }
+
+  console.log("[email] Attempting to send invite to", to, "via", SMTP_HOST + ":" + SMTP_PORT, "as", SMTP_USER);
 
   try {
     const info = await transporter.sendMail({
@@ -126,7 +129,10 @@ export async function sendInviteEmail(
 </html>`,
     });
     console.log("[email] Invite sent successfully to", to, "messageId:", info.messageId);
+    return { ok: true, messageId: info.messageId };
   } catch (err: any) {
-    console.error("[email] Failed to send invite to", to, ":", err?.message || err);
+    const msg = err?.message || String(err);
+    console.error("[email] Failed to send invite to", to, ":", msg);
+    return { ok: false, error: msg };
   }
 }
