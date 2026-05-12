@@ -135,12 +135,13 @@ export async function sendInviteEmail(
         }),
       });
       const payload = (await response.json()) as any;
+      console.log("[email] Brevo response:", response.status, JSON.stringify(payload));
       if (response.ok && payload?.messageId) {
         console.log("[email] Invite sent successfully to", to, "via brevo messageId:", payload.messageId);
         return { ok: true, messageId: String(payload.messageId) };
       }
       const msg = payload?.message || payload?.code || `Brevo error (${response.status})`;
-      console.error("[email] Brevo failed to send invite to", to, ":", msg);
+      console.error("[email] Brevo failed to send invite to", to, ":", msg, "\nPayload:", JSON.stringify(payload));
     } catch (err: any) {
       const msg = err?.message || String(err);
       console.error("[email] Brevo exception for", to, ":", msg);
