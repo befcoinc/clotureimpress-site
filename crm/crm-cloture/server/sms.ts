@@ -3,6 +3,7 @@ import twilio from "twilio";
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_FROM = process.env.TWILIO_FROM;
+const TEXTBELT_API_KEY = process.env.TEXTBELT_API_KEY || "textbelt";
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrateur",
@@ -33,12 +34,6 @@ export async function sendInviteSms(
   role: string,
   inviteUrl: string
 ): Promise<{ ok: boolean; error?: string; sid?: string }> {
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_FROM) {
-    const msg = "Twilio not configured";
-    console.warn("[sms] Skipped:", msg);
-    return { ok: false, error: msg };
-  }
-
   const to = normalizePhone(toRaw);
   if (!to) {
     const msg = "Invalid or missing phone number";
@@ -48,16 +43,46 @@ export async function sendInviteSms(
 
   const firstName = (name || "").split(" ")[0] || "Bonjour";
   const roleLabel = ROLE_LABELS[role] ?? role;
+  const body = `Cloture Impress CRM: Bonjour ${firstName}, votre compte (${roleLabel}) est pret. Creez votre mot de passe ici: ${inviteUrl} (valide 7 jours).`;
 
+  // Preferred provider: Twilio (if configured)
+  if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_FROM) {
+    try {
+      const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+      const message = await client.messages.create({
+        from: TWILIO_FROM,
+        to,
+        body,
+      });
+      console.log("[sms] Invite sent successfully to", to, "via twilio sid:", message.sid);
+      return { ok: true, sid: message.sid };
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      console.error("[sms] Twilio failed for", to, ":", msg);
+      // Continue with fallback provider below.
+    }
+  }
+
+  // Zero-config fallback: Textbelt (free key allows limited sends)
   try {
-    const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-    const message = await client.messages.create({
-      from: TWILIO_FROM,
-      to,
-      body: `Cloture Impress CRM: Bonjour ${firstName}, votre compte (${roleLabel}) est pret. Creez votre mot de passe ici: ${inviteUrl} (valide 7 jours).`,
+    const response = await fetch("https://textbelt.com/text", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        phone: to,
+        message: body,
+        key: TEXTBELT_API_KEY,
+      }).toString(),
     });
-    console.log("[sms] Invite sent successfully to", to, "sid:", message.sid);
-    return { ok: true, sid: message.sid };
+    const payload = (await response.json()) as any;
+    if (payload?.success) {
+      const sid = payload?.textId ? String(payload.textId) : undefined;
+      console.log("[sms] Invite sent successfully to", to, "via textbelt id:", sid || "n/a");
+      return { ok: true, sid };
+    }
+    const msg = payload?.error || "Unknown textbelt error";
+    console.error("[sms] Textbelt failed to send invite to", to, ":", msg);
+    return { ok: false, error: msg };
   } catch (err: any) {
     const msg = err?.message || String(err);
     console.error("[sms] Failed to send invite to", to, ":", msg);
