@@ -254,8 +254,13 @@
     /* ===== SERVICES ===== */
     .services-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(min(300px,100%), 1fr));
-      gap: var(--space-4);
+      grid-template-columns: repeat(auto-fit, minmax(min(280px,100%), 1fr));
+      gap: var(--space-5);
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    @media (min-width: 1100px) {
+      .services-grid { grid-template-columns: repeat(4, 1fr); }
     }
     .service-card {
       background: var(--color-surface-2);
@@ -303,6 +308,14 @@
       font-weight: 600; margin-bottom: var(--space-3);
     }
     .service-card p { font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.6; }
+    .service-card-cta {
+      background: linear-gradient(135deg, rgba(201,163,90,0.12) 0%, rgba(201,163,90,0.02) 100%);
+      border: 1px solid rgba(201,163,90,0.3);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .service-card-cta:hover { border-color: rgba(201,163,90,0.6); }
+    .service-cta-body { text-align: center; padding: var(--space-8); }
+    .service-card-cta h3 { color: var(--color-gold); }
 
     /* ===== WHY US ===== */
     .why-grid {
@@ -332,7 +345,8 @@
     .why-visual::before {
       content: '';
       position: absolute; inset: 0;
-      background: radial-gradient(ellipse at 50% 80%, rgba(201,163,90,0.15) 0%, transparent 60%);
+      background: linear-gradient(180deg, rgba(10,10,10,0.2) 0%, rgba(10,10,10,0.7) 100%);
+      z-index: 1;
     }
     .why-visual svg {
       width: 70%; height: auto; max-width: 320px;
@@ -345,6 +359,7 @@
       background: rgba(10,10,10,0.88); border: 1px solid var(--color-gold);
       backdrop-filter: blur(8px);
       padding: var(--space-4) var(--space-5); border-radius: var(--radius-md);
+      z-index: 2;
     }
     .why-visual-badge .badge-value {
       font-family: var(--font-display); font-size: var(--text-2xl);
@@ -398,10 +413,6 @@
       background: rgba(10,10,10,0.7);
       padding: var(--space-1) var(--space-3);
       border-radius: var(--radius-xs);
-    }
-    .gallery-item:first-child {
-      grid-column: span 2; grid-row: span 2;
-      aspect-ratio: unset; min-height: 420px;
     }
     .gallery-item:first-child svg { max-width: 380px; }
 
@@ -545,7 +556,6 @@
       .footer-grid { grid-template-columns: 1fr 1fr; }
       .footer-brand { grid-column: span 2; }
       .gallery-grid { grid-template-columns: 1fr 1fr; }
-      .gallery-item:first-child { grid-column: span 2; min-height: 280px; }
     }
     @media (max-width: 640px) {
       .hero-stats { gap: var(--space-6); }
@@ -555,7 +565,6 @@
       .footer-grid { grid-template-columns: 1fr; }
       .footer-brand { grid-column: span 1; }
       .gallery-grid { grid-template-columns: 1fr; }
-      .gallery-item:first-child { grid-column: span 1; min-height: 240px; }
       .cta-banner .section-heading { font-size: var(--text-xl); }
       .floating-cta a span:not(.icon) { display: none; }
       .nav-cta .btn { display: none; }
@@ -724,6 +733,14 @@
           <p>Chaque terrain est unique. Nous mesurons, planifions et adaptons chaque installation à votre espace pour une finition parfaite.</p>
         </div>
       </article>
+      <article class="service-card service-card-cta reveal">
+        <div class="service-cta-body">
+          <span class="eyebrow" style="margin-bottom: var(--space-3);">Soumission gratuite</span>
+          <h3>Un projet en tête&nbsp;?</h3>
+          <p style="margin-bottom: var(--space-5);">Recevez votre soumission personnalisée en moins de 48 heures.</p>
+          <a href="#soumission" class="btn btn-gold">Démarrer mon projet</a>
+        </div>
+      </article>
     </div>
   </div>
 </section>
@@ -770,18 +787,7 @@
         </ul>
       </div>
       <div class="why-visual reveal">
-        <svg viewBox="0 0 200 250" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <!-- ground line -->
-          <path d="M5 220h190" stroke-width="2"/>
-          <!-- fence posts (vertical) -->
-          <path d="M20 220V60M50 220V60M80 220V60M110 220V60M140 220V60M170 220V60"/>
-          <!-- horizontal rails -->
-          <path d="M5 80h190M5 180h190"/>
-          <!-- ornamental tops (fleur de lis style) -->
-          <path d="M20 60l-6-12 6-6 6 6-6 12M50 60l-6-12 6-6 6 6-6 12M80 60l-6-12 6-6 6 6-6 12M110 60l-6-12 6-6 6 6-6 12M140 60l-6-12 6-6 6 6-6 12M170 60l-6-12 6-6 6 6-6 12"/>
-          <!-- decorative scrollwork between posts -->
-          <path d="M30 130c5-10 15-10 20 0M60 130c5-10 15-10 20 0M90 130c5-10 15-10 20 0M120 130c5-10 15-10 20 0M150 130c5-10 15-10 20 0" stroke-width="1"/>
-        </svg>
+        <img src="images/service-ornementale.jpg" alt="Installation Clôture Impress" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0;">
         <div class="why-visual-badge">
           <span class="badge-value">+500</span>
           <span class="badge-label">projets complétés</span>
@@ -801,8 +807,8 @@
     </div>
     <div class="gallery-grid reveal">
       <div class="gallery-item">
-        <img src="images/galerie-1.jpg" alt="Clôture ornementale à Montréal">
-        <span class="gallery-item-label">Clôture ornementale · Montréal</span>
+        <img src="images/galerie-1.jpg" alt="Réalisation Clôture Impress">
+        <span class="gallery-item-label">Projet résidentiel · Montréal</span>
       </div>
       <div class="gallery-item">
         <img src="images/galerie-2.jpg" alt="Clôture d'intimité sur la Rive-Nord">
@@ -992,6 +998,8 @@
           <li><a href="#services">Clôture d'intimité</a></li>
           <li><a href="#services">Commercial & industriel</a></li>
           <li><a href="#services">Portails & accès</a></li>
+          <li><a href="#services">Clôture de verre</a></li>
+          <li><a href="#services">Installation sur mesure</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -1021,8 +1029,10 @@
 <!-- ===== FLOATING CTA ===== -->
 <div class="floating-cta" aria-label="Boutons flottants">
   <a href="tel:4506240821" class="floating-call" aria-label="Appeler maintenant">
-    <span aria-hidden="true">📞</span>
-    <span>(450) 624-0821</span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+    </svg>
+    <span>450.624.0821</span>
   </a>
 </div>
 
