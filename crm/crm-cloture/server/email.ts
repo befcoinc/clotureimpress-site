@@ -10,6 +10,36 @@ const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "Cloture Impress CRM"
 const BREVO_REPLY_TO = process.env.BREVO_REPLY_TO || BREVO_SENDER_EMAIL;
 const FROM = `Clôture Impress CRM <${SMTP_USER}>`;
 
+async function getBrevoBlockReason(email: string): Promise<string | null> {
+  if (!BREVO_API_KEY) return null;
+  try {
+    const response = await fetch(
+      `https://api.brevo.com/v3/smtp/blockedContacts/${encodeURIComponent(email)}`,
+      {
+        method: "GET",
+        headers: {
+          "api-key": BREVO_API_KEY,
+          accept: "application/json",
+        },
+      }
+    );
+
+    // 404 means this recipient is not blocked.
+    if (response.status === 404) return null;
+
+    const payload = (await response.json().catch(() => ({}))) as any;
+    if (response.ok) {
+      return payload?.reason || "blacklist user";
+    }
+
+    console.warn("[email] Brevo blocked-contacts lookup failed:", response.status, JSON.stringify(payload));
+    return null;
+  } catch (err: any) {
+    console.warn("[email] Brevo blocked-contacts lookup exception:", err?.message || String(err));
+    return null;
+  }
+}
+
 if (!SMTP_PASS) {
   console.warn("[email] WARNING: SMTP_PASS is not set — SMTP fallback DISABLED.");
 }
@@ -136,6 +166,13 @@ export async function sendInviteEmail(
   // Preferred provider on Render: Brevo API (HTTPS, no SMTP port dependency)
   if (BREVO_API_KEY) {
     try {
+      const blockReason = await getBrevoBlockReason(to);
+      if (blockReason) {
+        const msg = `Destinataire bloque dans Brevo (${blockReason})`;
+        console.error("[email] Invite blocked before send for", to, ":", msg);
+        return { ok: false, error: msg };
+      }
+
       const senderDomain = BREVO_SENDER_EMAIL.split("@")[1] || "clotureimpress.com";
       const messageId = `<invite.${Date.now()}.${Math.random().toString(36).slice(2)}@${senderDomain}>`;
       const response = await fetch("https://api.brevo.com/v3/smtp/email", {
