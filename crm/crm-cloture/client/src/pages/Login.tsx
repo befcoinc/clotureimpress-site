@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -6,15 +6,29 @@ export function Login() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberEmail, setRememberEmail] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const savedEmail = window.localStorage.getItem("cloturecrm:remembered-email");
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberEmail(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
+      if (rememberEmail) {
+        window.localStorage.setItem("cloturecrm:remembered-email", email.trim());
+      } else {
+        window.localStorage.removeItem("cloturecrm:remembered-email");
+      }
       await login(email, password);
     } catch (err: any) {
       setError(err.message || "Identifiants incorrects");
@@ -172,6 +186,25 @@ export function Login() {
                 </button>
               </div>
             </div>
+
+            <label style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.6rem",
+              color: "#bbb",
+              fontSize: "0.86rem",
+              marginBottom: "1.25rem",
+              cursor: "pointer",
+              userSelect: "none",
+            }}>
+              <input
+                type="checkbox"
+                checked={rememberEmail}
+                onChange={(e) => setRememberEmail(e.target.checked)}
+                style={{ width: 16, height: 16, accentColor: "#c9a35a" }}
+              />
+              Mémoriser mon courriel sur cet appareil
+            </label>
 
             <button
               type="submit"
