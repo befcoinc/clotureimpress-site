@@ -36,7 +36,16 @@ export function Utilisateurs() {
   const { toast } = useToast();
   const [userDialog, setUserDialog] = useState<UserDialogState>(null);
   const [crewDialog, setCrewDialog] = useState<CrewDialogState>(null);
-  const [inviteResult, setInviteResult] = useState<null | { email: string; name: string; inviteUrl: string; emailSent: boolean; emailError?: string }>(null);
+  const [inviteResult, setInviteResult] = useState<null | {
+    email: string;
+    phone?: string;
+    name: string;
+    inviteUrl: string;
+    emailSent: boolean;
+    emailError?: string;
+    smsSent: boolean;
+    smsError?: string;
+  }>(null);
 
   const canManage = role === "admin";
 
@@ -58,7 +67,16 @@ export function Utilisateurs() {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setUserDialog(null);
       if (data?.inviteUrl) {
-        setInviteResult({ email: data.email, name: data.name, inviteUrl: data.inviteUrl, emailSent: !!data.emailSent, emailError: data.emailError });
+        setInviteResult({
+          email: data.email,
+          phone: data.phone,
+          name: data.name,
+          inviteUrl: data.inviteUrl,
+          emailSent: !!data.emailSent,
+          emailError: data.emailError,
+          smsSent: !!data.smsSent,
+          smsError: data.smsError,
+        });
       } else {
         toast({ title: "Utilisateur créé" });
       }
@@ -91,7 +109,16 @@ export function Utilisateurs() {
     onSuccess: (data: any, id) => {
       const u = users.find(x => x.id === id);
       if (data?.inviteUrl && u) {
-        setInviteResult({ email: u.email, name: u.name, inviteUrl: data.inviteUrl, emailSent: !!data.emailSent, emailError: data.emailError });
+        setInviteResult({
+          email: u.email,
+          phone: u.phone || undefined,
+          name: u.name,
+          inviteUrl: data.inviteUrl,
+          emailSent: !!data.emailSent,
+          emailError: data.emailError,
+          smsSent: !!data.smsSent,
+          smsError: data.smsError,
+        });
       } else {
         toast({ title: "Invitation renvoyée" });
       }
@@ -327,13 +354,15 @@ export function Utilisateurs() {
           <DialogHeader>
             <DialogTitle>Lien d'invitation pour {inviteResult?.name}</DialogTitle>
             <DialogDescription>
-              {inviteResult?.emailSent
-                ? `Un email a été envoyé à ${inviteResult.email}. S'il ne le reçoit pas (vérifie le spam), copie le lien ci-dessous et envoie-le par SMS, WhatsApp ou tout autre moyen.`
-                : `⚠️ L'email n'a PAS pu être envoyé automatiquement à ${inviteResult?.email}. Copie le lien ci-dessous et envoie-le manuellement (SMS, WhatsApp, autre courriel...).`}
+              Envoi automatique déclenché sur les 2 canaux: email + SMS.
             </DialogDescription>
           </DialogHeader>
           {inviteResult && (
             <div className="space-y-3">
+              <div className="rounded-md border border-border p-3 text-[13px] space-y-1">
+                <p>Email ({inviteResult.email}) : {inviteResult.emailSent ? "envoyé" : "échec"}</p>
+                <p>SMS ({inviteResult.phone || "numéro non défini"}) : {inviteResult.smsSent ? "envoyé" : "échec"}</p>
+              </div>
               <div className="rounded-md border border-border bg-muted/50 p-3 break-all text-[13px] font-mono select-all">
                 {inviteResult.inviteUrl}
               </div>
@@ -359,9 +388,8 @@ export function Utilisateurs() {
                   ✉️ Envoyer par courriel manuellement
                 </Button>
               </div>
-              {inviteResult.emailError && (
-                <p className="text-[12px] text-muted-foreground">Détail technique : {inviteResult.emailError}</p>
-              )}
+              {inviteResult.emailError && <p className="text-[12px] text-muted-foreground">Erreur email : {inviteResult.emailError}</p>}
+              {inviteResult.smsError && <p className="text-[12px] text-muted-foreground">Erreur SMS : {inviteResult.smsError}</p>}
               <div className="flex justify-end">
                 <Button variant="outline" onClick={() => setInviteResult(null)}>Fermer</Button>
               </div>

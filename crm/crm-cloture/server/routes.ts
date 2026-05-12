@@ -7,6 +7,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage, detectSector, seed, hashPassword, verifyPassword } from "./storage";
 import { sendInviteEmail } from "./email";
+import { sendInviteSms } from "./sms";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema } from "@shared/schema";
 
 function decodeSvelteData(data: any[]) {
@@ -182,8 +183,18 @@ export async function registerRoutes(
       await storage.setInviteToken(user.id, token, expiresAt);
       const baseUrl = process.env.APP_URL || `https://cloture-crm.onrender.com`;
       const inviteUrl = `${baseUrl}/#/accept-invite?token=${token}`;
-      const emailResult = await sendInviteEmail(user.email, user.name, user.role, inviteUrl);
-      res.json({ ...user, inviteUrl, emailSent: emailResult.ok, emailError: emailResult.error });
+      const [emailResult, smsResult] = await Promise.all([
+        sendInviteEmail(user.email, user.name, user.role, inviteUrl),
+        sendInviteSms(user.phone ?? "", user.name, user.role, inviteUrl),
+      ]);
+      res.json({
+        ...user,
+        inviteUrl,
+        emailSent: emailResult.ok,
+        emailError: emailResult.error,
+        smsSent: smsResult.ok,
+        smsError: smsResult.error,
+      });
     } catch (error: any) {
       res.status(400).json({ error: error?.message || "Impossible de créer l'utilisateur" });
     }
@@ -197,8 +208,18 @@ export async function registerRoutes(
       await storage.setInviteToken(user.id, token, expiresAt);
       const baseUrl = process.env.APP_URL || "https://cloture-crm.onrender.com";
       const inviteUrl = `${baseUrl}/#/accept-invite?token=${token}`;
-      const emailResult = await sendInviteEmail(user.email, user.name, user.role, inviteUrl);
-      res.json({ ok: true, inviteUrl, emailSent: emailResult.ok, emailError: emailResult.error });
+      const [emailResult, smsResult] = await Promise.all([
+        sendInviteEmail(user.email, user.name, user.role, inviteUrl),
+        sendInviteSms(user.phone ?? "", user.name, user.role, inviteUrl),
+      ]);
+      res.json({
+        ok: true,
+        inviteUrl,
+        emailSent: emailResult.ok,
+        emailError: emailResult.error,
+        smsSent: smsResult.ok,
+        smsError: smsResult.error,
+      });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Erreur lors du renvoi" });
     }
