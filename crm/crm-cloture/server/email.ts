@@ -1,11 +1,21 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = "ClôturePro CRM <noreply@clotureimpress.com>";
+const SMTP_HOST = process.env.SMTP_HOST || "mail.privateemail.com";
+const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
+const SMTP_USER = process.env.SMTP_USER || "noreply@clotureimpress.com";
+const SMTP_PASS = process.env.SMTP_PASS;
+const FROM = `Clôture Impress CRM <${SMTP_USER}>`;
 
-if (!process.env.RESEND_API_KEY) {
-  console.warn("[email] WARNING: RESEND_API_KEY is not set — invite emails will NOT be sent.");
+if (!SMTP_PASS) {
+  console.warn("[email] WARNING: SMTP_PASS is not set — invite emails will NOT be sent.");
 }
+
+const transporter = nodemailer.createTransport({
+  host: SMTP_HOST,
+  port: SMTP_PORT,
+  secure: SMTP_PORT === 465, // true for 465, false for 587
+  auth: SMTP_PASS ? { user: SMTP_USER, pass: SMTP_PASS } : undefined,
+});
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrateur",
@@ -24,11 +34,17 @@ export async function sendInviteEmail(
   const roleLabel = ROLE_LABELS[role] ?? role;
   const firstName = name.split(" ")[0];
 
-  const { error } = await resend.emails.send({
-    from: FROM,
-    to,
-    subject: "Finalise la création de ton compte — ClôturePro CRM",
-    html: `
+  if (!SMTP_PASS) {
+    console.error("[email] Cannot send to", to, "— SMTP_PASS not configured");
+    return;
+  }
+
+  try {
+    const info = await transporter.sendMail({
+      from: FROM,
+      to,
+      subject: "Finalise la création de ton compte — Clôture Impress CRM",
+      html: `
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -104,12 +120,9 @@ export async function sendInviteEmail(
   </table>
 </body>
 </html>`,
-  });
-
-  if (error) {
-    // Log but don't throw — user creation should not fail if email fails
-    console.error("[email] Failed to send invite to", to, ":", JSON.stringify(error));
-  } else {
-    console.log("[email] Invite sent successfully to", to);
+    });
+    console.log("[email] Invite sent successfully to", to, "messageId:", info.messageId);
+  } catch (err: any) {
+    console.error("[email] Failed to send invite to", to, ":", err?.message || err);
   }
 }
