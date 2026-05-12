@@ -8,9 +8,18 @@ import {
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
-const client = postgres(process.env.DATABASE_URL!);
+// Render PostgreSQL requires SSL. Enable it whenever the URL points at Render
+// (both internal `dpg-...` and external `*.render.com` hostnames support TLS).
+const databaseUrl = process.env.DATABASE_URL!;
+const needsSsl =
+  /render\.com/i.test(databaseUrl) ||
+  /\bdpg-[a-z0-9]+/i.test(databaseUrl) ||
+  process.env.PGSSL === "require" ||
+  process.env.NODE_ENV === "production";
+
+const client = postgres(databaseUrl, needsSsl ? { ssl: "require" } : undefined);
 export const db = drizzle(client);
 
 // =============== SECTOR DETECTION ===============
@@ -27,8 +36,110 @@ function detectSector(lead: Partial<InsertLead>): string {
   return parts.join(" › ");
 }
 
+// =============== SCHEMA MIGRATION (idempotent) ===============
+// Runs CREATE TABLE IF NOT EXISTS for all tables defined in shared/schema.ts.
+// Avoids needing a separate `drizzle-kit push` step at deploy time.
+async function migrate() {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      role TEXT NOT NULL,
+      region TEXT,
+      cities TEXT,
+      phone TEXT,
+      active BOOLEAN NOT NULL DEFAULT TRUE
+    )
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS leads (
+      id SERIAL PRIMARY KEY,
+      client_name TEXT NOT NULL,
+      phone TEXT,
+      email TEXT,
+      address TEXT,
+      city TEXT,
+      province TEXT,
+      postal_code TEXT,
+      neighborhood TEXT,
+      fence_type TEXT,
+      message TEXT,
+      source TEXT NOT NULL DEFAULT 'email',
+      intimura_id TEXT,
+      sector TEXT,
+      status TEXT NOT NULL DEFAULT 'nouveau',
+      assigned_sales_id INTEGER,
+      estimated_value REAL,
+      estimated_length REAL,
+      created_at TEXT NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+    )
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS quotes (
+      id SERIAL PRIMARY KEY,
+      lead_id INTEGER,
+      intimura_id TEXT,
+      client_name TEXT NOT NULL,
+      address TEXT,
+      city TEXT,
+      province TEXT,
+      sector TEXT,
+      status TEXT NOT NULL DEFAULT 'brouillon',
+      sales_status TEXT NOT NULL DEFAULT 'nouveau',
+      install_status TEXT NOT NULL DEFAULT 'a_planifier',
+      assigned_sales_id INTEGER,
+      assigned_installer_id INTEGER,
+      assigned_crew_id INTEGER,
+      fence_type TEXT,
+      estimated_length REAL,
+      estimated_price REAL,
+      final_price REAL,
+      sales_notes TEXT,
+      install_notes TEXT,
+      scheduled_date TEXT,
+      scheduled_time TEXT,
+      signed_date TEXT,
+      installed_date TEXT,
+      paid_date TEXT,
+      timeline TEXT,
+      created_at TEXT NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+    )
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS crews (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'interne',
+      contact_name TEXT,
+      phone TEXT,
+      email TEXT,
+      province TEXT,
+      cities TEXT,
+      capacity INTEGER NOT NULL DEFAULT 1,
+      rating REAL DEFAULT 5,
+      status TEXT NOT NULL DEFAULT 'disponible',
+      notes TEXT
+    )
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS activities (
+      id SERIAL PRIMARY KEY,
+      quote_id INTEGER,
+      lead_id INTEGER,
+      user_id INTEGER,
+      user_name TEXT,
+      user_role TEXT,
+      action TEXT NOT NULL,
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+    )
+  `);
+}
+
 // =============== SEED DATA ===============
 async function seed() {
+  await migrate();
   const existing = await db.select().from(users).limit(1);
   if (existing.length > 0) return;
 
