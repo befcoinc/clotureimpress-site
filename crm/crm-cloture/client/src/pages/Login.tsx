@@ -1,9 +1,5 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { Logo } from "@/components/Logo";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
 
 export function Login() {
@@ -28,78 +24,195 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md">
-        {/* Card */}
-        <div className="rounded-2xl border border-border bg-card shadow-xl p-8 space-y-6">
-          {/* Header */}
-          <div className="flex flex-col items-center gap-3">
-            <Logo />
-            <div className="text-center space-y-1 mt-2">
-              <h1 className="text-2xl font-bold tracking-tight">Connexion CRM</h1>
-              <p className="text-sm text-muted-foreground">
-                Entrez vos identifiants pour accéder à votre espace
-              </p>
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "#0a0a0a",
+      backgroundImage: "radial-gradient(ellipse at 50% 0%, rgba(201,163,90,0.06) 0%, transparent 70%)",
+      padding: "1rem",
+      fontFamily: "'Inter', system-ui, sans-serif",
+    }}>
+      <div style={{ width: "100%", maxWidth: 420 }}>
+        <div style={{
+          background: "#111111",
+          border: "1px solid rgba(201,163,90,0.2)",
+          borderRadius: 12,
+          padding: "3rem 2.5rem",
+          color: "#f5f0e8",
+        }}>
+          {/* Logo */}
+          <img
+            src="https://clotureimpress.com/logo.png"
+            alt="Clôture Impress"
+            style={{ display: "block", margin: "0 auto 2rem", height: 60, width: "auto" }}
+          />
+
+          {/* Title */}
+          <h1 style={{
+            fontFamily: "'Cormorant Garamond', Georgia, serif",
+            fontSize: "1.8rem",
+            fontWeight: 400,
+            textAlign: "center",
+            marginBottom: "0.5rem",
+            color: "#f5f0e8",
+          }}>
+            Espace équipe
+          </h1>
+          <div style={{ width: 36, height: 1, background: "#c9a35a", margin: "0 auto 1.5rem" }} />
+          <p style={{ textAlign: "center", color: "#777", fontSize: "0.82rem", marginBottom: "2rem" }}>
+            Accès réservé au personnel autorisé
+          </p>
+
+          {/* Error */}
+          {error && (
+            <div style={{
+              background: "rgba(255,80,80,0.08)",
+              border: "1px solid rgba(255,80,80,0.25)",
+              borderRadius: 6,
+              color: "#ff7070",
+              fontSize: "0.85rem",
+              padding: "0.75rem 1rem",
+              marginBottom: "1.25rem",
+            }}>
+              {error}
             </div>
-          </div>
+          )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Adresse courriel</Label>
-              <Input
-                id="email"
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: "1.25rem" }}>
+              <label style={{
+                display: "block",
+                fontSize: "0.72rem",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "#777",
+                marginBottom: "0.4rem",
+              }}>
+                Courriel
+              </label>
+              <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                placeholder="prenom@cloturepro.ca"
-                className="h-11"
+                placeholder="nom@clotureimpress.com"
+                style={{
+                  width: "100%",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 6,
+                  color: "#f5f0e8",
+                  fontSize: "0.95rem",
+                  fontFamily: "inherit",
+                  padding: "0.8rem 1rem",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+                onFocus={(e) => e.target.style.borderColor = "#c9a35a"}
+                onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.1)"}
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Mot de passe</Label>
-              <div className="relative">
-                <Input
-                  id="password"
+            <div style={{ marginBottom: "1.25rem" }}>
+              <label style={{
+                display: "block",
+                fontSize: "0.72rem",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "#777",
+                marginBottom: "0.4rem",
+              }}>
+                Mot de passe
+              </label>
+              <div style={{ position: "relative" }}>
+                <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  className="h-11 pr-10"
+                  style={{
+                    width: "100%",
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 6,
+                    color: "#f5f0e8",
+                    fontSize: "0.95rem",
+                    fontFamily: "inherit",
+                    padding: "0.8rem 2.8rem 0.8rem 1rem",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = "#c9a35a"}
+                  onBlur={(e) => e.target.style.borderColor = "rgba(255,255,255,0.1)"}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   tabIndex={-1}
+                  style={{
+                    position: "absolute",
+                    right: "0.8rem",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#777",
+                    padding: 0,
+                    display: "flex",
+                  }}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            {error && (
-              <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive">
-                {error}
-              </div>
-            )}
-
-            <Button type="submit" className="w-full h-11 text-base" disabled={loading}>
-              {loading ? "Connexion en cours…" : "Se connecter"}
-            </Button>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: "100%",
+                background: loading ? "rgba(201,163,90,0.5)" : "#c9a35a",
+                color: "#0a0a0a",
+                border: "none",
+                borderRadius: 6,
+                fontSize: "0.8rem",
+                fontWeight: 700,
+                fontFamily: "inherit",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                padding: "1rem",
+                cursor: loading ? "not-allowed" : "pointer",
+                marginTop: "0.5rem",
+                transition: "opacity 0.2s",
+              }}
+            >
+              {loading ? "Connexion..." : "Se connecter"}
+            </button>
           </form>
 
-          {/* Default password hint */}
-          <div className="rounded-lg bg-muted/60 border border-border px-4 py-3 text-xs text-muted-foreground space-y-1">
-            <p className="font-medium text-foreground/80">Mot de passe par défaut</p>
-            <p>Tous les comptes utilisent <code className="font-mono bg-muted px-1 py-0.5 rounded">Cloture2025!</code> à la première connexion.</p>
-            <p>Changez-le dans votre profil après la connexion.</p>
-          </div>
+          {/* Back link */}
+          <a
+            href="https://clotureimpress.com"
+            style={{
+              display: "block",
+              textAlign: "center",
+              color: "#777",
+              fontSize: "0.8rem",
+              textDecoration: "none",
+              marginTop: "1.75rem",
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.color = "#c9a35a")}
+            onMouseOut={(e) => (e.currentTarget.style.color = "#777")}
+          >
+            ← Retour au site
+          </a>
         </div>
       </div>
     </div>
