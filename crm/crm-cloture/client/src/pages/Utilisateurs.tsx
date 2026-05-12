@@ -48,22 +48,27 @@ export function Utilisateurs() {
     return grouped;
   }, [users]);
 
+  const onMutationError = (err: Error) =>
+    toast({ title: "Erreur", description: err.message, variant: "destructive" });
+
   const createUser = useMutation({
-    mutationFn: async (payload: Partial<User>) => apiRequest("POST", "/api/users", payload),
+    mutationFn: async (payload: Partial<User>) => (await apiRequest("POST", "/api/users", payload)).json(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setUserDialog(null);
       toast({ title: "Utilisateur créé" });
     },
+    onError: onMutationError,
   });
 
   const updateUser = useMutation({
-    mutationFn: async ({ id, payload }: { id: number; payload: Partial<User> }) => apiRequest("PATCH", `/api/users/${id}`, payload),
+    mutationFn: async ({ id, payload }: { id: number; payload: Partial<User> }) => (await apiRequest("PATCH", `/api/users/${id}`, payload)).json(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setUserDialog(null);
       toast({ title: "Utilisateur modifié" });
     },
+    onError: onMutationError,
   });
 
   const deleteUser = useMutation({
@@ -73,24 +78,27 @@ export function Utilisateurs() {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       toast({ title: "Utilisateur supprimé" });
     },
+    onError: onMutationError,
   });
 
   const createCrew = useMutation({
-    mutationFn: async (payload: Partial<Crew>) => apiRequest("POST", "/api/crews", payload),
+    mutationFn: async (payload: Partial<Crew>) => (await apiRequest("POST", "/api/crews", payload)).json(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crews"] });
       setCrewDialog(null);
       toast({ title: "Équipe créée" });
     },
+    onError: onMutationError,
   });
 
   const updateCrew = useMutation({
-    mutationFn: async ({ id, payload }: { id: number; payload: Partial<Crew> }) => apiRequest("PATCH", `/api/crews/${id}`, payload),
+    mutationFn: async ({ id, payload }: { id: number; payload: Partial<Crew> }) => (await apiRequest("PATCH", `/api/crews/${id}`, payload)).json(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/crews"] });
       setCrewDialog(null);
       toast({ title: "Équipe modifiée" });
     },
+    onError: onMutationError,
   });
 
   const deleteCrew = useMutation({
@@ -100,6 +108,7 @@ export function Utilisateurs() {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       toast({ title: "Équipe supprimée" });
     },
+    onError: onMutationError,
   });
 
   return (
@@ -299,33 +308,40 @@ export function Utilisateurs() {
 }
 
 function UserForm({ user, isPending, onCancel, onSubmit }: { user?: User; isPending: boolean; onCancel: () => void; onSubmit: (payload: Partial<User>) => void }) {
+  const [name, setName] = useState(user?.name || "");
+  const [email, setEmail] = useState(user?.email || "");
+  const [role, setRole] = useState(user?.role || "sales_rep");
+  const [region, setRegion] = useState(user?.region || "Canada");
+  const [phone, setPhone] = useState(user?.phone || "");
+  const [active, setActive] = useState(user?.active === false ? "false" : "true");
+  const [cities, setCities] = useState(citiesText(user?.cities));
+
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = new FormData(e.currentTarget);
     onSubmit({
-      name: String(form.get("name") || "").trim(),
-      email: String(form.get("email") || "").trim(),
-      role: String(form.get("role") || "sales_rep"),
-      region: nullable(form.get("region")),
-      cities: citiesJson(form.get("cities")),
-      phone: nullable(form.get("phone")),
-      active: String(form.get("active") || "true") === "true",
+      name: name.trim(),
+      email: email.trim(),
+      role,
+      region: region || null,
+      cities: citiesJson(cities),
+      phone: phone.trim() || null,
+      active: active === "true",
     });
   }
 
   return (
     <form onSubmit={submit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Nom"><Input name="name" required defaultValue={user?.name || ""} data-testid="input-user-name" /></Field>
-        <Field label="Courriel"><Input name="email" type="email" required defaultValue={user?.email || ""} data-testid="input-user-email" /></Field>
+        <Field label="Nom"><Input required value={name} onChange={e => setName(e.target.value)} data-testid="input-user-name" /></Field>
+        <Field label="Courriel"><Input type="email" required value={email} onChange={e => setEmail(e.target.value)} data-testid="input-user-email" /></Field>
         <Field label="Rôle">
-          <Select name="role" defaultValue={user?.role || "sales_rep"}>
+          <Select value={role} onValueChange={setRole}>
             <SelectTrigger data-testid="select-user-role"><SelectValue /></SelectTrigger>
             <SelectContent>{Object.entries(ROLES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
           </Select>
         </Field>
         <Field label="Province / région">
-          <Select name="region" defaultValue={user?.region || "Canada"}>
+          <Select value={region} onValueChange={setRegion}>
             <SelectTrigger data-testid="select-user-region"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Canada">Canada</SelectItem>
@@ -333,9 +349,9 @@ function UserForm({ user, isPending, onCancel, onSubmit }: { user?: User; isPend
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Téléphone"><Input name="phone" defaultValue={user?.phone || ""} data-testid="input-user-phone" /></Field>
+        <Field label="Téléphone"><Input value={phone} onChange={e => setPhone(e.target.value)} data-testid="input-user-phone" /></Field>
         <Field label="Statut">
-          <Select name="active" defaultValue={user?.active === false ? "false" : "true"}>
+          <Select value={active} onValueChange={setActive}>
             <SelectTrigger data-testid="select-user-active"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="true">Actif</SelectItem>
@@ -345,7 +361,7 @@ function UserForm({ user, isPending, onCancel, onSubmit }: { user?: User; isPend
         </Field>
       </div>
       <Field label="Villes couvertes, séparées par des virgules">
-        <Textarea name="cities" rows={2} defaultValue={citiesText(user?.cities)} placeholder="Montréal, Laval, Longueuil" data-testid="textarea-user-cities" />
+        <Textarea rows={2} value={cities} onChange={e => setCities(e.target.value)} placeholder="Montréal, Laval, Longueuil" data-testid="textarea-user-cities" />
       </Field>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>Annuler</Button>
