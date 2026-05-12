@@ -1,12 +1,13 @@
 import { Switch, Route, Router } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
-import { useQuery } from "@tanstack/react-query";
-import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { RoleProvider } from "@/lib/role-context";
 import { Layout } from "@/components/Layout";
+import { Login } from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 import { Dashboard } from "@/pages/Dashboard";
 import { Leads } from "@/pages/Leads";
@@ -22,7 +23,6 @@ import { Secteurs } from "@/pages/Secteurs";
 import { Heatmap } from "@/pages/Heatmap";
 import { Utilisateurs } from "@/pages/Utilisateurs";
 import { Architecture } from "@/pages/Architecture";
-import type { User } from "@shared/schema";
 
 function AppRouter() {
   return (
@@ -48,12 +48,23 @@ function AppRouter() {
   );
 }
 
-function AppWithRole() {
-  const { data: users = [], isLoading } = useQuery<User[]>({ queryKey: ["/api/users"] });
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Chargement…</div>;
-  const admin = users.find(u => u.role === "admin") || users[0] || null;
+function AppWithAuth() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Chargement…
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
   return (
-    <RoleProvider initialUser={admin}>
+    <RoleProvider initialUser={user}>
       <Router hook={useHashLocation}>
         <AppRouter />
       </Router>
@@ -66,10 +77,13 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <AppWithRole />
+        <AuthProvider>
+          <AppWithAuth />
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
 }
 
 export default App;
+

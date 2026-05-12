@@ -1,6 +1,9 @@
 import "dotenv/config";
 import express, { Response, NextFunction } from 'express';
 import type { Request } from 'express';
+import session from "express-session";
+import createMemoryStore from "memorystore";
+import passport from "passport";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "node:http";
@@ -23,6 +26,27 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+// ── Session + Passport ──────────────────────────────────────────────────
+const MemoryStore = createMemoryStore(session);
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "crm-dev-secret-change-in-prod",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 8 * 60 * 60 * 1000, // 8 hours
+      sameSite: "lax",
+    },
+    store: new MemoryStore({ checkPeriod: 86_400_000 }),
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
+// ────────────────────────────────────────────────────────────────────────
+
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

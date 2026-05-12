@@ -1,8 +1,10 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "node:http";
 import type { Server } from "node:http";
 import { existsSync, readFileSync } from "node:fs";
-import { storage, detectSector, seed } from "./storage";
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+import { storage, detectSector, seed, hashPassword, verifyPassword } from "./storage";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema } from "@shared/schema";
 
 function decodeSvelteData(data: any[]) {
@@ -46,6 +48,89 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   await seed();
+
+  // ── Passport Local Strategy ─────────────────────────────────────────
+  passport.use(
+    new LocalStrategy({ usernameField: "email" }, async (email, password, done) => {
+      try {
+        const user = await storage.getUserByEmailWithHash(email);
+        if (!user) return done(null, false, { message: "Email ou mot de passe incorrect" });
+        if (!user.passwordHash)
+          return done(null, false, { message: "Compte non configuré — contactez l'administrateur" });
+        if (!verifyPassword(password, user.passwordHash))
+          return done(null, false, { message: "Email ou mot de passe incorrect" });
+        return done(null, user);
+      } catch (err) {
+        return done(err);
+      }
+    })
+  );
+  passport.serializeUser((user: any, done) => done(null, user.id));
+  passport.deserializeUser(async (id: number, done) => {
+    try {
+      const user = await storage.getUser(id);
+      done(null, user ?? null);
+    } catch (err) {
+      done(err);
+    }
+  });
+
+  // requireAuth middleware
+  function requireAuth(req: Request, res: Response, next: NextFunction) {
+    if (req.isAuthenticated()) return next();
+    return res.status(401).json({ error: "Authentification requise" });
+  }
+
+  // ── Auth routes (public) ────────────────────────────────────────────
+  app.post("/api/auth/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      if (err) return next(err);
+      if (!user) return res.status(401).json({ error: info?.message || "Identifiants incorrects" });
+      req.logIn(user, (loginErr) => {
+        if (loginErr) return next(loginErr);
+        const { passwordHash, ...safeUser } = user;
+        res.json(safeUser);
+      });
+    })(req, res, next);
+  });
+
+  app.post("/api/auth/logout", (req, res, next) => {
+    req.logout((err) => {
+      if (err) return next(err);
+      res.json({ ok: true });
+    });
+  });
+
+  app.get("/api/auth/me", (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.status(401).json({ error: "Non authentifié" });
+    const { passwordHash, ...safeUser } = req.user as any;
+    res.json(safeUser);
+  });
+
+  app.post("/api/auth/change-password", requireAuth, async (req, res, next) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword)
+        return res.status(400).json({ error: "Les deux champs sont requis" });
+      if (typeof newPassword !== "string" || newPassword.length < 6)
+        return res.status(400).json({ error: "Le nouveau mot de passe doit contenir au moins 6 caractères" });
+      const userId = (req.user as any).id;
+      const userWithHash = await storage.getUserByEmailWithHash((req.user as any).email);
+      if (!userWithHash?.passwordHash || !verifyPassword(currentPassword, userWithHash.passwordHash))
+        return res.status(401).json({ error: "Mot de passe actuel incorrect" });
+      await storage.setUserPassword(userId, hashPassword(newPassword));
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // ── Protect all other /api routes ──────────────────────────────────
+  app.use("/api", (req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith("/auth/")) return next();
+    return requireAuth(req, res, next);
+  });
+  // ───────────────────────────────────────────────────────────────────
 
   // -------- Users --------
   app.get("/api/users", async (_req, res) => {

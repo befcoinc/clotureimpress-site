@@ -3,11 +3,12 @@ import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Inbox, UserCheck, FileText, Wrench, MapPin, CalendarDays,
-  Network, Users, ShieldCheck, Hammer, UploadCloud, Flame, AlertTriangle, X,
+  Network, Users, ShieldCheck, Hammer, UploadCloud, Flame, AlertTriangle, X, LogOut,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { useRole } from "@/lib/role-context";
+import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import type { Permission } from "@/lib/role-context";
 import type { Quote } from "@shared/schema";
@@ -56,6 +57,7 @@ const NAV_SECTIONS: { label: string; items: NavItem[] }[] = [
 export function Layout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { can, role, currentUser } = useRole();
+  const { logout } = useAuth();
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -109,11 +111,31 @@ export function Layout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        <div className="px-4 py-3 border-t border-sidebar-border">
-          <div className="text-[10px] uppercase tracking-[0.14em] text-sidebar-foreground/40 mb-2">
-            Rôle simulé
+        <div className="px-4 py-3 border-t border-sidebar-border space-y-2">
+          {/* Admin-only: impersonate another user */}
+          {role === "admin" && (
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.14em] text-sidebar-foreground/40 mb-1.5">
+                Vue simulée
+              </div>
+              <RoleSwitcher />
+            </div>
+          )}
+          {/* Current user + logout */}
+          <div className="flex items-center gap-2 pt-1">
+            <div className="flex-1 min-w-0">
+              <div className="text-[12px] font-medium truncate">{currentUser?.name}</div>
+              <div className="text-[10px] text-sidebar-foreground/50 truncate">{currentUser?.email}</div>
+            </div>
+            <button
+              type="button"
+              title="Se déconnecter"
+              onClick={() => logout()}
+              className="shrink-0 rounded-md p-1.5 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
-          <RoleSwitcher />
         </div>
       </aside>
 

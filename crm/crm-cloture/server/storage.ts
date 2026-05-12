@@ -9,6 +9,7 @@ import {
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { eq, desc, sql } from "drizzle-orm";
+import { scryptSync, randomBytes, timingSafeEqual } from "crypto";
 
 // Render PostgreSQL requires SSL. Enable it whenever the URL points at Render
 // (both internal `dpg-...` and external `*.render.com` hostnames support TLS).
@@ -21,6 +22,24 @@ const needsSsl =
 
 const client = postgres(databaseUrl, needsSsl ? { ssl: "require" } : undefined);
 export const db = drizzle(client);
+
+// =============== PASSWORD UTILITIES ===============
+export function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${hash}`;
+}
+
+export function verifyPassword(plain: string, stored: string): boolean {
+  const [salt, hash] = stored.split(":");
+  if (!salt || !hash) return false;
+  try {
+    const input = scryptSync(plain, salt, 64);
+    return timingSafeEqual(input, Buffer.from(hash, "hex"));
+  } catch {
+    return false;
+  }
+}
 
 // =============== SECTOR DETECTION ===============
 function detectSector(lead: Partial<InsertLead>): string {
@@ -52,6 +71,8 @@ async function migrate() {
       active BOOLEAN NOT NULL DEFAULT TRUE
     )
   `);
+  // Add password_hash column for existing deployments (idempotent)
+  await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;`);
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS leads (
       id SERIAL PRIMARY KEY,
@@ -137,11 +158,21 @@ async function migrate() {
   `);
 }
 
+// =============== PASSWORD SEEDING ===============
+async function seedPasswords() {
+  const rows = await db.execute(sql`SELECT id FROM users WHERE password_hash IS NULL`);
+  for (const row of rows) {
+    const hash = hashPassword("Cloture2025!");
+    const rowId = (row as any).id;
+    await db.execute(sql`UPDATE users SET password_hash = ${hash} WHERE id = ${rowId}`);
+  }
+}
+
 // =============== SEED DATA ===============
 async function seed() {
   await migrate();
   const existing = await db.select().from(users).limit(1);
-  if (existing.length > 0) return;
+  if (existing.length === 0) {
 
   const seedUsers: InsertUser[] = [
     { name: "Marie Tremblay", email: "admin@cloturepro.ca", role: "admin", region: "Canada", phone: "514-555-0001", active: true },
@@ -222,6 +253,8 @@ async function seed() {
     { leadId: 1, userId: 2, userName: "Sophie Bergeron", userRole: "sales_director", action: "note", note: "Lead à fort potentiel, à qualifier rapidement." },
     { quoteId: 6, userId: 8, userName: "Patrick Boivin", userRole: "installer", action: "status_change", note: "Équipe en route ce matin." },
   ]);
+  } // end if (existing.length === 0)
+  await seedPasswords();
 }
 
 // =============== STORAGE INTERFACE ===============
@@ -233,6 +266,8 @@ export interface IStorage {
   createUser(data: InsertUser): Promise<User>;
   updateUser(id: number, data: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: number): Promise<User | undefined>;
+  getUserByEmailWithHash(email: string): Promise<(User & { passwordHash: string | null }) | undefined>;
+  setUserPassword(id: number, passwordHash: string): Promise<void>;
   // Leads
   getLeads(): Promise<Lead[]>;
   getLead(id: number): Promise<Lead | undefined>;
@@ -273,6 +308,20 @@ export class DatabaseStorage implements IStorage {
     await db.update(quotes).set({ assignedInstallerId: null }).where(eq(quotes.assignedInstallerId, id));
     await db.delete(users).where(eq(users.id, id));
     return existing;
+  }
+  async getUserByEmailWithHash(email: string) {
+    const rows = await db.execute(sql`SELECT id, name, email, role, region, cities, phone, active, password_hash FROM users WHERE email = ${email} LIMIT 1`);
+    if (!rows[0]) return undefined;
+    const row = rows[0] as any;
+    return {
+      id: row.id, name: row.name, email: row.email, role: row.role,
+      region: row.region ?? null, cities: row.cities ?? null,
+      phone: row.phone ?? null, active: row.active ?? true,
+      passwordHash: row.password_hash ?? null,
+    };
+  }
+  async setUserPassword(id: number, passwordHash: string): Promise<void> {
+    await db.execute(sql`UPDATE users SET password_hash = ${passwordHash} WHERE id = ${id}`);
   }
 
   async getLeads() { return db.select().from(leads).orderBy(desc(leads.id)); }
