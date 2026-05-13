@@ -7,7 +7,7 @@ import path from "node:path";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage, detectSector, seed, hashPassword, verifyPassword } from "./storage";
-import { sendInviteEmail, sendInstallerProfileReminderEmail } from "./email";
+import { sendInviteEmail, sendInstallerProfileReminderEmail, sendLeadAssignedEmail } from "./email";
 import { sendInviteSms, sendInstallerProfileReminderSms } from "./sms";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema } from "@shared/schema";
 
@@ -564,16 +564,44 @@ export async function registerRoutes(
     res.json(lead);
   });
   app.patch("/api/leads/:id", async (req, res) => {
+    const leadId = Number(req.params.id);
+    const before = await storage.getLead(leadId);
+    if (!before) return res.status(404).json({ error: "Not found" });
+
     const { _userId, _userName, _userRole, ...payload } = req.body;
-    const updated = await storage.updateLead(Number(req.params.id), payload);
+    const updated = await storage.updateLead(leadId, payload);
     if (!updated) return res.status(404).json({ error: "Not found" });
+
+    let assignedRepName: string | null = null;
+    if (payload.assignedSalesId && Number(payload.assignedSalesId) !== (before.assignedSalesId || null)) {
+      const rep = await storage.getUser(Number(payload.assignedSalesId));
+      assignedRepName = rep?.name || null;
+      if (rep?.email) {
+        const emailResult = await sendLeadAssignedEmail({
+          to: rep.email,
+          salesRepName: rep.name,
+          leadClientName: updated.clientName,
+          city: updated.city,
+          province: updated.province,
+          fenceType: updated.fenceType,
+        });
+        if (!emailResult.ok) {
+          console.warn("[lead-assignment-email] failed:", emailResult.error || "unknown error");
+        }
+      }
+    }
+
     await storage.createActivity({
       leadId: updated.id,
       userId: _userId || null,
       userName: _userName || "Système",
       userRole: _userRole || "system",
       action: "update",
-      note: payload.status ? `Statut → ${payload.status}` : (payload.assignedSalesId ? `Assignation vendeur` : "Mise à jour lead"),
+      note: assignedRepName
+        ? `Assignation vendeur → ${assignedRepName} (notification envoyée)`
+        : payload.status
+          ? `Statut → ${payload.status}`
+          : (payload.assignedSalesId ? `Assignation vendeur` : "Mise à jour lead"),
     });
     res.json(updated);
   });

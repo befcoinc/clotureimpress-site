@@ -343,3 +343,129 @@ export async function sendInstallerProfileReminderEmail(
     return { ok: false, error: err?.message || String(err) };
   }
 }
+
+export async function sendLeadAssignedEmail(params: {
+  to: string;
+  salesRepName: string;
+  leadClientName: string;
+  city?: string | null;
+  province?: string | null;
+  fenceType?: string | null;
+  appUrl?: string;
+}): Promise<{ ok: boolean; error?: string; messageId?: string }> {
+  const {
+    to,
+    salesRepName,
+    leadClientName,
+    city,
+    province,
+    fenceType,
+    appUrl = process.env.APP_URL || "https://cloture-crm.onrender.com/#/leads?status=assigne",
+  } = params;
+
+  const firstName = (salesRepName || "").split(" ")[0] || "Bonjour";
+  const cityLine = [city, province].filter(Boolean).join(", ");
+  const subject = "Nouveau lead assigné — Clôture Impress CRM";
+  const textContent = [
+    `Bonjour ${firstName},`,
+    "",
+    "Un nouveau lead vient de t'etre assigne dans le CRM.",
+    `Client: ${leadClientName}`,
+    cityLine ? `Ville: ${cityLine}` : null,
+    fenceType ? `Type de cloture: ${fenceType}` : null,
+    "",
+    "Ouvre le CRM:",
+    appUrl,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const html = `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nouveau lead assigné</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:system-ui,-apple-system,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+          <tr>
+            <td style="background:#0f766e;padding:24px 32px;">
+              <p style="margin:0;font-size:22px;font-weight:700;color:#ffffff;">Clôture Impress CRM</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 32px;">
+              <p style="margin:0 0 12px;font-size:18px;font-weight:600;color:#111827;">Bonjour ${firstName}</p>
+              <p style="margin:0 0 20px;font-size:15px;color:#4b5563;line-height:1.6;">Un nouveau lead vient de t'être assigné.</p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;">
+                <tr>
+                  <td style="padding:14px 16px;">
+                    <p style="margin:0 0 6px;font-size:13px;color:#111827;"><strong>Client:</strong> ${leadClientName}</p>
+                    ${cityLine ? `<p style="margin:0 0 6px;font-size:13px;color:#111827;"><strong>Ville:</strong> ${cityLine}</p>` : ""}
+                    ${fenceType ? `<p style="margin:0;font-size:13px;color:#111827;"><strong>Type:</strong> ${fenceType}</p>` : ""}
+                  </td>
+                </tr>
+              </table>
+              <table cellpadding="0" cellspacing="0" style="margin:0 0 8px;">
+                <tr>
+                  <td style="background:#0f766e;border-radius:8px;">
+                    <a href="${appUrl}" style="display:inline-block;padding:12px 22px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Ouvrir mes leads</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  if (BREVO_API_KEY) {
+    try {
+      const blockReason = await getBrevoBlockReason(to);
+      if (blockReason) return { ok: false, error: `Destinataire bloque dans Brevo (${blockReason})` };
+
+      const senderDomain = BREVO_SENDER_EMAIL.split("@")[1] || "clotureimpress.com";
+      const messageId = `<lead-assigned.${Date.now()}.${Math.random().toString(36).slice(2)}@${senderDomain}>`;
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": BREVO_API_KEY,
+        },
+        body: JSON.stringify({
+          sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
+          replyTo: { email: BREVO_REPLY_TO, name: BREVO_SENDER_NAME },
+          to: [{ email: to, name: salesRepName }],
+          subject,
+          textContent,
+          htmlContent: html,
+          headers: {
+            "X-Mailin-custom": "source:crm-lead-assignment|type:lead-assigned",
+            "Message-ID": messageId,
+          },
+        }),
+      });
+      const payload = (await response.json()) as any;
+      if (response.ok && payload?.messageId) return { ok: true, messageId: String(payload.messageId) };
+    } catch {
+      // Continue to SMTP fallback.
+    }
+  }
+
+  if (!SMTP_PASS) return { ok: false, error: "SMTP_PASS not configured" };
+
+  try {
+    const info = await transporter.sendMail({ from: FROM, to, subject, html });
+    return { ok: true, messageId: info.messageId };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || String(err) };
+  }
+}
