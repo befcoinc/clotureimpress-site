@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Circle, CircleMarker, MapContainer, Popup, TileLayer, ZoomControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -441,22 +441,36 @@ export function Heatmap() {
                     // so they still appear on the heatmap as soon as the fiche is filled.
                     const radiusM = parseRadiusMeters(p.radius) || 25_000;
                     return (
-                      <Circle
-                        key={`installer-${p.userId}`}
-                        center={coords}
-                        radius={radiusM}
-                        pathOptions={{ color: "#7c3aed", fillColor: "#7c3aed", fillOpacity: 0.07, weight: 2, dashArray: "6 4" }}
-                      >
-                        <Popup>
-                          <div className="min-w-[200px] space-y-1">
-                            <div className="font-bold text-sm">{p.displayName}</div>
-                            <div className="text-xs text-slate-500">{isEn ? "Installer territory" : "Territoire installateur"}</div>
-                            {p.regions && <div className="text-xs">{p.regions}</div>}
-                            <div className="text-xs"><span className="font-semibold">{isEn ? "Postal code:" : "Code postal :"}</span> {p.postalCode}</div>
-                            <div className="text-xs"><span className="font-semibold">{isEn ? "Radius:" : "Rayon :"}</span> {p.radius}</div>
-                          </div>
-                        </Popup>
-                      </Circle>
+                      <Fragment key={`installer-layer-${p.userId}`}>
+                        <Circle
+                          center={coords}
+                          radius={radiusM}
+                          pathOptions={{ color: "#7c3aed", fillColor: "#7c3aed", fillOpacity: 0.12, weight: 3, dashArray: "6 4" }}
+                        >
+                          <Popup>
+                            <div className="min-w-[200px] space-y-1">
+                              <div className="font-bold text-sm">{p.displayName}</div>
+                              <div className="text-xs text-slate-500">{isEn ? "Installer territory" : "Territoire installateur"}</div>
+                              {p.regions && <div className="text-xs">{p.regions}</div>}
+                              <div className="text-xs"><span className="font-semibold">{isEn ? "Postal code:" : "Code postal :"}</span> {p.postalCode}</div>
+                              <div className="text-xs"><span className="font-semibold">{isEn ? "Radius:" : "Rayon :"}</span> {p.radius || "25 km"}</div>
+                            </div>
+                          </Popup>
+                        </Circle>
+                        <CircleMarker
+                          center={coords}
+                          radius={7}
+                          pathOptions={{ color: "#5b21b6", fillColor: "#7c3aed", fillOpacity: 0.95, weight: 2 }}
+                        >
+                          <Popup>
+                            <div className="min-w-[200px] space-y-1">
+                              <div className="font-bold text-sm">{p.displayName}</div>
+                              <div className="text-xs text-slate-500">{isEn ? "Installer anchor" : "Point installateur"}</div>
+                              <div className="text-xs"><span className="font-semibold">{isEn ? "Postal code:" : "Code postal :"}</span> {p.postalCode}</div>
+                            </div>
+                          </Popup>
+                        </CircleMarker>
+                      </Fragment>
                     );
                   })}
                 </MapContainer>
