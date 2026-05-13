@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Circle, CircleMarker, MapContainer, Popup, TileLayer, ZoomControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -448,40 +448,44 @@ export function Heatmap() {
                   {layers.has("installers") && installerProfiles.map((p) => {
                     const coords = p.latLng || postalToCoords(p.postalCode, p.city);
                     if (!coords) return null;
-                    // Default to 25 km when the installer has not specified a radius
-                    // so they still appear on the heatmap as soon as the fiche is filled.
                     const radiusM = parseRadiusMeters(p.radius) || 25_000;
                     return (
-                      <Fragment key={`installer-layer-${p.userId}`}>
-                        <Circle
-                          center={coords}
-                          radius={radiusM}
-                          pathOptions={{ color: "#7c3aed", fillColor: "#7c3aed", fillOpacity: 0.12, weight: 3, dashArray: "6 4" }}
-                        >
-                          <Popup>
-                            <div className="min-w-[200px] space-y-1">
-                              <div className="font-bold text-sm">{p.displayName}</div>
-                              <div className="text-xs text-slate-500">{isEn ? "Installer territory" : "Territoire installateur"}</div>
-                              {p.regions && <div className="text-xs">{p.regions}</div>}
-                              <div className="text-xs"><span className="font-semibold">{isEn ? "Postal code:" : "Code postal :"}</span> {p.postalCode}</div>
-                              <div className="text-xs"><span className="font-semibold">{isEn ? "Radius:" : "Rayon :"}</span> {p.radius || "25 km"}</div>
-                            </div>
-                          </Popup>
-                        </Circle>
-                        <CircleMarker
-                          center={coords}
-                          radius={7}
-                          pathOptions={{ color: "#5b21b6", fillColor: "#7c3aed", fillOpacity: 0.95, weight: 2 }}
-                        >
-                          <Popup>
-                            <div className="min-w-[200px] space-y-1">
-                              <div className="font-bold text-sm">{p.displayName}</div>
-                              <div className="text-xs text-slate-500">{isEn ? "Installer anchor" : "Point installateur"}</div>
-                              <div className="text-xs"><span className="font-semibold">{isEn ? "Postal code:" : "Code postal :"}</span> {p.postalCode}</div>
-                            </div>
-                          </Popup>
-                        </CircleMarker>
-                      </Fragment>
+                      <Circle
+                        key={`installer-zone-${p.userId}`}
+                        center={coords}
+                        radius={radiusM}
+                        pathOptions={{ color: "#7c3aed", fillColor: "#7c3aed", fillOpacity: 0.12, weight: 3, dashArray: "6 4" }}
+                      >
+                        <Popup>
+                          <div className="min-w-[200px] space-y-1">
+                            <div className="font-bold text-sm">{p.displayName}</div>
+                            <div className="text-xs text-slate-500">{isEn ? "Installer territory" : "Territoire installateur"}</div>
+                            {p.regions && <div className="text-xs">{p.regions}</div>}
+                            <div className="text-xs"><span className="font-semibold">{isEn ? "Postal code:" : "Code postal :"}</span> {p.postalCode}</div>
+                            <div className="text-xs"><span className="font-semibold">{isEn ? "Radius:" : "Rayon :"}</span> {p.radius || "25 km"}</div>
+                          </div>
+                        </Popup>
+                      </Circle>
+                    );
+                  })}
+                  {layers.has("installers") && installerProfiles.map((p) => {
+                    const coords = p.latLng || postalToCoords(p.postalCode, p.city);
+                    if (!coords) return null;
+                    return (
+                      <CircleMarker
+                        key={`installer-pin-${p.userId}`}
+                        center={coords}
+                        radius={9}
+                        pathOptions={{ color: "#ffffff", fillColor: "#7c3aed", fillOpacity: 1, weight: 3 }}
+                      >
+                        <Popup>
+                          <div className="min-w-[200px] space-y-1">
+                            <div className="font-bold text-sm">{p.displayName}</div>
+                            <div className="text-xs text-slate-500">{isEn ? "Installer anchor" : "Point installateur"}</div>
+                            <div className="text-xs"><span className="font-semibold">{isEn ? "Postal code:" : "Code postal :"}</span> {p.postalCode}</div>
+                          </div>
+                        </Popup>
+                      </CircleMarker>
                     );
                   })}
                 </MapContainer>
