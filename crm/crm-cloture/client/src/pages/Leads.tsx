@@ -32,7 +32,10 @@ export function Leads() {
   const isEn = language === "en";
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>(() => {
+    if (typeof window === "undefined") return "all";
+    return new URLSearchParams(window.location.search).get("status") || "all";
+  });
   const [filterProvince, setFilterProvince] = useState<string>("all");
   const [search, setSearch] = useState("");
 

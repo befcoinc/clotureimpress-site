@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { PageHeader } from "@/components/PageHeader";
@@ -29,6 +29,14 @@ export function Soumissions() {
   const { data: crews = [] } = useQuery<Crew[]>({ queryKey: ["/api/crews"] });
   const [search, setSearch] = useState("");
   const [quoteDialog, setQuoteDialog] = useState<QuoteDialogState>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Read ?filter=xxx from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const f = params.get("filter");
+    if (f) setStatusFilter(f);
+  }, []);
 
   const canManageQuotes = can("edit_sales") || role === "admin" || role === "sales_director";
   const canDeleteQuotes = role === "admin" || role === "sales_director";
@@ -37,6 +45,11 @@ export function Soumissions() {
     let list = quotes;
     if (role === "sales_rep") list = list.filter(q => q.assignedSalesId === currentUser?.id);
     if (role === "installer") list = list.filter(q => q.assignedInstallerId === currentUser?.id);
+    if (statusFilter === "in-progress") {
+      list = list.filter(q => !["signee", "perdue"].includes(q.salesStatus));
+    } else if (statusFilter !== "all") {
+      list = list.filter(q => q.salesStatus === statusFilter);
+    }
     if (search) {
       const s = search.toLowerCase();
       list = list.filter(q =>
@@ -46,7 +59,7 @@ export function Soumissions() {
       );
     }
     return list;
-  }, [quotes, role, currentUser, search]);
+  }, [quotes, role, currentUser, search, statusFilter]);
 
   const createQuote = useMutation({
     mutationFn: async (payload: any) => apiRequest("POST", "/api/quotes", {
@@ -105,6 +118,14 @@ export function Soumissions() {
       <div className="p-6 lg:p-8 space-y-4">
         <div className="flex items-center gap-2">
           <Input placeholder={isEn ? "Search client, phone or city..." : "Rechercher client, téléphone ou ville..."} className="max-w-sm" value={search} onChange={e => setSearch(e.target.value)} data-testid="input-search-quotes" />
+          {statusFilter !== "all" && (
+            <Badge variant="secondary" className="gap-1.5 cursor-pointer" onClick={() => { setStatusFilter("all"); window.history.replaceState(null, "", "/soumissions"); }}>
+              {statusFilter === "in-progress"
+                ? (isEn ? "In progress" : "En cours")
+                : (SALES_STATUSES as Record<string, string>)[statusFilter] || statusFilter}
+              <span aria-hidden>×</span>
+            </Badge>
+          )}
           <div className="ml-auto text-xs text-muted-foreground">{visible.length} {isEn ? "quote(s)" : "soumission(s)"}</div>
         </div>
 

@@ -69,12 +69,12 @@ export function Dashboard() {
       <div className="p-6 lg:p-8 space-y-6">
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <KpiCard testId="kpi-new-leads" label={isEn ? "New leads" : "Nouveaux leads"} value={stats?.newLeads ?? "—"} hint={`${stats?.leadsCount ?? 0} ${isEn ? "total" : "au total"}`} icon={<Inbox className="h-4 w-4" />} accent="info" />
-          <KpiCard testId="kpi-in-progress" label={isEn ? "Quotes in progress" : "Soumissions en cours"} value={stats?.quotesInProgress ?? "—"} icon={<FileText className="h-4 w-4" />} />
-          <KpiCard testId="kpi-won" label={isEn ? "Won quotes" : "Soumissions gagnées"} value={stats?.quotesWon ?? "—"} icon={<CheckCircle2 className="h-4 w-4" />} accent="success" />
-          <KpiCard testId="kpi-installs" label={isEn ? "Scheduled installations" : "Installations planifiées"} value={stats?.installsPlanned ?? "—"} icon={<Calendar className="h-4 w-4" />} />
-          <KpiCard testId="kpi-late" label={isEn ? "Delays" : "Retards"} value={stats?.installsLate ?? 0} icon={<AlertTriangle className="h-4 w-4" />} accent={stats && stats.installsLate > 0 ? "danger" : "default"} />
-          <KpiCard testId="kpi-value" label={isEn ? "Estimated value" : "Valeur estimée"} value={stats ? moneyFmt.format(stats.estimatedValue) : "—"} icon={<DollarSign className="h-4 w-4" />} accent="success" />
+          <KpiCard testId="kpi-new-leads" label={isEn ? "New leads" : "Nouveaux leads"} value={stats?.newLeads ?? "—"} hint={`${stats?.leadsCount ?? 0} ${isEn ? "total" : "au total"}`} icon={<Inbox className="h-4 w-4" />} accent="info" href="/leads?status=nouveau" />
+          <KpiCard testId="kpi-in-progress" label={isEn ? "Quotes in progress" : "Soumissions en cours"} value={stats?.quotesInProgress ?? "—"} icon={<FileText className="h-4 w-4" />} href="/soumissions?filter=in-progress" />
+          <KpiCard testId="kpi-won" label={isEn ? "Won quotes" : "Soumissions gagnées"} value={stats?.quotesWon ?? "—"} icon={<CheckCircle2 className="h-4 w-4" />} accent="success" href="/soumissions?filter=signee" />
+          <KpiCard testId="kpi-installs" label={isEn ? "Scheduled installations" : "Installations planifiées"} value={stats?.installsPlanned ?? "—"} icon={<Calendar className="h-4 w-4" />} href="/calendrier" />
+          <KpiCard testId="kpi-late" label={isEn ? "Delays" : "Retards"} value={stats?.installsLate ?? 0} icon={<AlertTriangle className="h-4 w-4" />} accent={stats && stats.installsLate > 0 ? "danger" : "default"} href="/dispatch-installation?filter=retards" />
+          <KpiCard testId="kpi-value" label={isEn ? "Estimated value" : "Valeur estimée"} value={stats ? moneyFmt.format(stats.estimatedValue) : "—"} icon={<DollarSign className="h-4 w-4" />} accent="success" href="/tableau-ventes" />
         </div>
 
         {/* Urgent actions */}

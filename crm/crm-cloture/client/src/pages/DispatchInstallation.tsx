@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Calendar, Wrench, MapPin, Users } from "lucide-react";
@@ -44,6 +44,24 @@ export function DispatchInstallation() {
   // Installations to schedule = signed but no scheduled date or no installer
   const toSchedule = quotes.filter(q => q.salesStatus === "signee" && q.installStatus === "a_planifier");
 
+  // Late installations (matches /api/stats logic)
+  const lateInstalls = useMemo(() => quotes.filter(q => {
+    if (!q.scheduledDate) return false;
+    return new Date(q.scheduledDate) < new Date(Date.now() - 86_400_000) && q.installStatus !== "terminee";
+  }), [quotes]);
+
+  // Highlight "Retards" section when arriving via Dashboard KPI link.
+  const [highlightLate, setHighlightLate] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("filter") === "retards") {
+      setHighlightLate(true);
+      setTimeout(() => {
+        document.getElementById("section-retards")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }, []);
+
   // Group by sector
   const groupedBySector = useMemo(() => {
     const map = new Map<string, Quote[]>();
@@ -74,6 +92,36 @@ export function DispatchInstallation() {
         description={isEn ? "Plan installations, assign teams/subcontractors, and group by sector/day." : "Planifier les installations, assigner les équipes/sous-traitants et regrouper par secteur/journée."}
       />
       <div className="p-6 lg:p-8 space-y-6">
+        {/* Late installations (KPI "Retards") */}
+        {lateInstalls.length > 0 && (
+          <Card id="section-retards" className={highlightLate ? "border-rose-500 ring-2 ring-rose-300 dark:ring-rose-900" : "border-rose-200 dark:border-rose-900"}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2 text-rose-700 dark:text-rose-300">
+                <Calendar className="h-4 w-4" /> {isEn ? "Late installations" : "Installations en retard"}
+                <Badge variant="destructive" className="ml-1">{lateInstalls.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {lateInstalls.map(q => {
+                  const installer = users.find(u => u.id === q.assignedInstallerId);
+                  return (
+                    <Link key={q.id} href={`/soumissions/${q.id}`} className="block">
+                      <div className="rounded-md border border-rose-300 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/30 p-3 hover-elevate cursor-pointer">
+                        <div className="font-semibold text-[13px] truncate">{q.clientName}</div>
+                        <div className="text-[11px] text-muted-foreground truncate">{q.city}, {q.province}</div>
+                        <div className="mt-2 flex items-center justify-between text-[11px]">
+                          <span className="text-rose-700 dark:text-rose-300">📅 {q.scheduledDate}</span>
+                          <span className="text-muted-foreground truncate">{installer?.name || (isEn ? "Unassigned" : "Non assigné")}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
         {/* Available crews */}
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> {isEn ? "Teams and subcontractors" : "Équipes et sous-traitants"}</CardTitle></CardHeader>
