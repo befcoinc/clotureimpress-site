@@ -5,7 +5,7 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
-import { RoleProvider } from "@/lib/role-context";
+import { RoleProvider, useRole } from "@/lib/role-context";
 import { Layout } from "@/components/Layout";
 import { Login } from "@/pages/Login";
 import { AcceptInvite } from "@/pages/AcceptInvite";
