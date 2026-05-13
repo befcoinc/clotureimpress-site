@@ -49,6 +49,42 @@ function mapIntimuraStatus(status = "") {
 
 const installerPostalCoordCache = new Map<string, [number, number]>();
 
+type ApiCacheEntry = {
+  expiresAt: number;
+  payload: unknown;
+};
+
+const apiResponseCache = new Map<string, ApiCacheEntry>();
+const API_CACHE_TTL_MS = 15_000;
+
+function getApiCacheKey(req: Request) {
+  const actor = req.user as any;
+  const role = actor?.role || "anonymous";
+  return `${req.method}:${req.originalUrl}:role=${role}`;
+}
+
+function getCachedApiResponse<T>(req: Request): T | null {
+  const key = getApiCacheKey(req);
+  const cached = apiResponseCache.get(key);
+  if (!cached) return null;
+  if (cached.expiresAt <= Date.now()) {
+    apiResponseCache.delete(key);
+    return null;
+  }
+  return cached.payload as T;
+}
+
+function setCachedApiResponse(req: Request, payload: unknown, ttlMs = API_CACHE_TTL_MS) {
+  apiResponseCache.set(getApiCacheKey(req), {
+    payload,
+    expiresAt: Date.now() + ttlMs,
+  });
+}
+
+function clearApiResponseCache() {
+  apiResponseCache.clear();
+}
+
 async function geocodeCanadianPostalCode(postalCode?: string | null): Promise<[number, number] | null> {
   const clean = String(postalCode || "").replace(/\s/g, "").toUpperCase();
   if (!/^[A-Z]\d[A-Z]\d[A-Z]\d$/.test(clean)) return null;
@@ -117,6 +153,18 @@ export async function registerRoutes(
     if (req.isAuthenticated()) return next();
     return res.status(401).json({ error: "Authentification requise" });
   }
+
+  // Clear cached API responses after successful data mutations.
+  app.use("/api", (req, res, next) => {
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+      res.on("finish", () => {
+        if (res.statusCode < 400) {
+          clearApiResponseCache();
+        }
+      });
+    }
+    next();
+  });
 
   // ── Auth routes (public) ────────────────────────────────────────────
   app.post("/api/auth/login", (req, res, next) => {
@@ -351,6 +399,10 @@ export async function registerRoutes(
       if (!allowed.includes(actor?.role)) {
         return res.status(403).json({ error: "Accès refusé" });
       }
+      const cached = getCachedApiResponse<any[]>(req);
+      if (cached) {
+        return res.json(cached);
+      }
       const users = await storage.getUsers();
       const installers = users.filter((u: any) => u.role === "installer");
       const profiles = await Promise.all(
@@ -387,15 +439,23 @@ export async function registerRoutes(
       // Return every installer profile that has at least *some* location hint
       // (postal code OR city) so the heatmap can render them. Client-side
       // fallback handles missing coords / radius.
-      res.json(withCoords.filter(p => p.postalCode || p.city));
+      const visibleProfiles = withCoords.filter(p => p.postalCode || p.city);
+      setCachedApiResponse(req, visibleProfiles);
+      res.json(visibleProfiles);
     } catch (err) {
       next(err);
     }
   });
 
   // -------- Users --------
-  app.get("/api/users", async (_req, res) => {
-    res.json(await storage.getUsers());
+  app.get("/api/users", async (req, res) => {
+    const cached = getCachedApiResponse<any[]>(req);
+    if (cached) {
+      return res.json(cached);
+    }
+    const users = await storage.getUsers();
+    setCachedApiResponse(req, users);
+    res.json(users);
   });
 
   const userMutationErrorMessage = (error: any) => {
@@ -565,8 +625,14 @@ export async function registerRoutes(
   });
 
   // -------- Leads --------
-  app.get("/api/leads", async (_req, res) => {
-    res.json(await storage.getLeads());
+  app.get("/api/leads", async (req, res) => {
+    const cached = getCachedApiResponse<any[]>(req);
+    if (cached) {
+      return res.json(cached);
+    }
+    const leads = await storage.getLeads();
+    setCachedApiResponse(req, leads);
+    res.json(leads);
   });
   app.get("/api/leads/:id", async (req, res) => {
     const lead = await storage.getLead(Number(req.params.id));
@@ -836,8 +902,14 @@ export async function registerRoutes(
   }
 
   // -------- Quotes --------
-  app.get("/api/quotes", async (_req, res) => {
-    res.json(await storage.getQuotes());
+  app.get("/api/quotes", async (req, res) => {
+    const cached = getCachedApiResponse<any[]>(req);
+    if (cached) {
+      return res.json(cached);
+    }
+    const quotes = await storage.getQuotes();
+    setCachedApiResponse(req, quotes);
+    res.json(quotes);
   });
   app.get("/api/quotes/:id", async (req, res) => {
     const q = await storage.getQuote(Number(req.params.id));
@@ -947,7 +1019,11 @@ export async function registerRoutes(
   });
 
   // -------- Aggregated stats --------
-  app.get("/api/stats", async (_req, res) => {
+  app.get("/api/stats", async (req, res) => {
+    const cached = getCachedApiResponse<any>(req);
+    if (cached) {
+      return res.json(cached);
+    }
     const [allLeads, allQuotes, allUsers, allCrews] = await Promise.all([
       storage.getLeads(), storage.getQuotes(), storage.getUsers(), storage.getCrews(),
     ]);
@@ -963,7 +1039,7 @@ export async function registerRoutes(
       .filter(q => !["perdue"].includes(q.salesStatus))
       .reduce((s, q) => s + (q.estimatedPrice || 0), 0);
 
-    res.json({
+    const stats = {
       leadsCount: allLeads.length,
       newLeads: nouveau,
       quotesInProgress: enCours,
@@ -973,7 +1049,9 @@ export async function registerRoutes(
       estimatedValue,
       crewsCount: allCrews.length,
       usersCount: allUsers.length,
-    });
+    };
+    setCachedApiResponse(req, stats);
+    res.json(stats);
   });
 
   return httpServer;
