@@ -510,6 +510,7 @@ export function Utilisateurs() {
           userId={viewFormUserId}
           userName={users.find(u => u.id === viewFormUserId)?.name || ""}
           isEn={isEn}
+          canEdit={canManage}
           onClose={() => setViewFormUserId(null)}
         />
       )}
@@ -549,21 +550,99 @@ const SECTION_LABELS: Record<string, { fr: string; en: string }> = {
   "2": { fr: "2. Territoire desservi et secteur heatmap", en: "2. Service territory & heatmap sector" },
 };
 
-function InstallerFormDialog({ userId, userName, isEn, onClose }: { userId: number; userName: string; isEn: boolean; onClose: () => void }) {
+function InstallerFormDialog({ userId, userName, isEn, canEdit, onClose }: { userId: number; userName: string; isEn: boolean; canEdit: boolean; onClose: () => void }) {
+  const { toast } = useToast();
   const { data, isLoading } = useQuery<{ data: Record<string, string | boolean> | null }>({
     queryKey: [`/api/users/${userId}/installer-form-data`],
     enabled: userId > 0,
   });
 
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Record<string, string | boolean>>({});
+
   const formData = data?.data || null;
   const sections = [...new Set(FORM_FIELDS.map(f => f.section))];
 
-  function renderValue(field: typeof FORM_FIELDS[0]) {
-    if (!formData) return "—";
+  function startEdit() {
+    setDraft({ ...(formData || {}) });
+    setEditing(true);
+  }
+
+  function cancelEdit() {
+    setEditing(false);
+    setDraft({});
+  }
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: Record<string, string | boolean>) =>
+      (await apiRequest("PUT", `/api/users/${userId}/installer-form-data`, { data })).json(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${userId}/installer-form-data`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/installer-profiles"] });
+      setEditing(false);
+      setDraft({});
+      toast({ title: isEn ? "Form saved" : "Fiche enregistrée" });
+    },
+    onError: () => {
+      toast({ title: isEn ? "Save failed" : "Échec de la sauvegarde", variant: "destructive" });
+    },
+  });
+
+  function renderViewField(field: typeof FORM_FIELDS[0]) {
+    if (!formData) return null;
     const val = formData[field.key];
-    if (val === undefined || val === null || val === "") return "—";
-    if (typeof val === "boolean") return val ? "✓" : "✗";
-    return String(val);
+    if (val === undefined || val === null || val === "") return null;
+    const display = typeof val === "boolean" ? (val ? "✓" : null) : String(val);
+    if (!display) return null;
+    return (
+      <div key={field.key} className="flex flex-col">
+        <span className="text-[11px] text-muted-foreground">{isEn ? field.labelEn : field.label}</span>
+        <span className="text-[13px] font-medium">{display}</span>
+      </div>
+    );
+  }
+
+  function renderEditField(field: typeof FORM_FIELDS[0]) {
+    const isBool = field.key === "field_15" || field.key === "field_16" ||
+      (field.key >= "field_17" && field.key <= "field_21");
+    const label = isEn ? field.labelEn : field.label;
+    if (isBool) {
+      return (
+        <div key={field.key} className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id={`edit-${field.key}`}
+            checked={!!draft[field.key]}
+            onChange={e => setDraft(prev => ({ ...prev, [field.key]: e.target.checked }))}
+            className="h-4 w-4 cursor-pointer"
+          />
+          <label htmlFor={`edit-${field.key}`} className="text-[13px] cursor-pointer">{label}</label>
+        </div>
+      );
+    }
+    // Radius select
+    if (field.key === "field_13") {
+      const options = ["25 km","50 km","75 km","100 km","125 km","150 km","175 km","200 km","300 km","400 km","500 km"];
+      return (
+        <div key={field.key} className="flex flex-col gap-1">
+          <label className="text-[11px] text-muted-foreground">{label}</label>
+          <Select value={String(draft[field.key] || "")} onValueChange={v => setDraft(prev => ({ ...prev, [field.key]: v }))}>
+            <SelectTrigger className="h-8 text-[13px]"><SelectValue placeholder="—" /></SelectTrigger>
+            <SelectContent>{options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      );
+    }
+    return (
+      <div key={field.key} className="flex flex-col gap-1">
+        <label className="text-[11px] text-muted-foreground">{label}</label>
+        <Input
+          className="h-8 text-[13px]"
+          value={String(draft[field.key] ?? "")}
+          onChange={e => setDraft(prev => ({ ...prev, [field.key]: e.target.value }))}
+        />
+      </div>
+    );
   }
 
   return (
@@ -575,40 +654,80 @@ function InstallerFormDialog({ userId, userName, isEn, onClose }: { userId: numb
             {isEn ? "Subcontractor form — " : "Fiche sous-traitant — "}{userName}
           </DialogTitle>
           <DialogDescription>
-            {isEn ? "Data saved by the installer from their subcontractor form." : "Données enregistrées par l'installateur via sa fiche sous-traitant."}
+            {editing
+              ? (isEn ? "Edit the form data on behalf of the installer." : "Modifier les données de la fiche au nom de l'installateur.")
+              : (isEn ? "Data saved by the installer from their subcontractor form." : "Données enregistrées par l'installateur via sa fiche sous-traitant.")}
           </DialogDescription>
         </DialogHeader>
+
         {isLoading ? (
           <div className="py-8 text-center text-sm text-muted-foreground">{isEn ? "Loading..." : "Chargement..."}</div>
+        ) : editing ? (
+          <div className="space-y-5">
+            {sections.map(sec => {
+              const fields = FORM_FIELDS.filter(f => f.section === sec);
+              const sectionLabel = SECTION_LABELS[sec] ? (isEn ? SECTION_LABELS[sec].en : SECTION_LABELS[sec].fr) : `Section ${sec}`;
+              const boolFields = fields.filter(f => ["field_15","field_16","field_17","field_18","field_19","field_20","field_21"].includes(f.key));
+              const textFields = fields.filter(f => !["field_15","field_16","field_17","field_18","field_19","field_20","field_21"].includes(f.key));
+              return (
+                <div key={sec}>
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 border-b border-border pb-1">{sectionLabel}</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+                    {textFields.map(f => renderEditField(f))}
+                  </div>
+                  {boolFields.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+                      {boolFields.map(f => renderEditField(f))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         ) : !formData ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">{isEn ? "No form data saved yet." : "Aucune donnée de fiche enregistrée."}</div>
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            {isEn ? "No form data saved yet." : "Aucune donnée de fiche enregistrée."}
+            {canEdit && <div className="mt-3"><Button size="sm" onClick={() => { setDraft({}); setEditing(true); }}>{isEn ? "Fill in form" : "Remplir la fiche"}</Button></div>}
+          </div>
         ) : (
           <div className="space-y-4">
             {sections.map(sec => {
               const fields = FORM_FIELDS.filter(f => f.section === sec);
               const sectionLabel = SECTION_LABELS[sec] ? (isEn ? SECTION_LABELS[sec].en : SECTION_LABELS[sec].fr) : `Section ${sec}`;
+              const rendered = fields.map(f => renderViewField(f)).filter(Boolean);
+              if (rendered.length === 0) return null;
               return (
                 <div key={sec}>
                   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 border-b border-border pb-1">{sectionLabel}</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                    {fields.map(f => {
-                      const val = renderValue(f);
-                      if (val === "—" && typeof formData[f.key] !== "boolean") return null;
-                      return (
-                        <div key={f.key} className="flex flex-col">
-                          <span className="text-[11px] text-muted-foreground">{isEn ? f.labelEn : f.label}</span>
-                          <span className="text-[13px] font-medium">{val}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">{rendered}</div>
                 </div>
               );
             })}
           </div>
         )}
-        <div className="flex justify-end pt-2">
-          <Button variant="outline" onClick={onClose}>{isEn ? "Close" : "Fermer"}</Button>
+
+        <div className="flex justify-between pt-2 gap-2">
+          <div>
+            {canEdit && !editing && !isLoading && formData && (
+              <Button size="sm" variant="outline" onClick={startEdit}>
+                <Pencil className="h-3.5 w-3.5 mr-1.5" />{isEn ? "Edit" : "Modifier"}
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {editing ? (
+              <>
+                <Button variant="outline" size="sm" onClick={cancelEdit} disabled={saveMutation.isPending}>
+                  {isEn ? "Cancel" : "Annuler"}
+                </Button>
+                <Button size="sm" disabled={saveMutation.isPending} onClick={() => saveMutation.mutate(draft)}>
+                  {saveMutation.isPending ? (isEn ? "Saving..." : "Enregistrement...") : (isEn ? "Save" : "Enregistrer")}
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" onClick={onClose}>{isEn ? "Close" : "Fermer"}</Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

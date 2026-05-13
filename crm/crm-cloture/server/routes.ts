@@ -288,6 +288,26 @@ export async function registerRoutes(
     }
   });
 
+  // PUT /api/users/:id/installer-form-data — admin edits an installer's form
+  app.put("/api/users/:id/installer-form-data", requireAuth, async (req, res, next) => {
+    try {
+      const actor = req.user as any;
+      if (actor?.role !== "admin") {
+        return res.status(403).json({ error: "Accès refusé" });
+      }
+      const userId = parseInt(req.params.id, 10);
+      if (isNaN(userId)) return res.status(400).json({ error: "ID invalide" });
+      const { data } = req.body;
+      if (!data || typeof data !== "object") return res.status(400).json({ error: "Données invalides" });
+      const json = JSON.stringify(data);
+      if (json.length > 200000) return res.status(400).json({ error: "Fiche trop volumineuse" });
+      await storage.setInstallerProfileFormData(userId, json);
+      return res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // GET /api/installer-profiles — all installer territories for heatmap (admin/directors/sales_rep)
   app.get("/api/installer-profiles", requireAuth, async (req, res, next) => {
     try {
