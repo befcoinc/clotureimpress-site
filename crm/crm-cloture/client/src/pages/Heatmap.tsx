@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Circle, CircleMarker, MapContainer, Popup, TileLayer, ZoomControl } from "react-leaflet";
+import { Circle, CircleMarker, MapContainer, Popup, TileLayer, ZoomControl, useMap } from "react-leaflet";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { CalendarDays, DollarSign, Flame, HardHat, MapPin, Route, Target, TrendingUp, Users } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -122,6 +123,81 @@ function postalToCoords(pc: string, cityFallback?: string): [number, number] | n
 function parseRadiusMeters(radiusStr: string): number {
   const match = (radiusStr || "").match(/(\d+)/);
   return match ? parseInt(match[1]) * 1000 : 0;
+}
+
+// ── Imperative Leaflet installer layer ───────────────────────────────────────
+// Using the native Leaflet API directly avoids react-leaflet reconciler issues
+// where Circle/CircleMarker added after initial render may not appear.
+function InstallerLayerNative({ profiles, show, isEn }: {
+  profiles: InstallerProfile[];
+  show: boolean;
+  isEn: boolean;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (!show) return;
+    const layers: L.Layer[] = [];
+    for (const p of profiles) {
+      const coords: [number, number] | null = (() => {
+        if (p.latLng) return p.latLng;
+        const pc = (p.postalCode || "").replace(/\s/g, "").toUpperCase();
+        if (pc.length >= 2) {
+          const fsa = pc.slice(0, 2);
+          const FSA: Record<string, [number, number]> = {
+            "H1": [45.57, -73.53], "H2": [45.54, -73.61], "H3": [45.50, -73.57],
+            "H4": [45.47, -73.61], "H7": [45.60, -73.73], "H8": [45.50, -73.83], "H9": [45.44, -73.87],
+            "G1": [46.82, -71.21], "G2": [46.86, -71.35], "G3": [46.89, -71.15],
+            "G5": [46.49, -72.49], "G6": [46.74, -71.27],
+            "J0": [46.02, -73.44], "J1": [45.40, -71.89], "J2": [45.28, -72.70],
+            "J3": [45.53, -73.50], "J4": [45.52, -73.29], "J5": [45.89, -73.25],
+            "J6": [45.31, -73.26], "J7": [45.72, -74.00], "J8": [45.48, -75.72],
+            "K1": [45.42, -75.70], "K2": [45.32, -75.79],
+            "L3": [43.87, -79.26], "L4": [43.86, -79.43],
+            "M5": [43.65, -79.38],
+            "T2": [51.05, -114.07], "T5": [53.54, -113.49],
+            "V6": [49.24, -123.12],
+          };
+          if (FSA[fsa]) return FSA[fsa];
+        }
+        // City fallback
+        const CITIES: Record<string, [number, number]> = {
+          montreal: [45.5019, -73.5674], laval: [45.6066, -73.7124],
+          quebec: [46.8139, -71.208], "lac masson": [45.9833, -74.2167],
+          "lac-masson": [45.9833, -74.2167], ottawa: [45.4215, -75.6972],
+        };
+        const city = (p.city || "").toLowerCase().trim();
+        return CITIES[city] || null;
+      })();
+      if (!coords) continue;
+      const radiusM = (() => {
+        const m = (p.radius || "").match(/(\d+)/);
+        return m ? parseInt(m[1]) * 1000 : 25_000;
+      })();
+      const popup = `<div style="min-width:180px"><b style="font-size:13px">${p.displayName}</b><br/>
+        <span style="font-size:11px;color:#666">${isEn ? "Installer territory" : "Territoire installateur"}</span><br/>
+        <span style="font-size:11px">${isEn ? "Postal:" : "Code postal :"} <b>${p.postalCode}</b></span><br/>
+        <span style="font-size:11px">${isEn ? "Radius:" : "Rayon :"} <b>${p.radius || "25 km"}</b></span>
+        ${p.regions ? `<br/><span style="font-size:11px">${p.regions}</span>` : ""}</div>`;
+      const zone = L.circle(coords, {
+        radius: radiusM,
+        color: "#7c3aed",
+        fillColor: "#7c3aed",
+        fillOpacity: 0.12,
+        weight: 3,
+        dashArray: "8 5",
+      }).bindPopup(popup).addTo(map);
+      const pin = L.circleMarker(coords, {
+        radius: 10,
+        color: "#ffffff",
+        fillColor: "#7c3aed",
+        fillOpacity: 1,
+        weight: 3,
+      }).bindPopup(popup).addTo(map);
+      layers.push(zone, pin);
+    }
+    return () => { layers.forEach(l => l.remove()); };
+  }, [map, profiles, show, isEn]);
+  return null;
 }
 
 function normalize(value?: string | null) {
@@ -445,49 +521,7 @@ export function Heatmap() {
                       </CircleMarker>
                     );
                   })}
-                  {layers.has("installers") && installerProfiles.map((p) => {
-                    const coords = p.latLng || postalToCoords(p.postalCode, p.city);
-                    if (!coords) return null;
-                    const radiusM = parseRadiusMeters(p.radius) || 25_000;
-                    return (
-                      <Circle
-                        key={`installer-zone-${p.userId}`}
-                        center={coords}
-                        radius={radiusM}
-                        pathOptions={{ color: "#7c3aed", fillColor: "#7c3aed", fillOpacity: 0.12, weight: 3, dashArray: "6 4" }}
-                      >
-                        <Popup>
-                          <div className="min-w-[200px] space-y-1">
-                            <div className="font-bold text-sm">{p.displayName}</div>
-                            <div className="text-xs text-slate-500">{isEn ? "Installer territory" : "Territoire installateur"}</div>
-                            {p.regions && <div className="text-xs">{p.regions}</div>}
-                            <div className="text-xs"><span className="font-semibold">{isEn ? "Postal code:" : "Code postal :"}</span> {p.postalCode}</div>
-                            <div className="text-xs"><span className="font-semibold">{isEn ? "Radius:" : "Rayon :"}</span> {p.radius || "25 km"}</div>
-                          </div>
-                        </Popup>
-                      </Circle>
-                    );
-                  })}
-                  {layers.has("installers") && installerProfiles.map((p) => {
-                    const coords = p.latLng || postalToCoords(p.postalCode, p.city);
-                    if (!coords) return null;
-                    return (
-                      <CircleMarker
-                        key={`installer-pin-${p.userId}`}
-                        center={coords}
-                        radius={9}
-                        pathOptions={{ color: "#ffffff", fillColor: "#7c3aed", fillOpacity: 1, weight: 3 }}
-                      >
-                        <Popup>
-                          <div className="min-w-[200px] space-y-1">
-                            <div className="font-bold text-sm">{p.displayName}</div>
-                            <div className="text-xs text-slate-500">{isEn ? "Installer anchor" : "Point installateur"}</div>
-                            <div className="text-xs"><span className="font-semibold">{isEn ? "Postal code:" : "Code postal :"}</span> {p.postalCode}</div>
-                          </div>
-                        </Popup>
-                      </CircleMarker>
-                    );
-                  })}
+                  <InstallerLayerNative profiles={installerProfiles} show={layers.has("installers")} isEn={isEn} />
                 </MapContainer>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
