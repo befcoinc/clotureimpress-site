@@ -173,8 +173,9 @@ function InstallerLayerNative({ profiles, show, isEn }: {
         const m = (p.radius || "").match(/(\d+)/);
         return m ? parseInt(m[1]) * 1000 : 25_000;
       })();
-      const popup = `<div style="min-width:180px"><b style="font-size:13px">${p.displayName}</b><br/>
-        <span style="font-size:11px;color:#666">${isEn ? "Installer territory" : "Territoire installateur"}</span><br/>
+      const popup = `<div style="min-width:180px">
+        <a href="/utilisateurs?fiche=${p.userId}" style="font-size:14px;font-weight:bold;color:#7c3aed;text-decoration:none;cursor:pointer">${p.displayName}</a><br/>
+        <span style="font-size:11px;color:#888">${isEn ? "Click name to see full profile & quotes" : "Cliquer le nom pour voir la fiche complète"}</span><br/>
         <span style="font-size:11px">${isEn ? "Postal:" : "Code postal :"} <b>${p.postalCode}</b></span><br/>
         <span style="font-size:11px">${isEn ? "Radius:" : "Rayon :"} <b>${p.radius || "25 km"}</b></span>
         ${p.regions ? `<br/><span style="font-size:11px">${p.regions}</span>` : ""}</div>`;

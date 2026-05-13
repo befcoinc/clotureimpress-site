@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,6 +78,17 @@ export function Utilisateurs() {
   const [userDialog, setUserDialog] = useState<UserDialogState>(null);
   const [crewDialog, setCrewDialog] = useState<CrewDialogState>(null);
   const [viewFormUserId, setViewFormUserId] = useState<number | null>(null);
+
+  // Auto-open installer fiche when navigating from heatmap (?fiche=userId)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ficheId = params.get("fiche");
+    if (ficheId) {
+      const id = parseInt(ficheId, 10);
+      if (!isNaN(id)) setViewFormUserId(id);
+    }
+  }, []);
+
   const [inviteResult, setInviteResult] = useState<null | {
     email: string;
     phone?: string;
@@ -565,6 +576,8 @@ function InstallerFormDialog({ userId, userName, isEn, canEdit, onClose }: { use
     queryKey: [`/api/users/${userId}/installer-form-data`],
     enabled: userId > 0,
   });
+  const { data: allQuotes = [] } = useQuery<any[]>({ queryKey: ["/api/quotes"] });
+  const assignedQuotes = allQuotes.filter((q: any) => q.assignedInstallerId === userId);
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, string | boolean>>({});
@@ -715,6 +728,36 @@ function InstallerFormDialog({ userId, userName, isEn, canEdit, onClose }: { use
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* ── Soumissions assignées ─────────────────────────────── */}
+        {!editing && assignedQuotes.length > 0 && (
+          <div className="mt-4 border-t border-border pt-4">
+            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+              {isEn ? `Assigned quotes (${assignedQuotes.length})` : `Soumissions assignées (${assignedQuotes.length})`}
+            </div>
+            <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+              {assignedQuotes.map((q: any) => (
+                <a key={q.id} href={`/soumissions/${q.id}`} className="block rounded-md border border-border p-2.5 hover:bg-muted/60 transition-colors no-underline">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-[13px] text-foreground">{q.clientName}</span>
+                    <span className="text-[11px] text-muted-foreground">{q.city}{q.province ? `, ${q.province}` : ""}</span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    <span className="inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-700">{q.salesStatus}</span>
+                    <span className="inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-700">{q.installStatus}</span>
+                    {q.installDate && <span className="inline-block rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">{q.installDate}</span>}
+                    {q.estimatedPrice > 0 && <span className="inline-block rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700">{q.estimatedPrice.toLocaleString("fr-CA")} $</span>}
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+        {!editing && assignedQuotes.length === 0 && !isLoading && (
+          <div className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
+            {isEn ? "No quotes assigned to this installer yet." : "Aucune soumission assignée à cet installateur."}
           </div>
         )}
 
