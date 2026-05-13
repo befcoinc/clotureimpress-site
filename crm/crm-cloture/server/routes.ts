@@ -395,7 +395,7 @@ export async function registerRoutes(
   app.get("/api/installer-profiles", requireAuth, async (req, res, next) => {
     try {
       const actor = req.user as any;
-      const allowed = ["admin", "sales_director", "install_director", "sales_rep"];
+      const allowed = ["admin", "sales_director", "install_director", "sales_rep", "installer"];
       if (!allowed.includes(actor?.role)) {
         return res.status(403).json({ error: "Accès refusé" });
       }
@@ -404,7 +404,13 @@ export async function registerRoutes(
         return res.json(cached);
       }
       const users = await storage.getUsers();
-      const installers = users.filter((u: any) => u.role === "installer");
+      const installers = users.filter((u: any) => {
+        if (u.role !== "installer") return false;
+        // Installers can access the endpoint to render the heatmap, but only
+        // for their own profile; managers can see all installer territories.
+        if (actor?.role === "installer") return u.id === actor?.id;
+        return true;
+      });
       const profiles = await Promise.all(
         installers.map(async (u: any) => {
           const raw = await storage.getInstallerProfileFormData(u.id);
