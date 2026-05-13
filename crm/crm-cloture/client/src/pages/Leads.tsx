@@ -85,6 +85,23 @@ export function Leads() {
     },
   });
 
+  const assignSalesMut = useMutation({
+    mutationFn: async ({ id, salesId }: { id: number; salesId: number }) =>
+      apiRequest("PATCH", `/api/leads/${id}`, {
+        assignedSalesId: salesId,
+        status: "assigne",
+        _userId: currentUser?.id,
+        _userName: currentUser?.name,
+        _userRole: currentUser?.role,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      toast({ title: isEn ? "Lead assigned" : "Lead assigné" });
+    },
+  });
+
   return (
     <>
       <PageHeader
@@ -219,6 +236,28 @@ export function Leads() {
                       {rep ? <>{isEn ? "Sales rep" : "Vendeur"}: <span className="font-medium text-foreground">{rep.name}</span></> : <span className="text-amber-600">{isEn ? "Unassigned" : "Non assigné"}</span>}
                     </div>
                   </div>
+
+                  {can("assign_sales") && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <Select
+                        value={lead.assignedSalesId ? String(lead.assignedSalesId) : ""}
+                        onValueChange={(value) => assignSalesMut.mutate({ id: lead.id, salesId: Number(value) })}
+                        disabled={assignSalesMut.isPending}
+                      >
+                        <SelectTrigger className="h-8 w-[220px]" data-testid={`select-assign-sales-${lead.id}`}>
+                          <SelectValue placeholder={isEn ? "Assign to a seller..." : "Assigner à un vendeur..."} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {salesReps.map((rep) => (
+                            <SelectItem key={rep.id} value={String(rep.id)}>
+                              {rep.name}
+                              {rep.region === lead.province ? " ★" : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   {can("edit_lead") && (
                     <div className="flex flex-wrap items-center gap-1.5 pt-1">
