@@ -1214,8 +1214,20 @@
             </select>
           </label>
           <label class="modal-label">
-            <span data-fr="Régions desservies" data-en="Regions served">Régions desservies</span>
-            <input type="text" name="regions" class="modal-input" placeholder="Ex: Montréal, Laval, Rive-Nord">
+            <span data-fr="Code postal de base" data-en="Home postal code">Code postal de base</span>
+            <input type="text" name="postalCode" class="modal-input" placeholder="Ex: J7E 1Z5" maxlength="7" autocomplete="postal-code" style="text-transform:uppercase">
+          </label>
+          <label class="modal-label">
+            <span data-fr="Rayon de déplacement (km)" data-en="Travel radius (km)">Rayon de déplacement (km)</span>
+            <select name="radiusKm" class="modal-input">
+              <option value="" data-fr="Sélectionnez..." data-en="Select...">Sélectionnez...</option>
+              <option value="25">25 km</option>
+              <option value="50">50 km</option>
+              <option value="75">75 km</option>
+              <option value="100">100 km</option>
+              <option value="150">150 km</option>
+              <option value="200+">200 km+</option>
+            </select>
           </label>
         </div>
       </fieldset>
@@ -1430,7 +1442,7 @@
         address: (data.get('address') || '').toString().trim(),
         yearFounded: (data.get('yearFounded') || '').toString().trim(),
         employeeCount: (data.get('employeeCount') || '').toString().trim(),
-        regions: (data.get('regions') || '').toString().trim(),
+        regions: [(data.get('postalCode') || '').toString().trim().toUpperCase(), (data.get('radiusKm') || '').toString().trim() ? (data.get('radiusKm') || '').toString().trim() + ' km' : ''].filter(Boolean).join(' – '),
         contactName: (data.get('contactName') || '').toString().trim(),
         phone: (data.get('phone') || '').toString().trim(),
         email: (data.get('email') || '').toString().trim(),
