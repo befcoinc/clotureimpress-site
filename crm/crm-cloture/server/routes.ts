@@ -7,7 +7,7 @@ import path from "node:path";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage, detectSector, seed, hashPassword, verifyPassword } from "./storage";
-import { sendInviteEmail, sendInstallerProfileReminderEmail, sendLeadAssignedEmail } from "./email";
+import { sendInviteEmail, sendInstallerProfileReminderEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail } from "./email";
 import { sendInviteSms, sendInstallerProfileReminderSms } from "./sms";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema } from "@shared/schema";
 
@@ -864,13 +864,35 @@ export async function registerRoutes(
     }
 
     const updated = await storage.updateQuote(id, payload);
+
+    let assignedInstallerName: string | null = null;
+    if (payload.assignedInstallerId && Number(payload.assignedInstallerId) !== (existing.assignedInstallerId || null)) {
+      const installer = await storage.getUser(Number(payload.assignedInstallerId));
+      assignedInstallerName = installer?.name || null;
+      if (installer?.email) {
+        const emailResult = await sendInstallerAssignedEmail({
+          to: installer.email,
+          installerName: installer.name,
+          clientName: updated.clientName,
+          city: updated.city,
+          province: updated.province,
+          fenceType: updated.fenceType,
+        });
+        if (!emailResult.ok) {
+          console.warn("[installer-assignment-email] failed:", emailResult.error || "unknown error");
+        }
+      }
+    }
+
     await storage.createActivity({
       quoteId: id,
       userId: _userId || null,
       userName: _userName || "Système",
       userRole: _userRole || "system",
       action: _timelineStep ? "status_change" : "update",
-      note: _note || (payload.salesStatus ? `Vente → ${payload.salesStatus}` : payload.installStatus ? `Install → ${payload.installStatus}` : "Mise à jour"),
+      note: assignedInstallerName
+        ? `Assignation installateur → ${assignedInstallerName} (notification envoyée)`
+        : _note || (payload.salesStatus ? `Vente → ${payload.salesStatus}` : payload.installStatus ? `Install → ${payload.installStatus}` : "Mise à jour"),
     });
     res.json(updated);
   });
