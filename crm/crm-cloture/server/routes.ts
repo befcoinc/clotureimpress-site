@@ -286,6 +286,11 @@ export async function registerRoutes(
   });
   app.post("/api/users/:id/resend-installer-form", async (req, res) => {
     try {
+      const actorRole = (req.user as any)?.role;
+      if (!["admin", "sales_director", "install_director"].includes(actorRole)) {
+        return res.status(403).json({ error: "Acces refuse" });
+      }
+
       const user = await storage.getUser(Number(req.params.id));
       if (!user) return res.status(404).json({ error: "Utilisateur introuvable" });
       if (user.role !== "installer") return res.status(400).json({ error: "Cet utilisateur n'est pas un installateur" });
@@ -300,7 +305,7 @@ export async function registerRoutes(
       ]);
 
       const actor = (req.user as any)?.name || "Admin";
-      const actorRole = (req.user as any)?.role || "admin";
+      const actorRoleSafe = (req.user as any)?.role || "admin";
       const channels: string[] = [];
       if (emailResult.ok) channels.push("email");
       if (smsResult.ok) channels.push("sms");
@@ -312,7 +317,7 @@ export async function registerRoutes(
       await storage.createActivity({
         userId: (req.user as any)?.id || null,
         userName: actor,
-        userRole: actorRole,
+        userRole: actorRoleSafe,
         action: "installer_form_reminder",
         note: `Rappel fiche installateur envoye a ${user.name} (${user.email}) - canaux: ${channelText}${errorText ? ` - erreurs: ${errorText}` : ""}`,
       });
@@ -327,6 +332,34 @@ export async function registerRoutes(
       });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Erreur lors de l'envoi du rappel" });
+    }
+  });
+  app.patch("/api/users/:id/installer-profile-status", async (req, res) => {
+    try {
+      const actor = req.user as any;
+      if (!["admin", "sales_director", "install_director"].includes(actor?.role)) {
+        return res.status(403).json({ error: "Acces refuse" });
+      }
+
+      const user = await storage.getUser(Number(req.params.id));
+      if (!user) return res.status(404).json({ error: "Utilisateur introuvable" });
+      if (user.role !== "installer") return res.status(400).json({ error: "Cet utilisateur n'est pas un installateur" });
+
+      const completed = req.body?.completed === true;
+      await storage.setInstallerProfileCompleted(user.id, completed);
+
+      await storage.createActivity({
+        userId: actor?.id || null,
+        userName: actor?.name || "Admin",
+        userRole: actor?.role || "admin",
+        action: "installer_form_status",
+        note: `${completed ? "Fiche installateur marquee completee" : "Fiche installateur marquee non completee"} pour ${user.name} (${user.email})`,
+      });
+
+      const refreshed = await storage.getUser(user.id);
+      return res.json({ ok: true, installerProfileCompleted: refreshed?.installerProfileCompleted ?? completed });
+    } catch (error: any) {
+      return res.status(500).json({ error: error?.message || "Erreur lors de la mise a jour de la fiche" });
     }
   });
   app.patch("/api/users/:id", async (req, res) => {

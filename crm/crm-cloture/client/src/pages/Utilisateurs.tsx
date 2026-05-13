@@ -89,6 +89,7 @@ export function Utilisateurs() {
   }>(null);
 
   const canManage = role === "admin";
+  const canManageInstallerForms = role === "admin" || role === "sales_director" || role === "install_director";
   const permissionRows = isEn ? PERMISSIONS_TABLE_EN : PERMISSIONS_TABLE;
 
   const groups = useMemo(() => {
@@ -180,6 +181,21 @@ export function Utilisateurs() {
       toast({
         title: isEn ? "Form reminder sent" : "Rappel de fiche envoye",
         description: isEn ? `Delivery: ${sentText}` : `Envoi: ${sentText}`,
+      });
+    },
+    onError: onMutationError,
+  });
+
+  const setInstallerFormStatus = useMutation({
+    mutationFn: async ({ id, completed }: { id: number; completed: boolean }) =>
+      (await apiRequest("PATCH", `/api/users/${id}/installer-profile-status`, { completed })).json(),
+    onSuccess: (_data: any, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      toast({
+        title: vars.completed
+          ? (isEn ? "Form marked as completed" : "Fiche marquee comme completee")
+          : (isEn ? "Form marked as not completed" : "Fiche marquee non completee"),
       });
     },
     onError: onMutationError,
@@ -285,22 +301,26 @@ export function Utilisateurs() {
                           {u.region && <Badge variant="outline" className="text-[10px]">{u.region}</Badge>}
                           {u.cities && <span className="text-[10px] text-muted-foreground truncate">{formatCities(u.cities, isEn)}</span>}
                         </div>
-                        {canManage && (
+                        {(canManage || canManageInstallerForms) && (
                           <div className="mt-3 flex flex-wrap gap-2">
-                            <Button size="sm" variant="outline" className="h-7 gap-1.5" onClick={() => setUserDialog({ mode: "edit", user: u })} data-testid={`button-edit-user-${u.id}`}>
-                              <Pencil className="h-3.5 w-3.5" /> {isEn ? "Edit" : "Modifier"}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 gap-1.5"
-                              disabled={resendInvite.isPending}
-                              onClick={() => resendInvite.mutate(u.id)}
-                              data-testid={`button-resend-invite-${u.id}`}
-                            >
-                              <Mail className="h-3.5 w-3.5" /> {isEn ? "Resend invitation" : "Renvoyer l'invitation"}
-                            </Button>
-                            {installerFormPending && (
+                            {canManage && (
+                              <>
+                                <Button size="sm" variant="outline" className="h-7 gap-1.5" onClick={() => setUserDialog({ mode: "edit", user: u })} data-testid={`button-edit-user-${u.id}`}>
+                                  <Pencil className="h-3.5 w-3.5" /> {isEn ? "Edit" : "Modifier"}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 gap-1.5"
+                                  disabled={resendInvite.isPending}
+                                  onClick={() => resendInvite.mutate(u.id)}
+                                  data-testid={`button-resend-invite-${u.id}`}
+                                >
+                                  <Mail className="h-3.5 w-3.5" /> {isEn ? "Resend invitation" : "Renvoyer l'invitation"}
+                                </Button>
+                              </>
+                            )}
+                            {canManageInstallerForms && installerFormPending && (
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -312,17 +332,43 @@ export function Utilisateurs() {
                                 <Mail className="h-3.5 w-3.5" /> {isEn ? "Resend form" : "Renvoyer la fiche"}
                               </Button>
                             )}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-7 gap-1.5 text-destructive hover:text-destructive"
-                              onClick={() => {
-                                if (window.confirm(isEn ? `Delete ${u.name}? Assignments will be removed from quotes.` : `Supprimer ${u.name}? Ses assignations seront retirées des soumissions.`)) deleteUser.mutate(u.id);
-                              }}
-                              data-testid={`button-delete-user-${u.id}`}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" /> {isEn ? "Delete" : "Supprimer"}
-                            </Button>
+                            {canManageInstallerForms && u.role === "installer" && installerProfileCompleted && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 gap-1.5"
+                                disabled={setInstallerFormStatus.isPending}
+                                onClick={() => setInstallerFormStatus.mutate({ id: u.id, completed: false })}
+                                data-testid={`button-mark-installer-form-not-complete-${u.id}`}
+                              >
+                                {isEn ? "Mark form not completed" : "Marquer fiche non completee"}
+                              </Button>
+                            )}
+                            {canManageInstallerForms && installerFormPending && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 gap-1.5"
+                                disabled={setInstallerFormStatus.isPending}
+                                onClick={() => setInstallerFormStatus.mutate({ id: u.id, completed: true })}
+                                data-testid={`button-mark-installer-form-complete-${u.id}`}
+                              >
+                                {isEn ? "Mark form completed" : "Marquer fiche completee"}
+                              </Button>
+                            )}
+                            {canManage && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 gap-1.5 text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  if (window.confirm(isEn ? `Delete ${u.name}? Assignments will be removed from quotes.` : `Supprimer ${u.name}? Ses assignations seront retirées des soumissions.`)) deleteUser.mutate(u.id);
+                                }}
+                                data-testid={`button-delete-user-${u.id}`}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" /> {isEn ? "Delete" : "Supprimer"}
+                              </Button>
+                            )}
                           </div>
                         )}
                       </div>
