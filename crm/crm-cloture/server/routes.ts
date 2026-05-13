@@ -365,7 +365,12 @@ export async function registerRoutes(
             displayName: (formData.field_0 as string) || (formData.field_2 as string) || u.email,
             city: (formData.field_7 as string) || "",
             province: (formData.field_8 as string) || "",
-            postalCode: ((formData.field_14 as string) || "").replace(/\s/g, "").toUpperCase(),
+            // Prefer the heatmap-specific postal code (field_14); fall back to the
+            // company's regular postal code (field_9) so installers who only
+            // filled the standard address still appear on the heatmap.
+            postalCode: (
+              ((formData.field_14 as string) || (formData.field_9 as string) || "")
+            ).replace(/\s/g, "").toUpperCase(),
             radius: (formData.field_13 as string) || "",
             regions: (formData.field_12 as string) || "",
             latLng: null as [number, number] | null,
@@ -379,7 +384,10 @@ export async function registerRoutes(
           latLng: await geocodeCanadianPostalCode(p.postalCode),
         }))
       );
-      res.json(withCoords.filter(p => p.postalCode));
+      // Return every installer profile that has at least *some* location hint
+      // (postal code OR city) so the heatmap can render them. Client-side
+      // fallback handles missing coords / radius.
+      res.json(withCoords.filter(p => p.postalCode || p.city));
     } catch (err) {
       next(err);
     }

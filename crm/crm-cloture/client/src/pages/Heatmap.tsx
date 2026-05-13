@@ -436,8 +436,10 @@ export function Heatmap() {
                   })}
                   {layers.has("installers") && installerProfiles.map((p) => {
                     const coords = p.latLng || postalToCoords(p.postalCode, p.city);
-                    const radiusM = parseRadiusMeters(p.radius);
-                    if (!coords || radiusM === 0) return null;
+                    if (!coords) return null;
+                    // Default to 25 km when the installer has not specified a radius
+                    // so they still appear on the heatmap as soon as the fiche is filled.
+                    const radiusM = parseRadiusMeters(p.radius) || 25_000;
                     return (
                       <Circle
                         key={`installer-${p.userId}`}
