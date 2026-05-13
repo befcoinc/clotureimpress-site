@@ -192,13 +192,43 @@ export function Heatmap() {
 
   const mapQuotes = useMemo(() => {
     let fallbackIndex = 0;
-    return quotes
-      .filter(q => q.intimuraId)
+    const leadAsQuotes: Quote[] = leads.map((l) => ({
+      id: -1000000 - l.id,
+      intimuraId: `lead-${l.id}`,
+      clientName: l.clientName,
+      phone: l.phone || null,
+      email: l.email || null,
+      address: l.address || null,
+      city: l.city || "Ville inconnue",
+      province: l.province || "QC",
+      postalCode: l.postalCode || null,
+      sector: l.sector || null,
+      fenceType: l.fenceType || null,
+      estimatedPrice: (l.estimatedValue as number | null) ?? 0,
+      estimatedLength: (l.estimatedLength as number | null) ?? null,
+      salesStatus: "nouveau",
+      installStatus: "a_planifier",
+      assignedSalesId: l.assignedSalesId ?? null,
+      assignedInstallerId: null,
+      crewId: null,
+      installDate: null,
+      notes: null,
+      photos: null,
+      leadId: l.id,
+      createdAt: l.createdAt,
+    } as unknown as Quote));
+
+    const combined: Quote[] = [
+      ...quotes.filter(q => q.intimuraId),
+      ...leadAsQuotes,
+    ];
+
+    return combined
       .map((q) => {
         const city = prettyCity(q.city);
         const key = normalize(city);
         const base = CITY_COORDS[key] || fallbackCoord(fallbackIndex++);
-        const jitterSeed = q.id % 9;
+        const jitterSeed = Math.abs(q.id) % 9;
         const lat = base[0] + ((jitterSeed % 3) - 1) * 0.018;
         const lng = base[1] + (Math.floor(jitterSeed / 3) - 1) * 0.026;
         return {
@@ -217,7 +247,7 @@ export function Heatmap() {
         const isVente = ["signed", "install", "problem"].includes(q.stageTone);
         return (layers.has("estimations") && isEstimation) || (layers.has("ventes") && isVente);
       });
-  }, [quotes, province, stage, layers]);
+  }, [quotes, leads, province, stage, layers]);
 
   const hotspots = useMemo(() => {
     const map = new Map<string, Hotspot>();
