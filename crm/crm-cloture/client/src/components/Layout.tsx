@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/lib/language-context";
 import { cn } from "@/lib/utils";
 import type { Permission } from "@/lib/role-context";
-import type { Quote } from "@shared/schema";
+import type { Lead, Quote } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -76,6 +76,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const { can, role, currentUser } = useRole();
   const { logout } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"], enabled: can("view_sales") || can("assign_sales") });
+  const unassignedLeadsCount = useMemo(() => leads.filter((lead) => !lead.assignedSalesId).length, [leads]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -147,11 +149,15 @@ export function Layout({ children }: { children: ReactNode }) {
                           >
                             <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
                             <span className="truncate">{t(item.labelKey)}</span>
-                            {item.badge && (
+                            {item.href === "/dispatch-vendeur" && unassignedLeadsCount > 0 ? (
+                              <span className="ml-auto rounded-full bg-sidebar-primary px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-primary-foreground">
+                                {unassignedLeadsCount}
+                              </span>
+                            ) : item.badge ? (
                               <span className="ml-auto rounded-full bg-sidebar-primary px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-primary-foreground">
                                 {item.badge}
                               </span>
-                            )}
+                            ) : null}
                           </div>
                         </Link>
                       </li>
