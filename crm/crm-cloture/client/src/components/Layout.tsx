@@ -62,8 +62,8 @@ const NAV_SECTIONS: { labelKey: "nav.operations" | "nav.pilotage" | "nav.system"
   {
     labelKey: "nav.system",
     items: [
-      { href: "/utilisateurs", labelKey: "nav.usersRoles", icon: Users },
-      { href: "/architecture", labelKey: "nav.architecture", icon: Network },
+      { href: "/utilisateurs", labelKey: "nav.usersRoles", icon: Users, perm: "view_admin" },
+      { href: "/architecture", labelKey: "nav.architecture", icon: Network, perm: "view_admin" },
     ],
   },
 ];

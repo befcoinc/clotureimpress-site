@@ -29,6 +29,8 @@ import { LanguageProvider, useLanguage } from "@/lib/language-context";
 import { InstallerOnboarding } from "@/pages/InstallerOnboarding";
 
 function AppRouter() {
+  const { can } = useRole();
+
   return (
     <Layout>
       <Switch>
@@ -45,8 +47,8 @@ function AppRouter() {
         <Route path="/tableau-ventes" component={TableauVentes} />
         <Route path="/tableau-installation" component={TableauInstallation} />
         <Route path="/secteurs" component={Secteurs} />
-        <Route path="/utilisateurs" component={Utilisateurs} />
-        <Route path="/architecture" component={Architecture} />
+        <Route path="/utilisateurs" component={can("view_admin") ? Utilisateurs : NotFound} />
+        <Route path="/architecture" component={can("view_admin") ? Architecture : NotFound} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
