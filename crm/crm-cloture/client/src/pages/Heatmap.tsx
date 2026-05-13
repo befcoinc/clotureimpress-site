@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CircleMarker, MapContainer, Popup, TileLayer, ZoomControl } from "react-leaflet";
+import { Circle, CircleMarker, MapContainer, Popup, TileLayer, ZoomControl } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { CalendarDays, DollarSign, Flame, MapPin, Route, Target, Users } from "lucide-react";
+import { CalendarDays, DollarSign, Flame, HardHat, MapPin, Route, Target, TrendingUp, Users } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/lib/language-context";
 import type { Lead, Quote } from "@shared/schema";
@@ -19,6 +20,16 @@ type MapQuote = Quote & {
   mapCity: string;
   stageLabel: string;
   stageTone: "lead" | "sent" | "follow" | "appointment" | "signed" | "install" | "problem";
+};
+
+type InstallerProfile = {
+  userId: number;
+  displayName: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  radius: string;
+  regions: string;
 };
 
 type Hotspot = {
@@ -65,6 +76,52 @@ const CITY_COORDS: Record<string, [number, number]> = {
   "saint-honore": [48.533, -71.083],
   "moncton": [46.0878, -64.7782],
 };
+
+// FSA (first 2 chars of postal code) to approximate coordinates
+const FSA_COORDS: Record<string, [number, number]> = {
+  // Quebec — Montreal area
+  "H1": [45.57, -73.53], "H2": [45.54, -73.61], "H3": [45.50, -73.57],
+  "H4": [45.47, -73.61], "H5": [45.46, -73.56], "H6": [45.44, -73.62],
+  "H7": [45.60, -73.73], "H8": [45.50, -73.83], "H9": [45.44, -73.87],
+  // Quebec — Quebec City / Levis
+  "G1": [46.82, -71.21], "G2": [46.86, -71.35], "G3": [46.89, -71.15],
+  "G4": [48.46, -71.07], "G5": [46.49, -72.49], "G6": [46.74, -71.27],
+  "G7": [48.42, -71.07], "G8": [48.45, -68.53], "G9": [46.35, -72.55],
+  // Quebec — Monteregie / Laurentides / Estrie / Outaouais
+  "J0": [46.02, -73.44], "J1": [45.40, -71.89], "J2": [45.28, -72.70],
+  "J3": [45.53, -73.50], "J4": [45.52, -73.29], "J5": [45.89, -73.25],
+  "J6": [45.31, -73.26], "J7": [45.72, -74.00], "J8": [45.48, -75.72],
+  "J9": [48.10, -77.80],
+  // Ontario
+  "K1": [45.42, -75.70], "K2": [45.32, -75.79], "K6": [44.43, -76.50],
+  "K7": [44.23, -76.48], "L3": [43.87, -79.26], "L4": [43.86, -79.43],
+  "M1": [43.76, -79.21], "M4": [43.67, -79.36], "M5": [43.65, -79.38],
+  "N1": [43.55, -80.25], "N2": [43.45, -80.49], "N6": [42.98, -81.25],
+  // Alberta
+  "T1": [50.68, -113.81], "T2": [51.05, -114.07], "T3": [51.05, -114.15],
+  "T5": [53.54, -113.49], "T6": [53.54, -113.54],
+  // BC
+  "V5": [49.28, -123.12], "V6": [49.24, -123.12], "V7": [49.30, -123.00],
+};
+
+function postalToCoords(pc: string, cityFallback?: string): [number, number] | null {
+  if (!pc) return null;
+  const clean = pc.replace(/\s/g, "").toUpperCase();
+  if (clean.length >= 2) {
+    const fsa2 = clean.slice(0, 2);
+    if (FSA_COORDS[fsa2]) return FSA_COORDS[fsa2];
+  }
+  if (cityFallback) {
+    const key = normalize(cityFallback);
+    if (CITY_COORDS[key]) return CITY_COORDS[key];
+  }
+  return null;
+}
+
+function parseRadiusMeters(radiusStr: string): number {
+  const match = (radiusStr || "").match(/(\d+)/);
+  return match ? parseInt(match[1]) * 1000 : 0;
+}
 
 function normalize(value?: string | null) {
   return (value || "")
@@ -116,10 +173,21 @@ export function Heatmap() {
   const isEn = language === "en";
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
+  const { data: installerProfiles = [] } = useQuery<InstallerProfile[]>({ queryKey: ["/api/installer-profiles"] });
   const [province, setProvince] = useState("all");
   const [metric, setMetric] = useState<"count" | "value">("count");
   const [stage, setStage] = useState("all");
+  const [layers, setLayers] = useState<Set<string>>(new Set(["estimations", "ventes", "installers"]));
   const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
+
+  function toggleLayer(layer: string) {
+    setLayers(prev => {
+      const next = new Set(prev);
+      if (next.has(layer)) next.delete(layer);
+      else next.add(layer);
+      return next;
+    });
+  }
 
   const mapQuotes = useMemo(() => {
     let fallbackIndex = 0;
@@ -142,8 +210,13 @@ export function Heatmap() {
         } satisfies MapQuote;
       })
       .filter(q => province === "all" || q.province === province)
-      .filter(q => stage === "all" || q.stageTone === stage || q.salesStatus === stage || q.installStatus === stage);
-  }, [quotes, province, stage]);
+      .filter(q => stage === "all" || q.stageTone === stage || q.salesStatus === stage || q.installStatus === stage)
+      .filter(q => {
+        const isEstimation = ["lead", "sent", "follow", "appointment"].includes(q.stageTone);
+        const isVente = ["signed", "install", "problem"].includes(q.stageTone);
+        return (layers.has("estimations") && isEstimation) || (layers.has("ventes") && isVente);
+      });
+  }, [quotes, province, stage, layers]);
 
   const hotspots = useMemo(() => {
     const map = new Map<string, Hotspot>();
@@ -198,34 +271,68 @@ export function Heatmap() {
         title={isEn ? "Sector heatmap" : "Heatmap secteurs"}
         description={isEn ? "Interactive map with zoom, pan, and CRM stages for Intimura quotes." : "Carte interactive avec zoom, déplacement et étapes CRM des soumissions Intimura."}
         action={
-          <div className="flex flex-wrap gap-2">
-            <Select value={province} onValueChange={setProvince}>
-              <SelectTrigger className="w-[135px]" data-testid="select-heatmap-province"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Canada</SelectItem>
-                {PROVINCES.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={metric} onValueChange={(v) => setMetric(v as "count" | "value")}>
-              <SelectTrigger className="w-[160px]" data-testid="select-heatmap-metric"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="count">{isEn ? "Volume intensity" : "Intensité volume"}</SelectItem>
-                <SelectItem value="value">{isEn ? "Value intensity" : "Intensité valeur"}</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={stage} onValueChange={setStage}>
-              <SelectTrigger className="w-[180px]" data-testid="select-heatmap-stage"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{isEn ? "All stages" : "Toutes les étapes"}</SelectItem>
-                <SelectItem value="lead">{isEn ? "Lead / new" : "Lead / nouveau"}</SelectItem>
-                <SelectItem value="sent">{isEn ? "Quote sent" : "Soumission envoyée"}</SelectItem>
-                <SelectItem value="follow">{isEn ? "Follow-up" : "Suivi"}</SelectItem>
-                <SelectItem value="appointment">{isEn ? "Appointment" : "Rendez-vous"}</SelectItem>
-                <SelectItem value="signed">{isEn ? "Sale signed" : "Vente signée"}</SelectItem>
-                <SelectItem value="install">Installation</SelectItem>
-                <SelectItem value="problem">{isEn ? "Problem" : "Problème"}</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Select value={province} onValueChange={setProvince}>
+                <SelectTrigger className="w-[135px]" data-testid="select-heatmap-province"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Canada</SelectItem>
+                  {PROVINCES.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={metric} onValueChange={(v) => setMetric(v as "count" | "value")}>
+                <SelectTrigger className="w-[160px]" data-testid="select-heatmap-metric"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="count">{isEn ? "Volume intensity" : "Intensité volume"}</SelectItem>
+                  <SelectItem value="value">{isEn ? "Value intensity" : "Intensité valeur"}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={stage} onValueChange={setStage}>
+                <SelectTrigger className="w-[180px]" data-testid="select-heatmap-stage"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isEn ? "All stages" : "Toutes les étapes"}</SelectItem>
+                  <SelectItem value="lead">{isEn ? "Lead / new" : "Lead / nouveau"}</SelectItem>
+                  <SelectItem value="sent">{isEn ? "Quote sent" : "Soumission envoyée"}</SelectItem>
+                  <SelectItem value="follow">{isEn ? "Follow-up" : "Suivi"}</SelectItem>
+                  <SelectItem value="appointment">{isEn ? "Appointment" : "Rendez-vous"}</SelectItem>
+                  <SelectItem value="signed">{isEn ? "Sale signed" : "Vente signée"}</SelectItem>
+                  <SelectItem value="install">Installation</SelectItem>
+                  <SelectItem value="problem">{isEn ? "Problem" : "Problème"}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-xs text-muted-foreground font-medium">{isEn ? "Layers:" : "Couches :"}</span>
+              <Button
+                size="sm"
+                variant={layers.has("estimations") ? "default" : "outline"}
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => toggleLayer("estimations")}
+              >
+                <TrendingUp className="h-3 w-3" />
+                {isEn ? "Estimates" : "Estimations"}
+              </Button>
+              <Button
+                size="sm"
+                variant={layers.has("ventes") ? "default" : "outline"}
+                className="h-7 gap-1.5 text-xs"
+                style={layers.has("ventes") ? { backgroundColor: "#059669", borderColor: "#059669" } : {}}
+                onClick={() => toggleLayer("ventes")}
+              >
+                <DollarSign className="h-3 w-3" />
+                {isEn ? "Sales" : "Ventes"}
+              </Button>
+              <Button
+                size="sm"
+                variant={layers.has("installers") ? "default" : "outline"}
+                className="h-7 gap-1.5 text-xs"
+                style={layers.has("installers") ? { backgroundColor: "#7c3aed", borderColor: "#7c3aed" } : {}}
+                onClick={() => toggleLayer("installers")}
+              >
+                <HardHat className="h-3 w-3" />
+                {isEn ? "Installers" : "Installateurs"}
+              </Button>
+            </div>
           </div>
         }
       />
@@ -296,6 +403,29 @@ export function Heatmap() {
                       </CircleMarker>
                     );
                   })}
+                  {layers.has("installers") && installerProfiles.map((p) => {
+                    const coords = postalToCoords(p.postalCode, p.city);
+                    const radiusM = parseRadiusMeters(p.radius);
+                    if (!coords || radiusM === 0) return null;
+                    return (
+                      <Circle
+                        key={`installer-${p.userId}`}
+                        center={coords}
+                        radius={radiusM}
+                        pathOptions={{ color: "#7c3aed", fillColor: "#7c3aed", fillOpacity: 0.07, weight: 2, dashArray: "6 4" }}
+                      >
+                        <Popup>
+                          <div className="min-w-[200px] space-y-1">
+                            <div className="font-bold text-sm">{p.displayName}</div>
+                            <div className="text-xs text-slate-500">{isEn ? "Installer territory" : "Territoire installateur"}</div>
+                            {p.regions && <div className="text-xs">{p.regions}</div>}
+                            <div className="text-xs"><span className="font-semibold">{isEn ? "Postal code:" : "Code postal :"}</span> {p.postalCode}</div>
+                            <div className="text-xs"><span className="font-semibold">{isEn ? "Radius:" : "Rayon :"}</span> {p.radius}</div>
+                          </div>
+                        </Popup>
+                      </Circle>
+                    );
+                  })}
                 </MapContainer>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -306,6 +436,12 @@ export function Heatmap() {
                 <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#059669]" />{isEn ? "Signed" : "Signée"}</span>
                 <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#7c3aed]" />Installation</span>
                 <span className="inline-flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#dc2626]" />{isEn ? "Problem" : "Problème"}</span>
+                {layers.has("installers") && (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="inline-block h-2.5 w-5 rounded-sm border-2 border-dashed border-[#7c3aed] opacity-70" />
+                    {isEn ? "Installer territory" : "Territoire installateur"}
+                  </span>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -266,6 +266,40 @@ export async function registerRoutes(
   });
   // ───────────────────────────────────────────────────────────────────
 
+  // GET /api/installer-profiles — all installer territories for heatmap (admin/directors/sales_rep)
+  app.get("/api/installer-profiles", requireAuth, async (req, res, next) => {
+    try {
+      const actor = req.user as any;
+      const allowed = ["admin", "sales_director", "install_director", "sales_rep"];
+      if (!allowed.includes(actor?.role)) {
+        return res.status(403).json({ error: "Accès refusé" });
+      }
+      const users = await storage.getUsers();
+      const installers = users.filter((u: any) => u.role === "installer");
+      const profiles = await Promise.all(
+        installers.map(async (u: any) => {
+          const raw = await storage.getInstallerProfileFormData(u.id);
+          let formData: Record<string, string | boolean> = {};
+          if (raw) {
+            try { formData = JSON.parse(raw); } catch { /* ignore */ }
+          }
+          return {
+            userId: u.id,
+            displayName: (formData.field_0 as string) || (formData.field_2 as string) || u.email,
+            city: (formData.field_7 as string) || "",
+            province: (formData.field_8 as string) || "",
+            postalCode: ((formData.field_14 as string) || "").replace(/\s/g, "").toUpperCase(),
+            radius: (formData.field_13 as string) || "",
+            regions: (formData.field_12 as string) || "",
+          };
+        })
+      );
+      res.json(profiles.filter(p => p.postalCode));
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // -------- Users --------
   app.get("/api/users", async (_req, res) => {
     res.json(await storage.getUsers());
