@@ -39,8 +39,9 @@
   <p class="note">Version mise à jour avec un seul champ code postal dans la section territoire desservi.</p>
 
   <div class="btns">
-    <button onclick="window.print()">Imprimer / Enregistrer en PDF</button>
-    <button onclick="document.getElementById('fiche').reset()">Réinitialiser</button>
+    <button type="button" id="btn-print">Imprimer / Enregistrer en PDF</button>
+    <button type="button" id="btn-reset">Réinitialiser</button>
+    <span id="save-status" class="note" style="align-self:center;"></span>
   </div>
 
   <form id="fiche">
@@ -250,5 +251,108 @@
       <div><label>Signature</label><input type="text" /></div>
     </div>
   </form>
+
+  <script>
+    (function () {
+      const form = document.getElementById("fiche");
+      const printBtn = document.getElementById("btn-print");
+      const resetBtn = document.getElementById("btn-reset");
+      const statusEl = document.getElementById("save-status");
+      const fields = Array.from(form.querySelectorAll("input, textarea, select"));
+      let saveTimer = null;
+
+      fields.forEach((field, index) => {
+        if (!field.name) field.name = `field_${index}`;
+      });
+
+      function setStatus(text, isError) {
+        statusEl.textContent = text;
+        statusEl.style.color = isError ? "#b91c1c" : "#555";
+      }
+
+      function serialize() {
+        const data = {};
+        fields.forEach((field) => {
+          if (field.type === "checkbox") {
+            data[field.name] = field.checked;
+          } else {
+            data[field.name] = field.value;
+          }
+        });
+        return data;
+      }
+
+      function hydrate(data) {
+        if (!data || typeof data !== "object") return;
+        fields.forEach((field) => {
+          if (!(field.name in data)) return;
+          if (field.type === "checkbox") {
+            field.checked = !!data[field.name];
+          } else {
+            field.value = String(data[field.name] ?? "");
+          }
+        });
+      }
+
+      async function saveNow() {
+        try {
+          setStatus("Sauvegarde...", false);
+          const response = await fetch("/api/auth/installer-profile-data", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: serialize() }),
+          });
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(payload.error || "Erreur de sauvegarde");
+          }
+          setStatus("Sauvegarde automatique enregistree", false);
+        } catch (error) {
+          setStatus("Echec sauvegarde automatique", true);
+        }
+      }
+
+      function scheduleSave() {
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveNow, 600);
+      }
+
+      async function loadData() {
+        try {
+          setStatus("Chargement de la fiche...", false);
+          const response = await fetch("/api/auth/installer-profile-data", {
+            method: "GET",
+            credentials: "include",
+          });
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(payload.error || "Erreur de chargement");
+          }
+          const payload = await response.json();
+          hydrate(payload.data || {});
+          setStatus("Fiche chargee", false);
+        } catch (error) {
+          setStatus("Impossible de charger la fiche", true);
+        }
+      }
+
+      fields.forEach((field) => {
+        field.addEventListener("input", scheduleSave);
+        field.addEventListener("change", scheduleSave);
+      });
+
+      printBtn.addEventListener("click", function () {
+        window.print();
+      });
+
+      resetBtn.addEventListener("click", function () {
+        form.reset();
+        saveNow();
+      });
+
+      loadData();
+    })();
+  </script>
 </body>
 </html>

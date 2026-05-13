@@ -173,6 +173,13 @@ async function migrate() {
       created_at TEXT NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
     )
   `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS installer_profiles (
+      user_id INTEGER PRIMARY KEY,
+      form_data TEXT NOT NULL DEFAULT '{}',
+      updated_at TEXT NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+    )
+  `);
 }
 
 // =============== PASSWORD SEEDING ===============
@@ -289,6 +296,8 @@ export interface IStorage {
   setInviteToken(userId: number, token: string, expiresAt: number): Promise<void>;
   getUserByInviteToken(token: string): Promise<User | undefined>;
   clearInviteToken(userId: number): Promise<void>;
+  getInstallerProfileFormData(userId: number): Promise<string | null>;
+  setInstallerProfileFormData(userId: number, formData: string): Promise<void>;
   // Leads
   getLeads(): Promise<Lead[]>;
   getLead(id: number): Promise<Lead | undefined>;
@@ -379,6 +388,20 @@ export class DatabaseStorage implements IStorage {
   }
   async clearInviteToken(userId: number): Promise<void> {
     await db.execute(sql`UPDATE users SET invite_token = NULL, invite_expires_at = NULL WHERE id = ${userId}`);
+  }
+  async getInstallerProfileFormData(userId: number): Promise<string | null> {
+    const rows = await db.execute(sql`SELECT form_data FROM installer_profiles WHERE user_id = ${userId} LIMIT 1`);
+    const row = rows[0] as any;
+    if (!row) return null;
+    return typeof row.form_data === "string" ? row.form_data : JSON.stringify(row.form_data ?? {});
+  }
+  async setInstallerProfileFormData(userId: number, formData: string): Promise<void> {
+    await db.execute(sql`
+      INSERT INTO installer_profiles (user_id, form_data, updated_at)
+      VALUES (${userId}, ${formData}, ${new Date().toISOString()})
+      ON CONFLICT (user_id)
+      DO UPDATE SET form_data = EXCLUDED.form_data, updated_at = EXCLUDED.updated_at
+    `);
   }
 
   async getLeads() { return db.select().from(leads).orderBy(desc(leads.id)); }

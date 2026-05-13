@@ -190,6 +190,48 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/auth/installer-profile-data", requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      if (!user || user.role !== "installer") {
+        return res.status(403).json({ error: "Acces reserve aux installateurs" });
+      }
+      const raw = await storage.getInstallerProfileFormData(user.id);
+      let data: Record<string, any> = {};
+      if (raw) {
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          data = {};
+        }
+      }
+      return res.json({ ok: true, data });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  app.post("/api/auth/installer-profile-data", requireAuth, async (req, res, next) => {
+    try {
+      const user = req.user as any;
+      if (!user || user.role !== "installer") {
+        return res.status(403).json({ error: "Acces reserve aux installateurs" });
+      }
+      const data = req.body?.data;
+      if (!data || typeof data !== "object" || Array.isArray(data)) {
+        return res.status(400).json({ error: "Payload invalide" });
+      }
+      const json = JSON.stringify(data);
+      if (json.length > 200000) {
+        return res.status(400).json({ error: "Fiche trop volumineuse" });
+      }
+      await storage.setInstallerProfileFormData(user.id, json);
+      return res.json({ ok: true });
+    } catch (err) {
+      return next(err);
+    }
+  });
+
   // Serve subcontractor onboarding form HTML used after installer password creation
   app.get("/installer-sous-traitant-form", (req, res) => {
     if (!req.isAuthenticated() || !req.user) {
