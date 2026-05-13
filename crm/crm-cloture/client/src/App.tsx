@@ -33,6 +33,7 @@ function AppRouter() {
     <Layout>
       <Switch>
         <Route path="/" component={Dashboard} />
+        <Route path="/login" component={Dashboard} />
         <Route path="/leads" component={Leads} />
         <Route path="/intimura" component={Intimura} />
         <Route path="/dispatch-vendeur" component={DispatchVendeur} />

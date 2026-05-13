@@ -293,7 +293,7 @@ export async function registerRoutes(
       await storage.setInstallerProfileCompleted(user.id, false);
 
       const baseUrl = process.env.APP_URL || "https://cloture-crm.onrender.com";
-      const loginUrl = `${baseUrl}/#/login`;
+      const loginUrl = `${baseUrl}/`;
       const [emailResult, smsResult] = await Promise.all([
         sendInstallerProfileReminderEmail(user.email, user.name, loginUrl),
         sendInstallerProfileReminderSms(user.phone ?? "", user.smsCarrier ?? "", user.name, loginUrl),
