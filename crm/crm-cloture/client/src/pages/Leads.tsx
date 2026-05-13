@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Mail, Phone, MapPin, Filter } from "lucide-react";
+import { Plus, Mail, Phone, MapPin, Filter, Globe, Database, Clock } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -211,9 +211,37 @@ export function Leads() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-semibold text-[14px] truncate">{lead.clientName}</div>
-                      <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground">
+                      <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground flex-wrap">
                         <Badge variant="outline" className="text-[10px]">{lead.province}</Badge>
                         <span>{lead.sector}</span>
+                        {(() => {
+                          const src = (lead.source || "").toLowerCase();
+                          if (src === "web") return (
+                            <Badge variant="default" className="text-[10px] bg-emerald-600 hover:bg-emerald-700 gap-1">
+                              <Globe className="h-2.5 w-2.5" />
+                              {isEn ? "Website" : "Site web"}
+                            </Badge>
+                          );
+                          if (src === "intimura") return (
+                            <Badge variant="default" className="text-[10px] bg-violet-600 hover:bg-violet-700 gap-1">
+                              <Database className="h-2.5 w-2.5" />
+                              Intimura
+                            </Badge>
+                          );
+                          return <Badge variant="outline" className="text-[10px]">{lead.source || "—"}</Badge>;
+                        })()}
+                        {lead.createdAt && lead.createdAt !== "CURRENT_TIMESTAMP" && (() => {
+                          const d = new Date(lead.createdAt);
+                          if (isNaN(d.getTime())) return null;
+                          const dateStr = d.toLocaleDateString(isEn ? "en-CA" : "fr-CA", { year: "numeric", month: "short", day: "numeric" });
+                          const timeStr = d.toLocaleTimeString(isEn ? "en-CA" : "fr-CA", { hour: "2-digit", minute: "2-digit" });
+                          return (
+                            <span className="inline-flex items-center gap-1" title={d.toLocaleString(isEn ? "en-CA" : "fr-CA")}>
+                              <Clock className="h-2.5 w-2.5" />
+                              {dateStr} · {timeStr}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                     <StatusBadge status={lead.status} />
