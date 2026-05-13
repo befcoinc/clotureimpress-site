@@ -257,7 +257,8 @@ export function Utilisateurs() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {list.map(u => {
                       const accountCompleted = (u as any).mustChangePassword === false;
-                      const installerFormPending = u.role === "installer" && accountCompleted && (u as any).installerProfileCompleted === false;
+                      const installerProfileCompleted = (u as any).installerProfileCompleted === true;
+                      const installerFormPending = u.role === "installer" && !installerProfileCompleted;
                       return (
                       <div key={u.id} className="rounded-md border border-card-border bg-card p-3">
                         <div className="flex items-start justify-between gap-3">
@@ -268,13 +269,12 @@ export function Utilisateurs() {
                           </div>
                           <div className="flex flex-col items-end gap-1 shrink-0">
                             <Badge variant={u.active ? "outline" : "secondary"} className="text-[10px]">{u.active ? (isEn ? "Active" : "Actif") : (isEn ? "Inactive" : "Inactif")}</Badge>
-                            {accountCompleted ? (
+                            {installerFormPending ? (
+                              <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-900 hover:bg-amber-100">📝 {isEn ? "Form not completed" : "Fiche non completee"}</Badge>
+                            ) : accountCompleted ? (
                               <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white">✓ {isEn ? "Account completed" : "Compte complété"}</Badge>
                             ) : (
                               <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-900 hover:bg-amber-100">⏳ {isEn ? "Pending" : "En attente"}</Badge>
-                            )}
-                            {installerFormPending && (
-                              <Badge variant="secondary" className="text-[10px] bg-orange-100 text-orange-900 hover:bg-orange-100">📝 {isEn ? "Form to complete" : "Fiche a completer"}</Badge>
                             )}
                             {getCarrierLabel((u as any).smsCarrier) && (
                               <Badge variant="outline" className="text-[10px] text-blue-600 border-blue-200">📱 {getCarrierLabel((u as any).smsCarrier)}</Badge>
@@ -300,7 +300,7 @@ export function Utilisateurs() {
                             >
                               <Mail className="h-3.5 w-3.5" /> {isEn ? "Resend invitation" : "Renvoyer l'invitation"}
                             </Button>
-                            {u.role === "installer" && (u as any).installerProfileCompleted === false && (
+                            {installerFormPending && (
                               <Button
                                 size="sm"
                                 variant="outline"

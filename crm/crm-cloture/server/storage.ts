@@ -83,6 +83,13 @@ async function migrate() {
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT TRUE;`);
   // Require subcontractor profile onboarding for newly-created installers
   await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS installer_profile_completed BOOLEAN NOT NULL DEFAULT TRUE;`);
+  // If an installer has no phone, we treat onboarding as incomplete.
+  await db.execute(sql`
+    UPDATE users
+    SET installer_profile_completed = FALSE
+    WHERE role = 'installer'
+      AND (phone IS NULL OR btrim(phone) = '')
+  `);
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS leads (
       id SERIAL PRIMARY KEY,
