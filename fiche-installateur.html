@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fiche sous-traitant installateur — Clôture Impress</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #222; background: #f7f7f8; }
+    .wrap { max-width: 1000px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 28px; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    h1 { font-size: 24px; margin-bottom: 8px; color: #0f766e; }
+    h2 { font-size: 18px; margin: 24px 0 10px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+    p { margin: 0 0 12px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+    .full { grid-column: 1 / -1; }
+    label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+    input[type="text"], input[type="email"], input[type="tel"], input[type="date"], textarea, select {
+      width: 100%; box-sizing: border-box; border: 1px solid #999; padding: 8px; min-height: 34px; border-radius: 4px;
+    }
+    textarea { min-height: 70px; resize: vertical; }
+    .checks { display: flex; flex-wrap: wrap; gap: 12px 18px; }
+    .checks label { font-weight: normal; display: flex; align-items: center; gap: 6px; }
+    .section { margin-bottom: 8px; }
+    .signature { margin-top: 30px; }
+    .note { font-size: 12px; color: #555; }
+    .btns { margin: 24px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    button { padding: 10px 14px; border: 1px solid #333; background: #f3f3f3; cursor: pointer; border-radius: 6px; font-weight: 600; }
+    button.primary { background: #0f766e; color: #fff; border-color: #0f766e; padding: 12px 22px; font-size: 15px; }
+    button.primary:hover { background: #0d655e; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { border: 1px solid #999; padding: 8px; font-size: 12px; vertical-align: middle; }
+    th { background: #f2f2f2; text-align: left; }
+    td input { min-height: 30px; }
+    .status-banner { padding: 14px 18px; border-radius: 8px; margin-bottom: 18px; font-weight: 600; }
+    .status-loading { background: #fef3c7; color: #92400e; }
+    .status-error { background: #fee2e2; color: #991b1b; }
+    .status-success { background: #d1fae5; color: #065f46; }
+    .status-completed { background: #dbeafe; color: #1e40af; }
+    #form-wrap { display: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Fiche de candidature — Installateur sous-traitant</h1>
+    <p class="note">Remplis tous les champs puis clique <strong>Soumettre la fiche</strong> au bas. Tes réponses sont sauvegardées automatiquement.</p>
+
+    <div id="status-banner" class="status-banner status-loading">Chargement de la fiche...</div>
+
+    <form id="fiche" autocomplete="off">
+      <div id="form-wrap">
+      <h2>1. Informations générales</h2>
+      <div class="grid section">
+        <div><label>Nom légal de l'entreprise</label><input type="text" name="companyLegalName" /></div>
+        <div><label>Nom commercial</label><input type="text" name="companyTradeName" /></div>
+        <div><label>Nom du responsable</label><input type="text" name="contactName" /></div>
+        <div><label>Courriel</label><input type="email" name="email" /></div>
+        <div><label>Téléphone principal</label><input type="tel" name="phonePrimary" /></div>
+        <div><label>Téléphone secondaire</label><input type="tel" name="phoneSecondary" /></div>
+        <div class="full"><label>Adresse complète</label><input type="text" name="address" /></div>
+        <div><label>Ville</label><input type="text" name="city" /></div>
+        <div><label>Province</label><input type="text" name="province" /></div>
+        <div><label>Code postal</label><input type="text" name="postalCode" /></div>
+        <div><label>NEQ / Numéro d'entreprise</label><input type="text" name="neq" /></div>
+        <div><label>Site web</label><input type="text" name="website" /></div>
+      </div>
+
+      <h2>2. Territoire desservi et secteur heatmap</h2>
+      <div class="grid section">
+        <div class="full"><label>Régions desservies</label><input type="text" name="regions" /></div>
+        <div>
+          <label>Choix du rayon à partir de votre code postal</label>
+          <select name="radiusKm">
+            <option value="">Choisir</option>
+            <option>25 km</option><option>50 km</option><option>75 km</option>
+            <option>100 km</option><option>125 km</option><option>150 km</option>
+            <option>175 km</option><option>200 km</option><option>300 km</option>
+            <option>400 km</option><option>500 km</option>
+          </select>
+        </div>
+        <div><label>Code postal de départ pour heatmap</label><input type="text" name="postalCodeHeatmap" placeholder="Ex.: H7A 2X5" /></div>
+        <div>
+          <label>Disponible pour travaux hors région</label>
+          <div class="checks">
+            <label><input type="checkbox" name="hors_region_oui" /> Oui</label>
+            <label><input type="checkbox" name="hors_region_non" /> Non</label>
+          </div>
+        </div>
+        <div class="full">
+          <label>Provinces acceptées</label>
+          <div class="checks">
+            <label><input type="checkbox" name="province_qc" /> Québec</label>
+            <label><input type="checkbox" name="province_on" /> Ontario</label>
+            <label><input type="checkbox" name="province_ab" /> Alberta</label>
+            <label><input type="checkbox" name="province_bc" /> Colombie-Britannique</label>
+            <label><input type="checkbox" name="province_autres" /> Autres</label>
+          </div>
+        </div>
+      </div>
+
+      <h2>3. Expérience et tarification par type de clôture</h2>
+      <div class="grid section">
+        <div><label>Années d'expérience</label><input type="text" name="yearsExperience" /></div>
+        <div><label>Nombre d'installateurs</label><input type="text" name="installersCount" /></div>
+        <div><label>Nombre d'équipes disponibles</label><input type="text" name="teamsCount" /></div>
+        <div><label>Capacité moyenne par semaine</label><input type="text" name="capacityWeek" /></div>
+        <div class="full"><label>Spécialités</label><textarea name="specialties"></textarea></div>
+        <div class="full">
+          <label>Tarification par type de clôture (au pied linéaire)</label>
+          <table>
+            <thead><tr><th>Type</th><th>Offert</th><th>Tarif</th><th>Notes</th></tr></thead>
+            <tbody id="pricing-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <h2>4. Équipement et véhicules</h2>
+      <div class="grid section">
+        <div class="full"><label>Camions / remorques disponibles</label><input type="text" name="vehicles" /></div>
+        <div class="full">
+          <label>Équipements disponibles</label>
+          <div class="checks">
+            <label><input type="checkbox" name="eq_tariere" /> Tarière</label>
+            <label><input type="checkbox" name="eq_excavatrice" /> Mini-excavatrice</label>
+            <label><input type="checkbox" name="eq_betonniere" /> Bétonnière</label>
+            <label><input type="checkbox" name="eq_coupe" /> Outils de coupe</label>
+            <label><input type="checkbox" name="eq_soudeuse" /> Soudeuse</label>
+            <label><input type="checkbox" name="eq_laser" /> Niveau laser</label>
+            <label><input type="checkbox" name="eq_securite" /> Équipement de sécurité</label>
+            <label><input type="checkbox" name="eq_autres" /> Autres</label>
+          </div>
+        </div>
+        <div>
+          <label>Transport des matériaux</label>
+          <div class="checks">
+            <label><input type="checkbox" name="transport_oui" /> Oui</label>
+            <label><input type="checkbox" name="transport_non" /> Non</label>
+          </div>
+        </div>
+      </div>
+
+      <h2>5. Conformité et assurances</h2>
+      <div class="grid section">
+        <div>
+          <label>Assurance responsabilité civile</label>
+          <div class="checks">
+            <label><input type="checkbox" name="assur_oui" /> Oui</label>
+            <label><input type="checkbox" name="assur_non" /> Non</label>
+          </div>
+        </div>
+        <div><label>Nom de l'assureur</label><input type="text" name="insurerName" /></div>
+        <div><label>Numéro de police</label><input type="text" name="insurerPolicy" /></div>
+        <div><label>Montant de couverture</label><input type="text" name="insurerCoverage" /></div>
+        <div><label>Date d'expiration</label><input type="date" name="insurerExpiry" /></div>
+        <div>
+          <label>CNESST / WCB active</label>
+          <div class="checks">
+            <label><input type="checkbox" name="cnesst_oui" /> Oui</label>
+            <label><input type="checkbox" name="cnesst_non" /> Non</label>
+          </div>
+        </div>
+        <div><label>Numéro de dossier</label><input type="text" name="cnesstFile" /></div>
+        <div><label>Permis RBQ</label><input type="text" name="rbq" /></div>
+        <div><label>TPS</label><input type="text" name="tps" /></div>
+        <div><label>TVQ / TVH</label><input type="text" name="tvq" /></div>
+      </div>
+
+      <h2>6. Disponibilité</h2>
+      <div class="grid section">
+        <div>
+          <label>Disponible immédiatement</label>
+          <div class="checks">
+            <label><input type="checkbox" name="dispo_oui" /> Oui</label>
+            <label><input type="checkbox" name="dispo_non" /> Non</label>
+          </div>
+        </div>
+        <div><label>Date de disponibilité</label><input type="date" name="dispoDate" /></div>
+        <div><label>Préavis minimal requis</label><input type="text" name="dispoNotice" /></div>
+        <div><label>Commentaires sur la disponibilité</label><input type="text" name="dispoComments" /></div>
+      </div>
+
+      <h2>7. Références</h2>
+      <div class="grid section">
+        <div><label>Référence 1 — Entreprise / client</label><input type="text" name="ref1_company" /></div>
+        <div><label>Personne contact</label><input type="text" name="ref1_contact" /></div>
+        <div><label>Téléphone</label><input type="text" name="ref1_phone" /></div>
+        <div><label>Type de projet</label><input type="text" name="ref1_project" /></div>
+        <div><label>Référence 2 — Entreprise / client</label><input type="text" name="ref2_company" /></div>
+        <div><label>Personne contact</label><input type="text" name="ref2_contact" /></div>
+        <div><label>Téléphone</label><input type="text" name="ref2_phone" /></div>
+        <div><label>Type de projet</label><input type="text" name="ref2_project" /></div>
+        <div><label>Référence 3 — Entreprise / client</label><input type="text" name="ref3_company" /></div>
+        <div><label>Personne contact</label><input type="text" name="ref3_contact" /></div>
+        <div><label>Téléphone</label><input type="text" name="ref3_phone" /></div>
+        <div><label>Type de projet</label><input type="text" name="ref3_project" /></div>
+      </div>
+
+      <h2>8. Engagement</h2>
+      <div class="grid section">
+        <div class="full">
+          <label>Respect des standards de qualité, délais et sécurité</label>
+          <div class="checks">
+            <label><input type="checkbox" name="eng_qual_oui" /> Oui</label>
+            <label><input type="checkbox" name="eng_qual_non" /> Non</label>
+          </div>
+        </div>
+        <div class="full">
+          <label>Transmission des photos avant / après</label>
+          <div class="checks">
+            <label><input type="checkbox" name="eng_photo_oui" /> Oui</label>
+            <label><input type="checkbox" name="eng_photo_non" /> Non</label>
+          </div>
+        </div>
+        <div class="full">
+          <label>Utilisation d'un outil de suivi de chantier</label>
+          <div class="checks">
+            <label><input type="checkbox" name="eng_suivi_oui" /> Oui</label>
+            <label><input type="checkbox" name="eng_suivi_non" /> Non</label>
+          </div>
+        </div>
+        <div class="full"><label>Commentaires additionnels</label><textarea name="comments"></textarea></div>
+      </div>
+
+      <h2>9. Signature</h2>
+      <div class="grid signature">
+        <div><label>Nom du signataire</label><input type="text" name="sigName" /></div>
+        <div><label>Fonction</label><input type="text" name="sigRole" /></div>
+        <div><label>Date</label><input type="date" name="sigDate" /></div>
+        <div><label>Signature (tapez votre nom)</label><input type="text" name="sigText" /></div>
+      </div>
+
+      <div class="btns">
+        <button type="button" id="btn-submit" class="primary">Soumettre la fiche</button>
+        <button type="button" id="btn-print">Imprimer / PDF</button>
+        <span id="save-status" class="note"></span>
+      </div>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    (function () {
+      const API_BASE = "https://cloture-crm.onrender.com";
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+
+      const banner = document.getElementById("status-banner");
+      const formWrap = document.getElementById("form-wrap");
+      const statusEl = document.getElementById("save-status");
+
+      function setBanner(msg, kind) {
+        banner.textContent = msg;
+        banner.className = "status-banner status-" + kind;
+      }
+
+      // Build pricing rows
+      const PRICING = ["Maille de chaîne","Ornementale","Bois","Vinyle","Commerciale","Industrielle","Portails","Composite fibre/aluminium","Clôture de verre","Autres"];
+      const tbody = document.getElementById("pricing-tbody");
+      PRICING.forEach((label, i) => {
+        const slug = "pricing" + i;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${label}</td>
+          <td><input type="checkbox" name="${slug}_offered" /></td>
+          <td><input type="text" name="${slug}_rate" placeholder="$ / pi lin." /></td>
+          <td><input type="text" name="${slug}_notes" /></td>`;
+        tbody.appendChild(tr);
+      });
+
+      const form = document.getElementById("fiche");
+      const fields = () => Array.from(form.querySelectorAll("input, textarea, select"));
+
+      function serialize() {
+        const data = {};
+        fields().forEach((f) => {
+          if (!f.name) return;
+          if (f.type === "checkbox") data[f.name] = f.checked;
+          else data[f.name] = f.value;
+        });
+        return data;
+      }
+      function hydrate(data) {
+        if (!data) return;
+        fields().forEach((f) => {
+          if (!f.name || !(f.name in data)) return;
+          if (f.type === "checkbox") f.checked = !!data[f.name];
+          else f.value = String(data[f.name] ?? "");
+        });
+      }
+
+      if (!token) {
+        setBanner("Lien invalide : aucun token fourni.", "error");
+        return;
+      }
+
+      let saveTimer = null;
+      async function saveNow() {
+        try {
+          statusEl.textContent = "Sauvegarde...";
+          const r = await fetch(`${API_BASE}/api/public/installer-fiche/${encodeURIComponent(token)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: serialize(), submitted: false }),
+          });
+          if (!r.ok) throw new Error("save failed");
+          statusEl.textContent = "Sauvegarde automatique enregistrée";
+          statusEl.style.color = "#065f46";
+        } catch {
+          statusEl.textContent = "Échec sauvegarde automatique";
+          statusEl.style.color = "#991b1b";
+        }
+      }
+      function scheduleSave() {
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveNow, 800);
+      }
+
+      async function load() {
+        try {
+          const r = await fetch(`${API_BASE}/api/public/installer-fiche/${encodeURIComponent(token)}`);
+          const payload = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            setBanner(payload.error || "Lien invalide ou expiré.", "error");
+            return;
+          }
+          // Pre-fill from initial application
+          const a = payload.application || {};
+          const presets = {
+            companyLegalName: a.companyName,
+            contactName: a.contactName,
+            email: a.email,
+            phonePrimary: a.phone,
+            address: a.address,
+            regions: a.regions,
+          };
+          hydrate(presets);
+          // Then overlay any saved data
+          if (payload.data) hydrate(payload.data);
+
+          formWrap.style.display = "block";
+          if (payload.completed) {
+            setBanner("Cette fiche a déjà été soumise. Tu peux mettre à jour tes informations puis re-soumettre si nécessaire.", "completed");
+          } else {
+            setBanner(`Bienvenue ${a.contactName || ""}. Remplis la fiche puis clique « Soumettre la fiche » au bas.`, "success");
+          }
+
+          // Wire auto-save
+          fields().forEach((f) => {
+            f.addEventListener("input", scheduleSave);
+            f.addEventListener("change", scheduleSave);
+          });
+        } catch (err) {
+          setBanner("Impossible de charger la fiche. Vérifie ta connexion.", "error");
+        }
+      }
+
+      document.getElementById("btn-print").addEventListener("click", () => window.print());
+      document.getElementById("btn-submit").addEventListener("click", async () => {
+        const btn = document.getElementById("btn-submit");
+        btn.disabled = true;
+        btn.textContent = "Envoi...";
+        try {
+          const r = await fetch(`${API_BASE}/api/public/installer-fiche/${encodeURIComponent(token)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: serialize(), submitted: true }),
+          });
+          const payload = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            setBanner(payload.error || "Erreur lors de la soumission.", "error");
+            btn.disabled = false;
+            btn.textContent = "Soumettre la fiche";
+            return;
+          }
+          setBanner("Fiche soumise avec succès. L'équipe Clôture Impress te contactera bientôt. Merci !", "success");
+          btn.textContent = "Fiche soumise ✓";
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } catch {
+          setBanner("Erreur réseau. Réessaie.", "error");
+          btn.disabled = false;
+          btn.textContent = "Soumettre la fiche";
+        }
+      });
+
+      load();
+    })();
+  </script>
+</body>
+</html>

@@ -200,6 +200,11 @@ async function migrate() {
       created_at TEXT NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
     )
   `);
+  // Add columns introduced after first deploy of installer_applications (idempotent)
+  await db.execute(sql`ALTER TABLE installer_applications ADD COLUMN IF NOT EXISTS form_token TEXT`);
+  await db.execute(sql`ALTER TABLE installer_applications ADD COLUMN IF NOT EXISTS fiche_data TEXT`);
+  await db.execute(sql`ALTER TABLE installer_applications ADD COLUMN IF NOT EXISTS fiche_completed_at TEXT`);
+  await db.execute(sql`ALTER TABLE installer_applications ADD COLUMN IF NOT EXISTS converted_user_id INTEGER`);
 }
 
 // =============== PASSWORD SEEDING ===============
@@ -487,6 +492,18 @@ export class DatabaseStorage implements IStorage {
   }
   async updateInstallerApplication(id: number, data: Partial<InsertInstallerApplication>): Promise<InstallerApplication | undefined> {
     return (await db.update(installerApplications).set(data).where(eq(installerApplications.id, id)).returning())[0];
+  }
+  async getInstallerApplicationByToken(token: string): Promise<InstallerApplication | undefined> {
+    return (await db.select().from(installerApplications).where(eq(installerApplications.formToken, token)))[0];
+  }
+  async setInstallerApplicationFormToken(id: number, token: string | null): Promise<void> {
+    await db.update(installerApplications).set({ formToken: token }).where(eq(installerApplications.id, id));
+  }
+  async setInstallerApplicationFicheData(id: number, ficheData: string, ficheCompletedAt: string): Promise<void> {
+    await db.update(installerApplications).set({ ficheData, ficheCompletedAt }).where(eq(installerApplications.id, id));
+  }
+  async setInstallerApplicationConvertedUserId(id: number, userId: number): Promise<void> {
+    await db.update(installerApplications).set({ convertedUserId: userId }).where(eq(installerApplications.id, id));
   }
 }
 

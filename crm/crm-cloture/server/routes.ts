@@ -7,7 +7,7 @@ import path from "node:path";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage, detectSector, seed, hashPassword, verifyPassword } from "./storage";
-import { sendInviteEmail, sendInstallerProfileReminderEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail } from "./email";
+import { sendInviteEmail, sendInstallerProfileReminderEmail, sendInstallerFicheLinkEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail } from "./email";
 import { sendInviteSms, sendInstallerProfileReminderSms } from "./sms";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema, insertInstallerApplicationSchema } from "@shared/schema";
 
@@ -1166,6 +1166,7 @@ export async function registerRoutes(
 
       // Mark application as approved
       await storage.updateInstallerApplication(id, { status: "approuve", notes: `Converti en compte installateur (userId: ${newUser.id}) le ${new Date().toLocaleDateString("fr-CA")}` });
+      await storage.setInstallerApplicationConvertedUserId(id, newUser.id);
 
       res.json({
         ok: true,
@@ -1179,6 +1180,124 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("[installer-applications/convert] error", err);
       res.status(500).json({ error: err?.message || "Erreur serveur" });
+    }
+  });
+
+  // -------- Send fiche sous-traitant link to applicant (no account created) --------
+  app.post("/api/installer-applications/:id/send-fiche", requireAuth, async (req, res) => {
+    try {
+      const actor = req.user as any;
+      if (!["admin", "sales_director", "install_director"].includes(actor?.role)) {
+        return res.status(403).json({ error: "Acces refuse" });
+      }
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+
+      const app = await storage.getInstallerApplication(id);
+      if (!app) return res.status(404).json({ error: "Application introuvable" });
+
+      // Reuse existing token if present, otherwise generate one
+      const token = app.formToken || randomBytes(24).toString("hex");
+      if (!app.formToken) {
+        await storage.setInstallerApplicationFormToken(id, token);
+      }
+
+      const siteUrl = process.env.SITE_URL || "https://clotureimpress.com";
+      const ficheUrl = `${siteUrl}/fiche-installateur.html?token=${token}`;
+
+      const emailResult = await sendInstallerFicheLinkEmail(
+        app.email,
+        app.contactName,
+        app.companyName,
+        ficheUrl
+      );
+
+      await storage.createActivity({
+        userId: actor?.id || null,
+        userName: actor?.name || "Admin",
+        userRole: actor?.role || "admin",
+        action: "installer_application_send_fiche",
+        note: `Lien fiche sous-traitant envoye a ${app.contactName} (${app.email}) pour ${app.companyName}${emailResult.ok ? "" : ` - erreur: ${emailResult.error}`}`,
+      });
+
+      res.json({ ok: true, ficheUrl, emailSent: emailResult.ok, emailError: emailResult.error });
+    } catch (err: any) {
+      console.error("[installer-applications/send-fiche] error", err);
+      res.status(500).json({ error: err?.message || "Erreur serveur" });
+    }
+  });
+
+  // -------- Public fiche endpoints (token-based, no auth) --------
+  app.options("/api/public/installer-fiche/:token", (req, res) => {
+    applyPublicCors(req, res);
+    res.status(204).end();
+  });
+  app.get("/api/public/installer-fiche/:token", async (req, res) => {
+    applyPublicCors(req, res);
+    try {
+      const token = String(req.params.token || "");
+      if (!token) return res.status(400).json({ error: "Token manquant" });
+      const app = await storage.getInstallerApplicationByToken(token);
+      if (!app) return res.status(404).json({ error: "Lien invalide ou expire" });
+
+      let parsed: any = null;
+      if (app.ficheData) {
+        try { parsed = JSON.parse(app.ficheData); } catch { parsed = null; }
+      }
+
+      res.json({
+        ok: true,
+        application: {
+          companyName: app.companyName,
+          contactName: app.contactName,
+          email: app.email,
+          phone: app.phone,
+          address: app.address,
+          regions: app.regions,
+        },
+        data: parsed,
+        completed: !!app.ficheCompletedAt,
+      });
+    } catch (err: any) {
+      console.error("[public/installer-fiche GET] error", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+  app.post("/api/public/installer-fiche/:token", async (req, res) => {
+    applyPublicCors(req, res);
+    try {
+      const token = String(req.params.token || "");
+      if (!token) return res.status(400).json({ error: "Token manquant" });
+      const app = await storage.getInstallerApplicationByToken(token);
+      if (!app) return res.status(404).json({ error: "Lien invalide ou expire" });
+
+      const data = req.body?.data;
+      if (!data || typeof data !== "object") {
+        return res.status(400).json({ error: "Donnees invalides" });
+      }
+      const submitted = req.body?.submitted === true;
+
+      const serialized = JSON.stringify(data);
+      const completedAt = submitted
+        ? new Date().toISOString()
+        : (app.ficheCompletedAt || ""); // keep existing completion timestamp on auto-saves
+
+      await storage.setInstallerApplicationFicheData(app.id, serialized, completedAt);
+
+      if (submitted) {
+        await storage.createActivity({
+          userId: null,
+          userName: app.contactName,
+          userRole: "installer_applicant",
+          action: "installer_application_fiche_submitted",
+          note: `Fiche sous-traitant soumise par ${app.contactName} (${app.email}) pour ${app.companyName}`,
+        });
+      }
+
+      res.json({ ok: true, submitted });
+    } catch (err: any) {
+      console.error("[public/installer-fiche POST] error", err);
+      res.status(500).json({ error: "Erreur serveur" });
     }
   });
 

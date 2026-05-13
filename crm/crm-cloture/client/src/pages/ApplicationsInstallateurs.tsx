@@ -12,7 +12,7 @@ import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
 import type { InstallerApplication } from "@shared/schema";
 import { useLocation } from "wouter";
-import { Building2, CalendarDays, Mail, MapPin, Phone, Send, Wrench } from "lucide-react";
+import { Building2, CalendarDays, FileText, Mail, MapPin, Phone, Send, UserPlus, Wrench, CheckCircle2 } from "lucide-react";
 
 const STATUS_LABELS: Record<string, string> = {
   en_attente: "En attente",
@@ -47,7 +47,9 @@ export function ApplicationsInstallateurs() {
   const [selected, setSelected] = useState<InstallerApplication | null>(null);
   const [newStatus, setNewStatus] = useState("");
   const [notes, setNotes] = useState("");
-  const [isSending, setIsSending] = useState(false);
+  const [isSendingFiche, setIsSendingFiche] = useState(false);
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [showFicheData, setShowFicheData] = useState(false);
 
   const { data: applications = [], isLoading } = useQuery<InstallerApplication[]>({
     queryKey: ["/api/installer-applications"],
@@ -70,6 +72,7 @@ export function ApplicationsInstallateurs() {
     setSelected(app);
     setNewStatus(app.status);
     setNotes(app.notes || "");
+    setShowFicheData(false);
   }
 
   function postalCodeFromRegions(regions: string | null | undefined) {
@@ -82,8 +85,35 @@ export function ApplicationsInstallateurs() {
     navigate("/heatmap" + (postal ? `?installer=${encodeURIComponent(postal)}` : ""));
   }
 
-  async function sendFiche(app: InstallerApplication) {
-    setIsSending(true);
+  async function sendFicheLink(app: InstallerApplication) {
+    setIsSendingFiche(true);
+    try {
+      const res = await apiRequest("POST", `/api/installer-applications/${app.id}/send-fiche`, {});
+      const data = await res.json().catch(() => ({})) as any;
+      if (!res.ok) {
+        toast({ title: data?.error || (language === "fr" ? "Erreur" : "Error"), variant: "destructive" });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/installer-applications"] });
+      toast({
+        title: data.emailSent
+          ? (language === "fr" ? "Lien de la fiche envoyé par courriel" : "Form link emailed")
+          : (language === "fr" ? "Lien généré (envoi courriel a échoué)" : "Link generated (email failed)"),
+        description: data.ficheUrl,
+      });
+    } catch {
+      toast({ title: language === "fr" ? "Erreur réseau" : "Network error", variant: "destructive" });
+    } finally {
+      setIsSendingFiche(false);
+    }
+  }
+
+  async function createAccount(app: InstallerApplication) {
+    if (!confirm(language === "fr"
+      ? `Créer un compte installateur dans le CRM pour ${app.contactName} (${app.email}) ? Une invitation sera envoyée par courriel et SMS.`
+      : `Create an installer account in the CRM for ${app.contactName} (${app.email})? An invite will be sent by email and SMS.`
+    )) return;
+    setIsCreatingAccount(true);
     try {
       const res = await apiRequest("POST", `/api/installer-applications/${app.id}/convert`, {});
       const data = await res.json().catch(() => ({})) as any;
@@ -97,7 +127,7 @@ export function ApplicationsInstallateurs() {
     } catch {
       toast({ title: language === "fr" ? "Erreur réseau" : "Network error", variant: "destructive" });
     } finally {
-      setIsSending(false);
+      setIsCreatingAccount(false);
     }
   }
 
@@ -135,6 +165,17 @@ export function ApplicationsInstallateurs() {
                       <Badge variant={STATUS_COLORS[app.status] ?? "outline"}>
                         {statusLabels[app.status] ?? app.status}
                       </Badge>
+                      {app.ficheCompletedAt && (
+                        <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-700">
+                          <CheckCircle2 size={11} className="mr-1" />
+                          {isFr ? "Fiche complétée" : "Form completed"}
+                        </Badge>
+                      )}
+                      {app.convertedUserId && (
+                        <Badge variant="outline">
+                          {isFr ? "Compte créé" : "Account created"}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
@@ -176,7 +217,7 @@ export function ApplicationsInstallateurs() {
 
       <Dialog open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
         {selected && (
-          <DialogContent className="max-w-xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{selected.companyName}</DialogTitle>
             </DialogHeader>
@@ -202,6 +243,34 @@ export function ApplicationsInstallateurs() {
                   </div>
                 ))}
               </div>
+
+              {/* Fiche completion banner */}
+              {selected.ficheCompletedAt && (
+                <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-emerald-800 flex items-center gap-2">
+                      <CheckCircle2 size={16} />
+                      {isFr
+                        ? `Fiche soumise le ${new Date(selected.ficheCompletedAt).toLocaleDateString("fr-CA")}`
+                        : `Form submitted on ${new Date(selected.ficheCompletedAt).toLocaleDateString("en-CA")}`}
+                    </p>
+                    <Button variant="ghost" size="sm" onClick={() => setShowFicheData(v => !v)}>
+                      <FileText size={13} className="mr-1" />
+                      {showFicheData
+                        ? (isFr ? "Masquer" : "Hide")
+                        : (isFr ? "Voir la fiche" : "View form")}
+                    </Button>
+                  </div>
+                  {showFicheData && selected.ficheData && (
+                    <pre className="mt-3 max-h-72 overflow-auto rounded bg-white p-2 text-xs whitespace-pre-wrap break-all">
+                      {(() => {
+                        try { return JSON.stringify(JSON.parse(selected.ficheData), null, 2); }
+                        catch { return selected.ficheData; }
+                      })()}
+                    </pre>
+                  )}
+                </div>
+              )}
 
               {/* Status change */}
               <div className="space-y-2">
@@ -234,7 +303,7 @@ export function ApplicationsInstallateurs() {
               </div>
 
               <div className="flex flex-wrap justify-between gap-2 pt-2">
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -246,13 +315,28 @@ export function ApplicationsInstallateurs() {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={isSending || selected.status === "approuve"}
-                    onClick={() => sendFiche(selected)}
+                    disabled={isSendingFiche}
+                    onClick={() => sendFicheLink(selected)}
                   >
                     <Send size={14} className="mr-1" />
-                    {isSending
+                    {isSendingFiche
                       ? (isFr ? "Envoi..." : "Sending...")
-                      : (isFr ? "Envoyer la fiche" : "Send form")}
+                      : selected.ficheCompletedAt
+                        ? (isFr ? "Réenvoyer le lien" : "Resend link")
+                        : (isFr ? "Envoyer la fiche à remplir" : "Send form to fill")}
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    disabled={isCreatingAccount || !!selected.convertedUserId}
+                    onClick={() => createAccount(selected)}
+                  >
+                    <UserPlus size={14} className="mr-1" />
+                    {isCreatingAccount
+                      ? (isFr ? "Création..." : "Creating...")
+                      : selected.convertedUserId
+                        ? (isFr ? "Compte déjà créé" : "Account already created")
+                        : (isFr ? "Créer compte installateur" : "Create installer account")}
                   </Button>
                 </div>
                 <div className="flex gap-2">
