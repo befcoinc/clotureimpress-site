@@ -168,6 +168,23 @@ export function Utilisateurs() {
     onError: onMutationError,
   });
 
+  const resendInstallerForm = useMutation({
+    mutationFn: async (id: number) => (await apiRequest("POST", `/api/users/${id}/resend-installer-form`, {})).json(),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      const channels: string[] = [];
+      if (data?.emailSent) channels.push(isEn ? "email" : "courriel");
+      if (data?.smsSent) channels.push("SMS");
+      const sentText = channels.length > 0 ? channels.join(" + ") : (isEn ? "no channel" : "aucun canal");
+      toast({
+        title: isEn ? "Form reminder sent" : "Rappel de fiche envoye",
+        description: isEn ? `Delivery: ${sentText}` : `Envoi: ${sentText}`,
+      });
+    },
+    onError: onMutationError,
+  });
+
   const createCrew = useMutation({
     mutationFn: async (payload: Partial<Crew>) => (await apiRequest("POST", "/api/crews", payload)).json(),
     onSuccess: () => {
@@ -238,7 +255,10 @@ export function Utilisateurs() {
                   <div className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">{isEn ? "No users in this role." : "Aucun utilisateur dans ce rôle."}</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {list.map(u => (
+                    {list.map(u => {
+                      const accountCompleted = (u as any).mustChangePassword === false;
+                      const installerFormPending = u.role === "installer" && accountCompleted && (u as any).installerProfileCompleted === false;
+                      return (
                       <div key={u.id} className="rounded-md border border-card-border bg-card p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -248,10 +268,13 @@ export function Utilisateurs() {
                           </div>
                           <div className="flex flex-col items-end gap-1 shrink-0">
                             <Badge variant={u.active ? "outline" : "secondary"} className="text-[10px]">{u.active ? (isEn ? "Active" : "Actif") : (isEn ? "Inactive" : "Inactif")}</Badge>
-                            {(u as any).mustChangePassword === false ? (
+                            {accountCompleted ? (
                               <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white">✓ {isEn ? "Account completed" : "Compte complété"}</Badge>
                             ) : (
                               <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-900 hover:bg-amber-100">⏳ {isEn ? "Pending" : "En attente"}</Badge>
+                            )}
+                            {installerFormPending && (
+                              <Badge variant="secondary" className="text-[10px] bg-orange-100 text-orange-900 hover:bg-orange-100">📝 {isEn ? "Form to complete" : "Fiche a completer"}</Badge>
                             )}
                             {getCarrierLabel((u as any).smsCarrier) && (
                               <Badge variant="outline" className="text-[10px] text-blue-600 border-blue-200">📱 {getCarrierLabel((u as any).smsCarrier)}</Badge>
@@ -277,6 +300,18 @@ export function Utilisateurs() {
                             >
                               <Mail className="h-3.5 w-3.5" /> {isEn ? "Resend invitation" : "Renvoyer l'invitation"}
                             </Button>
+                            {u.role === "installer" && (u as any).installerProfileCompleted === false && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 gap-1.5"
+                                disabled={resendInstallerForm.isPending}
+                                onClick={() => resendInstallerForm.mutate(u.id)}
+                                data-testid={`button-resend-installer-form-${u.id}`}
+                              >
+                                <Mail className="h-3.5 w-3.5" /> {isEn ? "Resend form" : "Renvoyer la fiche"}
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
@@ -291,7 +326,8 @@ export function Utilisateurs() {
                           </div>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>

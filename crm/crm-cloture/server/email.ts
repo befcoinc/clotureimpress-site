@@ -231,3 +231,115 @@ export async function sendInviteEmail(
     return { ok: false, error: msg };
   }
 }
+
+export async function sendInstallerProfileReminderEmail(
+  to: string,
+  name: string,
+  loginUrl: string
+): Promise<{ ok: boolean; error?: string; messageId?: string }> {
+  const firstName = name.split(" ")[0] || "Bonjour";
+  const subject = "Action requise | Required: Complete subcontractor form";
+  const textContent = [
+    `Bonjour ${firstName},`,
+    "",
+    "Action requise: complete ta fiche sous-traitant pour rester actif sur les dossiers.",
+    "Required: complete your subcontractor form to stay active on assignments.",
+    "",
+    "Connexion / Login:",
+    loginUrl,
+    "",
+    "Merci | Thank you.",
+  ].join("\n");
+  const html = `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rappel fiche sous-traitant</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:system-ui,-apple-system,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+          <tr>
+            <td style="background:#0f766e;padding:24px 36px;">
+              <p style="margin:0;font-size:22px;font-weight:700;color:#ffffff;">Cloture Impress CRM</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px 36px;">
+              <p style="margin:0 0 12px;font-size:18px;font-weight:600;color:#111827;">Bonjour ${firstName}</p>
+              <p style="margin:0 0 24px;font-size:15px;color:#4b5563;line-height:1.6;">
+                <strong>Action requise:</strong> complete ta fiche sous-traitant pour rester actif sur les dossiers.<br/>
+                <strong>Required:</strong> complete your subcontractor form to stay active on assignments.
+              </p>
+              <table cellpadding="0" cellspacing="0" style="margin:0 0 18px;">
+                <tr>
+                  <td style="background:#0f766e;border-radius:8px;">
+                    <a href="${loginUrl}" style="display:inline-block;padding:12px 24px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">
+                      Ouvrir le CRM / Open CRM
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0;font-size:13px;color:#9ca3af;">Merci | Thank you.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  if (BREVO_API_KEY) {
+    try {
+      const blockReason = await getBrevoBlockReason(to);
+      if (blockReason) {
+        const msg = `Destinataire bloque dans Brevo (${blockReason})`;
+        return { ok: false, error: msg };
+      }
+      const senderDomain = BREVO_SENDER_EMAIL.split("@")[1] || "clotureimpress.com";
+      const messageId = `<reminder.${Date.now()}.${Math.random().toString(36).slice(2)}@${senderDomain}>`;
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": BREVO_API_KEY,
+        },
+        body: JSON.stringify({
+          sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
+          replyTo: { email: BREVO_REPLY_TO, name: BREVO_SENDER_NAME },
+          to: [{ email: to, name }],
+          subject,
+          textContent,
+          htmlContent: html,
+          headers: {
+            "X-Mailin-custom": "source:crm-installer-reminder|type:installer-profile",
+            "Message-ID": messageId,
+          },
+        }),
+      });
+      const payload = (await response.json()) as any;
+      if (response.ok && payload?.messageId) return { ok: true, messageId: String(payload.messageId) };
+    } catch {
+      // Fall through to SMTP fallback
+    }
+  }
+
+  if (!SMTP_PASS) return { ok: false, error: "SMTP_PASS not configured" };
+
+  try {
+    const info = await transporter.sendMail({
+      from: FROM,
+      to,
+      subject,
+      html,
+    });
+    return { ok: true, messageId: info.messageId };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || String(err) };
+  }
+}

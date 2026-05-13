@@ -7,8 +7,8 @@ import path from "node:path";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage, detectSector, seed, hashPassword, verifyPassword } from "./storage";
-import { sendInviteEmail } from "./email";
-import { sendInviteSms } from "./sms";
+import { sendInviteEmail, sendInstallerProfileReminderEmail } from "./email";
+import { sendInviteSms, sendInstallerProfileReminderSms } from "./sms";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema } from "@shared/schema";
 
 function decodeSvelteData(data: any[]) {
@@ -282,6 +282,51 @@ export async function registerRoutes(
       });
     } catch (error: any) {
       res.status(500).json({ error: error?.message || "Erreur lors du renvoi" });
+    }
+  });
+  app.post("/api/users/:id/resend-installer-form", async (req, res) => {
+    try {
+      const user = await storage.getUser(Number(req.params.id));
+      if (!user) return res.status(404).json({ error: "Utilisateur introuvable" });
+      if (user.role !== "installer") return res.status(400).json({ error: "Cet utilisateur n'est pas un installateur" });
+
+      await storage.setInstallerProfileCompleted(user.id, false);
+
+      const baseUrl = process.env.APP_URL || "https://cloture-crm.onrender.com";
+      const loginUrl = `${baseUrl}/#/login`;
+      const [emailResult, smsResult] = await Promise.all([
+        sendInstallerProfileReminderEmail(user.email, user.name, loginUrl),
+        sendInstallerProfileReminderSms(user.phone ?? "", user.smsCarrier ?? "", user.name, loginUrl),
+      ]);
+
+      const actor = (req.user as any)?.name || "Admin";
+      const actorRole = (req.user as any)?.role || "admin";
+      const channels: string[] = [];
+      if (emailResult.ok) channels.push("email");
+      if (smsResult.ok) channels.push("sms");
+      const channelText = channels.length ? channels.join("+") : "none";
+      const errorText = [emailResult.error ? `email=${emailResult.error}` : null, smsResult.error ? `sms=${smsResult.error}` : null]
+        .filter(Boolean)
+        .join(" | ");
+
+      await storage.createActivity({
+        userId: (req.user as any)?.id || null,
+        userName: actor,
+        userRole: actorRole,
+        action: "installer_form_reminder",
+        note: `Rappel fiche installateur envoye a ${user.name} (${user.email}) - canaux: ${channelText}${errorText ? ` - erreurs: ${errorText}` : ""}`,
+      });
+
+      res.json({
+        ok: true,
+        loginUrl,
+        emailSent: emailResult.ok,
+        emailError: emailResult.error,
+        smsSent: smsResult.ok,
+        smsError: smsResult.error,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error?.message || "Erreur lors de l'envoi du rappel" });
     }
   });
   app.patch("/api/users/:id", async (req, res) => {
