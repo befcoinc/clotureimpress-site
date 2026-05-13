@@ -109,6 +109,8 @@ export function Utilisateurs() {
     mutationFn: async (payload: Partial<User>) => (await apiRequest("POST", "/api/users", payload)).json(),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/installer-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       setUserDialog(null);
       if (data?.inviteUrl) {
         setInviteResult({
@@ -132,6 +134,10 @@ export function Utilisateurs() {
     mutationFn: async ({ id, payload }: { id: number; payload: Partial<User> }) => (await apiRequest("PATCH", `/api/users/${id}`, payload)).json(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/installer-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       setUserDialog(null);
       toast({ title: isEn ? "User updated" : "Utilisateur modifié" });
     },
@@ -142,7 +148,10 @@ export function Utilisateurs() {
     mutationFn: async (id: number) => apiRequest("DELETE", `/api/users/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/installer-profiles"] });
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({ title: isEn ? "User deleted" : "Utilisateur supprimé" });
     },
     onError: onMutationError,
@@ -579,6 +588,9 @@ function InstallerFormDialog({ userId, userName, isEn, canEdit, onClose }: { use
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${userId}/installer-form-data`] });
       queryClient.invalidateQueries({ queryKey: ["/api/installer-profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       setEditing(false);
       setDraft({});
       toast({ title: isEn ? "Form saved" : "Fiche enregistrée" });
