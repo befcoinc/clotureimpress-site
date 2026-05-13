@@ -139,6 +139,7 @@
       border-bottom: 1px solid var(--color-border);
       display: block;
       padding: 0; line-height: 0;
+      pointer-events: none;
     }
     .affiliation-text { text-transform: uppercase; }
     .affiliation-logo {
@@ -1145,7 +1146,7 @@
       btn.textContent = l === 'fr' ? 'EN' : 'FR';
       // Swap affiliation banner image
       var affImg = document.getElementById('affil-img');
-      if (affImg) affImg.src = l === 'fr' ? 'images/hugo1.png' : 'images/hugo1-en.png';
+      if (affImg) affImg.src = l === 'fr' ? 'images/hugo1.png' : 'images/hugo anglais.png';
       document.querySelectorAll('[data-fr][data-en]').forEach(function(el) {
         var text = l === 'fr' ? el.getAttribute('data-fr') : el.getAttribute('data-en');
         // Support HTML entities like <br>
