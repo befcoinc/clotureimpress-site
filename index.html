@@ -135,15 +135,102 @@
     /* ===== BANDEAU AFFILIATION ===== */
     .affiliation-banner {
       position: relative; z-index: 102;
-      background: #111;
+      background: #0a0a0a;
       border-bottom: 1px solid var(--color-border);
-      display: block;
-      padding: 0; line-height: 0;
+      overflow: hidden;
+      pointer-events: none;
     }
-    .affiliation-text { text-transform: uppercase; }
-    .affiliation-logo {
-      width: 100%; height: auto;
-      display: block;
+    .affiliation-inner {
+      position: relative;
+      background-image: url('images/hugo1.png');
+      background-size: cover;
+      background-position: center top;
+      min-height: 160px;
+      display: flex;
+      align-items: flex-end;
+      padding: clamp(1rem, 2.5vw, 1.75rem) clamp(1rem, 4vw, 3rem);
+    }
+    .affiliation-inner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        108deg,
+        rgba(5,5,5,0.96) 0%,
+        rgba(5,5,5,0.93) 42%,
+        rgba(5,5,5,0.55) 60%,
+        transparent 74%
+      );
+      pointer-events: none;
+    }
+    .affil-text-group {
+      position: relative; z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      max-width: 640px;
+    }
+    .affil-label {
+      font-family: var(--font-display);
+      font-size: clamp(0.6rem, 0.9vw, 0.78rem);
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.85);
+      max-width: none;
+    }
+    .affil-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.4rem, 3.2vw, 2.6rem);
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--color-gold);
+      line-height: 1;
+      max-width: none;
+    }
+    .affil-sub {
+      font-family: var(--font-display);
+      font-size: clamp(0.65rem, 1.2vw, 0.9rem);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #fff;
+      max-width: none;
+    }
+    .affil-canada { color: var(--color-gold); }
+    .affil-badges {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.4rem 0.9rem;
+      margin-top: 0.6rem;
+      padding-top: 0.55rem;
+      border-top: 1px solid rgba(201,163,90,0.35);
+    }
+    .affil-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: var(--font-display);
+      font-size: clamp(0.55rem, 0.85vw, 0.68rem);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #fff;
+    }
+    .affil-badge-icon { font-size: 0.95rem; line-height: 1; }
+    .affil-sep { color: rgba(201,163,90,0.45); line-height: 1; }
+    @media (max-width: 600px) {
+      .affiliation-inner {
+        min-height: 0;
+        background-image: none;
+        background-color: #111;
+        padding: 1rem 1.25rem;
+      }
+      .affiliation-inner::before { display: none; }
+      .affil-badges { gap: 0.3rem 0.6rem; }
+      .affil-sep { display: none; }
     }
 
     /* ===== HEADER / NAV ===== */
@@ -618,7 +705,20 @@
 
 <!-- ===== BANDEAU AFFILIATION ===== -->
 <div class="affiliation-banner">
-  <img src="images/hugo1.png" alt="Partenaire Hugo" class="affiliation-logo">
+  <div class="affiliation-inner">
+    <div class="affil-text-group">
+      <p class="affil-label" data-fr="NOUS SOMMES" data-en="WE ARE">NOUS SOMMES</p>
+      <p class="affil-title" data-fr="DISTRIBUTEUR OFFICIEL" data-en="OFFICIAL DISTRIBUTOR">DISTRIBUTEUR OFFICIEL</p>
+      <p class="affil-sub" data-fr="POUR LES PRODUITS INTIMURA À TRAVERS LE <span class='affil-canada'>CANADA</span>" data-en="FOR INTIMURA PRODUCTS ACROSS <span class='affil-canada'>CANADA</span>">POUR LES PRODUITS INTIMURA À TRAVERS LE <span class="affil-canada">CANADA</span></p>
+      <div class="affil-badges">
+        <span class="affil-badge"><span class="affil-badge-icon">🍁</span><span data-fr="PRODUITS DE QUALITÉ SUPÉRIEURE" data-en="SUPERIOR QUALITY PRODUCTS">PRODUITS DE QUALITÉ SUPÉRIEURE</span></span>
+        <span class="affil-sep">|</span>
+        <span class="affil-badge"><span class="affil-badge-icon">🛡️</span><span data-fr="DESIGN MODERNE" data-en="MODERN DESIGN">DESIGN MODERNE</span></span>
+        <span class="affil-sep">|</span>
+        <span class="affil-badge"><span class="affil-badge-icon">🔗</span><span data-fr="INTIMITÉ ET DURABILITÉ" data-en="PRIVACY &amp; DURABILITY">INTIMITÉ ET DURABILITÉ</span></span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ===== HEADER ===== -->
