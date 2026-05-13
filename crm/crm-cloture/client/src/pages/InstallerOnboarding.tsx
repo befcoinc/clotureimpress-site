@@ -34,7 +34,7 @@ export function InstallerOnboarding() {
           <CardHeader>
             <CardTitle>Fiche sous-traitant obligatoire</CardTitle>
             <CardDescription>
-              Complete la fiche ci-dessous pour finaliser l'activation de ton compte installateur.
+              Complete ou mets a jour la fiche ci-dessous pour gerer ton profil installateur depuis le CRM.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -52,7 +52,7 @@ export function InstallerOnboarding() {
             )}
             <div className="flex justify-end">
               <Button onClick={markCompleted} disabled={isSubmitting} data-testid="button-confirm-installer-form">
-                {isSubmitting ? "Validation..." : "J'ai complete la fiche"}
+                {isSubmitting ? "Validation..." : "J'ai complete / mis a jour la fiche"}
               </Button>
             </div>
           </CardContent>

@@ -28,7 +28,7 @@ import { Architecture } from "@/pages/Architecture";
 import { LanguageProvider, useLanguage } from "@/lib/language-context";
 import { InstallerOnboarding } from "@/pages/InstallerOnboarding";
 
-function AppRouter({ canViewAdmin }: { canViewAdmin: boolean }) {
+function AppRouter({ canViewAdmin, isInstaller }: { canViewAdmin: boolean; isInstaller: boolean }) {
 
   return (
     <Layout>
@@ -42,6 +42,7 @@ function AppRouter({ canViewAdmin }: { canViewAdmin: boolean }) {
         <Route path="/soumissions/:id" component={QuoteDetail} />
         <Route path="/calendrier" component={CalendrierPartage} />
         <Route path="/dispatch-installation" component={DispatchInstallation} />
+        <Route path="/ma-fiche-sous-traitant" component={isInstaller ? InstallerOnboarding : NotFound} />
         <Route path="/heatmap" component={Heatmap} />
         <Route path="/tableau-ventes" component={TableauVentes} />
         <Route path="/tableau-installation" component={TableauInstallation} />
@@ -84,11 +85,12 @@ function AppWithAuth() {
   }
 
   const canViewAdmin = ["admin", "sales_director", "install_director"].includes((user as any).role);
+  const isInstaller = (user as any).role === "installer";
 
   return (
     <RoleProvider initialUser={user}>
       <Router hook={useHashLocation}>
-        <AppRouter canViewAdmin={canViewAdmin} />
+        <AppRouter canViewAdmin={canViewAdmin} isInstaller={isInstaller} />
       </Router>
     </RoleProvider>
   );

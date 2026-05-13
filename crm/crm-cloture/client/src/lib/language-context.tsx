@@ -19,6 +19,7 @@ type TranslationKey =
   | "nav.sectorHeatmap"
   | "nav.salesBoard"
   | "nav.installBoard"
+  | "nav.installerProfile"
   | "nav.sectorsPlanning"
   | "nav.usersRoles"
   | "nav.architecture"
@@ -52,6 +53,7 @@ const TRANSLATIONS: Record<AppLanguage, Record<TranslationKey, string>> = {
     "nav.sectorHeatmap": "Heatmap secteurs",
     "nav.salesBoard": "Tableau ventes",
     "nav.installBoard": "Tableau installation",
+    "nav.installerProfile": "Ma fiche sous-traitant",
     "nav.sectorsPlanning": "Secteurs et planification",
     "nav.usersRoles": "Utilisateurs et roles",
     "nav.architecture": "Architecture CRM",
@@ -84,6 +86,7 @@ const TRANSLATIONS: Record<AppLanguage, Record<TranslationKey, string>> = {
     "nav.sectorHeatmap": "Sector Heatmap",
     "nav.salesBoard": "Sales Board",
     "nav.installBoard": "Installation Board",
+    "nav.installerProfile": "My subcontractor form",
     "nav.sectorsPlanning": "Sectors and Planning",
     "nav.usersRoles": "Users and Roles",
     "nav.architecture": "CRM Architecture",

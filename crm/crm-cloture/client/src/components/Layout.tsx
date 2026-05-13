@@ -29,11 +29,13 @@ interface NavItem {
     | "nav.sectorHeatmap"
     | "nav.salesBoard"
     | "nav.installBoard"
+    | "nav.installerProfile"
     | "nav.sectorsPlanning"
     | "nav.usersRoles"
     | "nav.architecture";
   icon: any;
   perm?: Permission;
+  roles?: Array<"admin" | "sales_director" | "install_director" | "sales_rep" | "installer">;
   badge?: string;
 }
 
@@ -48,6 +50,7 @@ const NAV_SECTIONS: { labelKey: "nav.operations" | "nav.pilotage" | "nav.system"
       { href: "/soumissions", labelKey: "nav.quotes", icon: FileText, perm: "view_sales" },
       { href: "/calendrier", labelKey: "nav.sharedCalendar", icon: CalendarDays, badge: "team" },
       { href: "/dispatch-installation", labelKey: "nav.installDispatch", icon: Wrench, perm: "view_install" },
+      { href: "/ma-fiche-sous-traitant", labelKey: "nav.installerProfile", icon: FileText, roles: ["installer"] },
       { href: "/heatmap", labelKey: "nav.sectorHeatmap", icon: Flame, perm: "view_sectors", badge: "hot" },
     ],
   },
@@ -114,7 +117,11 @@ export function Layout({ children }: { children: ReactNode }) {
 
         <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2.5 px-2.5">
           {NAV_SECTIONS.map((section) => {
-            const visible = section.items.filter((it) => !it.perm || can(it.perm));
+            const visible = section.items.filter((it) => {
+              const permOk = !it.perm || can(it.perm);
+              const roleOk = !it.roles || it.roles.includes(role as any);
+              return permOk && roleOk;
+            });
             if (visible.length === 0) return null;
             return (
               <div key={section.labelKey} className="mb-4">
