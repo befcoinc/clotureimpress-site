@@ -30,6 +30,7 @@ type InstallerProfile = {
   postalCode: string;
   radius: string;
   regions: string;
+  latLng?: [number, number] | null;
 };
 
 type Hotspot = {
@@ -404,7 +405,7 @@ export function Heatmap() {
                     );
                   })}
                   {layers.has("installers") && installerProfiles.map((p) => {
-                    const coords = postalToCoords(p.postalCode, p.city);
+                    const coords = p.latLng || postalToCoords(p.postalCode, p.city);
                     const radiusM = parseRadiusMeters(p.radius);
                     if (!coords || radiusM === 0) return null;
                     return (

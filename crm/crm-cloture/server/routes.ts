@@ -47,6 +47,39 @@ function mapIntimuraStatus(status = "") {
   return "nouveau";
 }
 
+const installerPostalCoordCache = new Map<string, [number, number]>();
+
+async function geocodeCanadianPostalCode(postalCode?: string | null): Promise<[number, number] | null> {
+  const clean = String(postalCode || "").replace(/\s/g, "").toUpperCase();
+  if (!/^[A-Z]\d[A-Z]\d[A-Z]\d$/.test(clean)) return null;
+  const cached = installerPostalCoordCache.get(clean);
+  if (cached) return cached;
+
+  try {
+    const params = new URLSearchParams({
+      q: `${clean}, Canada`,
+      format: "jsonv2",
+      limit: "1",
+      countrycodes: "ca",
+      addressdetails: "0",
+    });
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+      headers: { "User-Agent": "cloture-crm/1.0" },
+    });
+    if (!response.ok) return null;
+    const payload = await response.json() as Array<{ lat?: string; lon?: string }>;
+    const first = payload?.[0];
+    const lat = first?.lat ? Number(first.lat) : NaN;
+    const lon = first?.lon ? Number(first.lon) : NaN;
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    const coords: [number, number] = [lat, lon];
+    installerPostalCoordCache.set(clean, coords);
+    return coords;
+  } catch {
+    return null;
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -333,10 +366,18 @@ export async function registerRoutes(
             postalCode: ((formData.field_14 as string) || "").replace(/\s/g, "").toUpperCase(),
             radius: (formData.field_13 as string) || "",
             regions: (formData.field_12 as string) || "",
+            latLng: null as [number, number] | null,
           };
         })
       );
-      res.json(profiles.filter(p => p.postalCode));
+
+      const withCoords = await Promise.all(
+        profiles.map(async (p) => ({
+          ...p,
+          latLng: await geocodeCanadianPostalCode(p.postalCode),
+        }))
+      );
+      res.json(withCoords.filter(p => p.postalCode));
     } catch (err) {
       next(err);
     }
