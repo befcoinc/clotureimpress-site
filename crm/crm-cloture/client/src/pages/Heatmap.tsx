@@ -246,6 +246,20 @@ const STAGE_COLORS: Record<MapQuote["stageTone"], string> = {
   problem: "#dc2626",
 };
 
+// Fly to postal code from ?installer= URL param
+function FlyToInstaller() {
+  const map = useMap();
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const postal = params.get("installer");
+    if (!postal) return;
+    const coords = postalToCoords(postal);
+    if (!coords) return;
+    map.flyTo(coords, 12, { duration: 1.2 });
+  }, [map]);
+  return null;
+}
+
 export function Heatmap() {
   const { language } = useLanguage();
   const isEn = language === "en";
@@ -523,6 +537,7 @@ export function Heatmap() {
                     );
                   })}
                   <InstallerLayerNative profiles={installerProfiles} show={layers.has("installers")} isEn={isEn} />
+                  <FlyToInstaller />
                 </MapContainer>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">

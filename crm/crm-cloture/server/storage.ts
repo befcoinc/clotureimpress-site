@@ -479,6 +479,9 @@ export class DatabaseStorage implements IStorage {
   async getInstallerApplications(): Promise<InstallerApplication[]> {
     return db.select().from(installerApplications).orderBy(desc(installerApplications.id));
   }
+  async getInstallerApplication(id: number): Promise<InstallerApplication | undefined> {
+    return (await db.select().from(installerApplications).where(eq(installerApplications.id, id)))[0];
+  }
   async createInstallerApplication(data: InsertInstallerApplication): Promise<InstallerApplication> {
     return (await db.insert(installerApplications).values(data).returning())[0];
   }

@@ -1123,6 +1123,65 @@ export async function registerRoutes(
     }
   });
 
+  // Convert an installer application → create user account + send invite
+  app.post("/api/installer-applications/:id/convert", requireAuth, async (req, res) => {
+    try {
+      const actor = req.user as any;
+      if (!["admin", "sales_director", "install_director"].includes(actor?.role)) {
+        return res.status(403).json({ error: "Acces refuse" });
+      }
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+
+      const app = await storage.getInstallerApplication(id);
+      if (!app) return res.status(404).json({ error: "Application introuvable" });
+
+      // Check if a user with this email already exists
+      const existing = await storage.getUserByEmailWithHash(app.email);
+      if (existing) {
+        return res.status(409).json({ error: "Un compte existe déjà pour ce courriel." });
+      }
+
+      // Create installer user
+      const newUser = await storage.createUser({
+        name: app.contactName,
+        email: app.email,
+        role: "installer",
+        phone: app.phone,
+        region: app.regions || null,
+        active: true,
+      });
+      await storage.setInstallerProfileCompleted(newUser.id, false);
+
+      // Send invite
+      const token = randomBytes(32).toString("hex");
+      const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+      await storage.setInviteToken(newUser.id, token, expiresAt);
+      const baseUrl = process.env.APP_URL || "https://cloture-crm.onrender.com";
+      const inviteUrl = `${baseUrl}/i/${token}`;
+      const [emailResult, smsResult] = await Promise.all([
+        sendInviteEmail(newUser.email, newUser.name, newUser.role, inviteUrl),
+        sendInviteSms(newUser.phone ?? "", newUser.smsCarrier ?? "", newUser.name, newUser.role, inviteUrl),
+      ]);
+
+      // Mark application as approved
+      await storage.updateInstallerApplication(id, { status: "approuve", notes: `Converti en compte installateur (userId: ${newUser.id}) le ${new Date().toLocaleDateString("fr-CA")}` });
+
+      res.json({
+        ok: true,
+        userId: newUser.id,
+        inviteUrl,
+        emailSent: emailResult.ok,
+        emailError: emailResult.error,
+        smsSent: smsResult.ok,
+        smsError: smsResult.error,
+      });
+    } catch (err: any) {
+      console.error("[installer-applications/convert] error", err);
+      res.status(500).json({ error: err?.message || "Erreur serveur" });
+    }
+  });
+
   // -------- Sector detection helper --------
   app.post("/api/sector/detect", (req, res) => {
     res.json({ sector: detectSector(req.body || {}) });

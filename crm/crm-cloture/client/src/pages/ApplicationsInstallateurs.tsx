@@ -11,7 +11,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
 import type { InstallerApplication } from "@shared/schema";
-import { Building2, CalendarDays, Mail, MapPin, Phone, Wrench } from "lucide-react";
+import { useLocation } from "wouter";
+import { Building2, CalendarDays, Mail, MapPin, Phone, Send, Wrench } from "lucide-react";
 
 const STATUS_LABELS: Record<string, string> = {
   en_attente: "En attente",
@@ -42,9 +43,11 @@ function formatDate(dateStr: string) {
 export function ApplicationsInstallateurs() {
   const { language } = useLanguage();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [selected, setSelected] = useState<InstallerApplication | null>(null);
   const [newStatus, setNewStatus] = useState("");
   const [notes, setNotes] = useState("");
+  const [isSending, setIsSending] = useState(false);
 
   const { data: applications = [], isLoading } = useQuery<InstallerApplication[]>({
     queryKey: ["/api/installer-applications"],
@@ -67,6 +70,35 @@ export function ApplicationsInstallateurs() {
     setSelected(app);
     setNewStatus(app.status);
     setNotes(app.notes || "");
+  }
+
+  function postalCodeFromRegions(regions: string | null | undefined) {
+    if (!regions) return "";
+    return regions.split("–")[0].trim();
+  }
+
+  function viewOnHeatmap(app: InstallerApplication) {
+    const postal = postalCodeFromRegions(app.regions);
+    navigate("/heatmap" + (postal ? `?installer=${encodeURIComponent(postal)}` : ""));
+  }
+
+  async function sendFiche(app: InstallerApplication) {
+    setIsSending(true);
+    try {
+      const res = await apiRequest("POST", `/api/installer-applications/${app.id}/convert`, {});
+      const data = await res.json().catch(() => ({})) as any;
+      if (!res.ok) {
+        toast({ title: data?.error || (language === "fr" ? "Erreur" : "Error"), variant: "destructive" });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/installer-applications"] });
+      toast({ title: language === "fr" ? "Compte créé et invitation envoyée" : "Account created and invite sent" });
+      setSelected(null);
+    } catch {
+      toast({ title: language === "fr" ? "Erreur réseau" : "Network error", variant: "destructive" });
+    } finally {
+      setIsSending(false);
+    }
   }
 
   const isFr = language === "fr";
@@ -201,18 +233,41 @@ export function ApplicationsInstallateurs() {
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setSelected(null)}>
-                  {isFr ? "Annuler" : "Cancel"}
-                </Button>
-                <Button
-                  onClick={() => patchMutation.mutate({ id: selected.id, status: newStatus, notes })}
-                  disabled={patchMutation.isPending}
-                >
-                  {patchMutation.isPending
-                    ? (isFr ? "Enregistrement..." : "Saving...")
-                    : (isFr ? "Enregistrer" : "Save")}
-                </Button>
+              <div className="flex flex-wrap justify-between gap-2 pt-2">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => viewOnHeatmap(selected)}
+                  >
+                    <MapPin size={14} className="mr-1" />
+                    {isFr ? "Voir sur la carte" : "View on map"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isSending || selected.status === "approuve"}
+                    onClick={() => sendFiche(selected)}
+                  >
+                    <Send size={14} className="mr-1" />
+                    {isSending
+                      ? (isFr ? "Envoi..." : "Sending...")
+                      : (isFr ? "Envoyer la fiche" : "Send form")}
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setSelected(null)}>
+                    {isFr ? "Annuler" : "Cancel"}
+                  </Button>
+                  <Button
+                    onClick={() => patchMutation.mutate({ id: selected.id, status: newStatus, notes })}
+                    disabled={patchMutation.isPending}
+                  >
+                    {patchMutation.isPending
+                      ? (isFr ? "Enregistrement..." : "Saving...")
+                      : (isFr ? "Enregistrer" : "Save")}
+                  </Button>
+                </div>
               </div>
             </div>
           </DialogContent>
