@@ -594,6 +594,24 @@
       .reveal { opacity: 1; transform: none; transition: none; }
       *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
     }
+    .lang-switch {
+      background: transparent;
+      border: 1.5px solid var(--color-gold);
+      color: var(--color-gold);
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 5px 11px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      flex-shrink: 0;
+    }
+    .lang-switch:hover {
+      background: var(--color-gold);
+      color: #000;
+    }
   </style>
 </head>
 <body>
@@ -611,13 +629,14 @@
         <img src="logo.png" alt="Clôture Impress">
       </a>
       <ul class="nav-links" role="list">
-        <li><a href="#services">Services</a></li>
-        <li><a href="#a-propos">À propos</a></li>
-        <li><a href="#zones">Zones desservies</a></li>
+        <li><a href="#services" data-fr="Services" data-en="Services">Services</a></li>
+        <li><a href="#a-propos" data-fr="À propos" data-en="About">À propos</a></li>
+        <li><a href="#zones" data-fr="Zones desservies" data-en="National coverage">Zones desservies</a></li>
       </ul>
       <div class="nav-cta">
         <a href="tel:4506240821" class="nav-phone" aria-label="Appeler Clôture Impress">450.624.0821</a>
-        <a href="#soumission" class="btn btn-gold">Soumission gratuite</a>
+        <a href="#soumission" class="btn btn-gold" data-fr="Soumission gratuite" data-en="Free quote">Soumission gratuite</a>
+        <button class="lang-switch" id="lang-switch" aria-label="Switch language">EN</button>
         <a href="https://cloture-crm.onrender.com" class="btn-login-nav" aria-label="Connexion équipe">🔐</a>
       </div>
       <button class="hamburger" aria-label="Menu" id="hamburger" aria-expanded="false">
@@ -626,11 +645,11 @@
     </nav>
   </div>
   <div class="mobile-menu" id="mobile-menu" hidden>
-    <a href="#services" class="mobile-link">Services</a>
-    <a href="#a-propos" class="mobile-link">À propos</a>
-    <a href="#zones" class="mobile-link">Zones desservies</a>
+    <a href="#services" class="mobile-link" data-fr="Services" data-en="Services">Services</a>
+    <a href="#a-propos" class="mobile-link" data-fr="À propos" data-en="About">À propos</a>
+    <a href="#zones" class="mobile-link" data-fr="Couverture nationale" data-en="National coverage">Couverture nationale</a>
     <a href="tel:4506240821" class="nav-phone">450.624.0821</a>
-    <a href="#soumission" class="btn btn-gold" style="text-align:center;">Soumission gratuite</a>
+    <a href="#soumission" class="btn btn-gold" style="text-align:center;" data-fr="Soumission gratuite" data-en="Free quote">Soumission gratuite</a>
   </div>
 </header>
 
@@ -640,7 +659,7 @@
   <img
     class="hero-image"
     src="images/hero 1.png"
-    alt="Clôture Impress — Installation résidentielle"
+    alt="Clôture Impress — Grossiste clôtures haut de gamme, réseau national"
     width="1600" height="900"
     loading="eager"
     decoding="async"
@@ -655,9 +674,9 @@
       <span class="zone-badge">Colombie-Britannique</span>
       <span class="zone-badge">+ partout au Canada</span>
     </div>
-    <span class="eyebrow reveal reveal-delay-1">Grossiste &amp; réseau d'installateurs — depuis 2018</span>
-    <h1 class="display-heading reveal reveal-delay-2">La clôture<br>partout au Canada</h1>
-    <p class="hero-lead reveal reveal-delay-3">
+    <span class="eyebrow reveal reveal-delay-1" data-fr="Grossiste &amp; réseau d'installateurs — depuis 2018" data-en="Wholesaler &amp; installer network — since 2018">Grossiste &amp; réseau d'installateurs — depuis 2018</span>
+    <h1 class="display-heading reveal reveal-delay-2" data-fr="La clôture&lt;br&gt;partout au Canada" data-en="Fencing&lt;br&gt;across Canada">La clôture<br>partout au Canada</h1>
+    <p class="hero-lead reveal reveal-delay-3" data-fr="Clôture Impress est grossiste en clôtures haut de gamme et chapeaute un réseau d'installateurs certifiés d'un océan à l'autre. Résidentiel, commercial, industriel — on fournit les matériaux, nos partenaires installent avec le même standard d'excellence." data-en="Cloture Impress is a premium fence wholesaler leading a certified installer network from coast to coast. Residential, commercial, industrial — we supply the materials, our partners install with the same standard of excellence.">
       Clôture Impress est grossiste en clôtures haut de gamme et chapeaute un réseau d'installateurs certifiés d'un océan à l'autre. Résidentiel, commercial, industriel — on fournit les matériaux, nos partenaires installent avec le même standard d'excellence.
     </p>
     <div class="hero-actions reveal reveal-delay-3">
@@ -666,19 +685,19 @@
     <div class="hero-stats reveal">
       <div>
         <span class="hero-stat-value">+500</span>
-        <span class="hero-stat-label">Projets réalisés</span>
+        <span class="hero-stat-label" data-fr="Projets réalisés" data-en="Projects completed">Projets réalisés</span>
       </div>
       <div>
         <span class="hero-stat-value">7+</span>
-        <span class="hero-stat-label">Années d'expérience</span>
+        <span class="hero-stat-label" data-fr="Années d'expérience" data-en="Years of experience">Années d'expérience</span>
       </div>
       <div>
         <span class="hero-stat-value">Canada</span>
-        <span class="hero-stat-label">Couverture nationale</span>
+        <span class="hero-stat-label" data-fr="Couverture nationale" data-en="National coverage">Couverture nationale</span>
       </div>
       <div>
         <span class="hero-stat-value">48h</span>
-        <span class="hero-stat-label">Délai de réponse</span>
+        <span class="hero-stat-label" data-fr="Délai de réponse" data-en="Response time">Délai de réponse</span>
       </div>
     </div>
   </div>
@@ -688,11 +707,11 @@
 <section class="section section-surface" id="services" aria-labelledby="services-heading">
   <div class="container">
     <div class="section-intro reveal">
-      <span class="eyebrow">Nos services</span>
+      <span class="eyebrow" data-fr="Nos services" data-en="Our services">Nos services</span>
       <span class="gold-line"></span>
-      <h2 class="section-heading" id="services-heading">Des solutions pour chaque projet</h2>
-      <p style="color: var(--color-text-muted); margin-top: var(--space-4);">
-        Nous importons, vendons et installons des clôtures adaptées à vos besoins — résidentiels ou commerciaux — avec des matériaux durables et une finition soignée.
+      <h2 class="section-heading" id="services-heading" data-fr="Des solutions pour chaque projet" data-en="Solutions for every project">Des solutions pour chaque projet</h2>
+      <p style="color: var(--color-text-muted); margin-top: var(--space-4);" data-fr="Grossiste haut de gamme, on fournit les matériaux — nos installateurs certifiés s'occupent de la pose partout au Canada. Résidentiel, commercial, industriel." data-en="Premium wholesaler, we supply the materials — our certified installers handle the installation across Canada. Residential, commercial, industrial.">
+        Grossiste haut de gamme, on fournit les matériaux — nos installateurs certifiés s'occupent de la pose partout au Canada. Résidentiel, commercial, industriel.
       </p>
     </div>
     <div class="services-grid">
@@ -701,8 +720,8 @@
           <img src="images/service-ornementale.jpg" alt="Clôture ornementale en fer forgé">
         </div>
         <div class="service-card-body">
-          <h3>Clôture ornementale</h3>
-          <p>Un choix élégant et intemporel pour sécuriser et embellir votre propriété. Disponible en fer forgé ou en aluminium peint.</p>
+          <h3 data-fr="Clôture ornementale" data-en="Ornamental fencing">Clôture ornementale</h3>
+          <p data-fr="Un choix élégant et intemporel pour sécuriser et embellir votre propriété. Disponible en fer forgé ou en aluminium peint." data-en="A timeless, elegant choice to secure and enhance your property. Available in wrought iron or painted aluminum.">Un choix élégant et intemporel pour sécuriser et embellir votre propriété. Disponible en fer forgé ou en aluminium peint.</p>
         </div>
       </article>
       <article class="service-card reveal reveal-delay-2">
@@ -710,8 +729,8 @@
           <img src="images/service-maille.jpg" alt="Clôture en maille de chaîne">
         </div>
         <div class="service-card-body">
-          <h3>Maille de chaîne</h3>
-          <p>Une solution robuste et économique pour délimiter un terrain résidentiel, commercial ou industriel avec efficacité.</p>
+          <h3 data-fr="Maille de chaîne" data-en="Chain link">Maille de chaîne</h3>
+          <p data-fr="Une solution robuste et économique pour délimiter un terrain résidentiel, commercial ou industriel avec efficacité." data-en="A robust, cost-effective solution to delimit residential, commercial or industrial land efficiently.">Une solution robuste et économique pour délimiter un terrain résidentiel, commercial ou industriel avec efficacité.</p>
         </div>
       </article>
       <article class="service-card reveal reveal-delay-3">
@@ -719,8 +738,8 @@
           <img src="images/service-intimite.jpg" alt="Clôture d'intimité en bois ou vinyle">
         </div>
         <div class="service-card-body">
-          <h3>Clôture d'intimité</h3>
-          <p>Créez un espace privé et paisible dans votre cour avec nos clôtures en bois, composite ou vinyle. Idéale pour les propriétés résidentielles.</p>
+          <h3 data-fr="Clôture d'intimité" data-en="Privacy fence">Clôture d'intimité</h3>
+          <p data-fr="Créez un espace privé et paisible dans votre cour avec nos clôtures en bois, composite ou vinyle. Idéale pour les propriétés résidentielles." data-en="Create a private, peaceful space in your yard with our wood, composite or vinyl fences. Ideal for residential properties.">Créez un espace privé et paisible dans votre cour avec nos clôtures en bois, composite ou vinyle. Idéale pour les propriétés résidentielles.</p>
         </div>
       </article>
       <article class="service-card reveal">
@@ -728,8 +747,8 @@
           <img src="images/service-commercial.jpg" alt="Clôture commerciale et industrielle">
         </div>
         <div class="service-card-body">
-          <h3>Commercial &amp; industriel</h3>
-          <p>Des installations solides et durables pour périmétrer des entrepôts, stationnements, terrains industriels et sites commerciaux.</p>
+          <h3 data-fr="Commercial &amp; industriel" data-en="Commercial &amp; industrial">Commercial &amp; industriel</h3>
+          <p data-fr="Des installations solides et durables pour périmétrer des entrepôts, stationnements, terrains industriels et sites commerciaux." data-en="Solid, long-lasting installations to perimeter warehouses, parking lots, industrial grounds and commercial sites.">Des installations solides et durables pour périmétrer des entrepôts, stationnements, terrains industriels et sites commerciaux.</p>
         </div>
       </article>
       <article class="service-card reveal reveal-delay-1">
@@ -737,8 +756,8 @@
           <img src="images/service-portail.jpg" alt="Portail motorisé et accès sécurisé">
         </div>
         <div class="service-card-body">
-          <h3>Portails &amp; accès</h3>
-          <p>Complétez votre installation avec un portail sur mesure motorisé ou manuel. Sécurité et esthétique au service de votre propriété.</p>
+          <h3 data-fr="Portails &amp; accès" data-en="Gates &amp; access">Portails &amp; accès</h3>
+          <p data-fr="Complétez votre installation avec un portail sur mesure motorisé ou manuel. Sécurité et esthétique au service de votre propriété." data-en="Complete your installation with a custom motorized or manual gate. Security and style for your property.">Complétez votre installation avec un portail sur mesure motorisé ou manuel. Sécurité et esthétique au service de votre propriété.</p>
         </div>
       </article>
       <article class="service-card reveal reveal-delay-2">
@@ -746,8 +765,8 @@
           <img src="images/service-verre.jpg" alt="Clôture et rampe de verre">
         </div>
         <div class="service-card-body">
-          <h3>Clôture de verre</h3>
-          <p>Pour un style moderne et épuré, nos clôtures et rampes en verre offrent une protection sans obstruer la vue. Idéales pour balcons et terrasses.</p>
+          <h3 data-fr="Clôture de verre" data-en="Glass fencing">Clôture de verre</h3>
+          <p data-fr="Pour un style moderne et épuré, nos clôtures et rampes en verre offrent une protection sans obstruer la vue. Idéales pour balcons et terrasses." data-en="For a modern, clean look, our glass fences and railings offer protection without blocking the view. Perfect for balconies and terraces.">Pour un style moderne et épuré, nos clôtures et rampes en verre offrent une protection sans obstruer la vue. Idéales pour balcons et terrasses.</p>
         </div>
       </article>
       <article class="service-card reveal reveal-delay-3">
@@ -755,16 +774,16 @@
           <img src="images/service-installation.jpg" alt="Installation sur mesure de clôtures">
         </div>
         <div class="service-card-body">
-          <h3>Installation sur mesure</h3>
-          <p>Chaque terrain est unique. Nous mesurons, planifions et adaptons chaque installation à votre espace pour une finition parfaite.</p>
+          <h3 data-fr="Installation sur mesure" data-en="Custom installation">Installation sur mesure</h3>
+          <p data-fr="Chaque terrain est unique. Nous mesurons, planifions et adaptons chaque installation à votre espace pour une finition parfaite." data-en="Every property is unique. We measure, plan and adapt every installation to your space for a perfect finish.">Chaque terrain est unique. Nous mesurons, planifions et adaptons chaque installation à votre espace pour une finition parfaite.</p>
         </div>
       </article>
       <article class="service-card service-card-cta reveal">
         <div class="service-cta-body">
-          <span class="eyebrow" style="margin-bottom: var(--space-3);">Soumission gratuite</span>
-          <h3>Un projet en tête&nbsp;?</h3>
-          <p style="margin-bottom: var(--space-5);">Recevez votre soumission personnalisée en moins de 48 heures.</p>
-          <a href="#soumission" class="btn btn-gold">Démarrer mon projet</a>
+          <span class="eyebrow" style="margin-bottom: var(--space-3);" data-fr="Soumission gratuite" data-en="Free quote">Soumission gratuite</span>
+          <h3 data-fr="Un projet en tête&nbsp;?" data-en="Have a project in mind?">Un projet en tête&nbsp;?</h3>
+          <p style="margin-bottom: var(--space-5);" data-fr="Recevez votre soumission personnalisée en moins de 48 heures." data-en="Get your personalized quote in under 48 hours.">Recevez votre soumission personnalisée en moins de 48 heures.</p>
+          <a href="#soumission" class="btn btn-gold" data-fr="Démarrer mon projet" data-en="Start my project">Démarrer mon projet</a>
         </div>
       </article>
     </div>
@@ -777,37 +796,37 @@
     <div class="why-grid">
       <div>
         <div class="reveal">
-          <span class="eyebrow">Pourquoi nous choisir</span>
+          <span class="eyebrow" data-fr="Pourquoi nous choisir" data-en="Why choose us">Pourquoi nous choisir</span>
           <span class="gold-line"></span>
-          <h2 class="section-heading" id="why-heading">Notre engagement envers chaque projet</h2>
+          <h2 class="section-heading" id="why-heading" data-fr="Notre engagement envers chaque projet" data-en="Our commitment to every project">Notre engagement envers chaque projet</h2>
         </div>
         <ul class="why-list">
           <li class="why-item reveal reveal-delay-1">
             <div class="why-icon" aria-hidden="true">★</div>
             <div>
-              <h4>Expérience depuis 2018</h4>
-              <p>Plus de 7 ans à installer des clôtures résidentielles et commerciales dans la région de Montréal et sur la Rive-Nord.</p>
+              <h4>Grossiste établi depuis 2018</h4>
+              <p>Plus de 7 ans d'expertise en fourniture et coordination d'installations de clôtures haut de gamme à travers le Canada.</p>
             </div>
           </li>
           <li class="why-item reveal reveal-delay-2">
             <div class="why-icon" aria-hidden="true">⚡</div>
             <div>
-              <h4>Soumission rapide en 48h</h4>
-              <p>Nous répondons rapidement à toutes les demandes. Pas de longues attentes, pas de surprises sur votre facture.</p>
+              <h4 data-fr="Soumission rapide en 48h" data-en="Fast quote in 48h">Soumission rapide en 48h</h4>
+              <p data-fr="Nous répondons rapidement à toutes les demandes. Pas de longues attentes, pas de surprises sur votre facture." data-en="We respond quickly to all requests. No long waits, no surprises on your invoice.">Nous répondons rapidement à toutes les demandes. Pas de longues attentes, pas de surprises sur votre facture.</p>
             </div>
           </li>
           <li class="why-item reveal reveal-delay-3">
             <div class="why-icon" aria-hidden="true">✦</div>
             <div>
-              <h4>Matériaux durables et haut de gamme</h4>
-              <p>Nous importons des matériaux de qualité supérieure pour garantir une installation qui résiste aux hivers québécois.</p>
+              <h4>Matériaux haut de gamme importés</h4>
+              <p>On s'approvisionne directement à la source pour offrir des produits de qualité supérieure, livrés partout au Canada.</p>
             </div>
           </li>
           <li class="why-item reveal">
             <div class="why-icon" aria-hidden="true">◎</div>
             <div>
-              <h4>Chantier propre, délais respectés</h4>
-              <p>Travail soigné, respect de votre propriété et des délais promis. Nous partons en laissant tout impeccable.</p>
+              <h4 data-fr="Chantier propre, délais respectés" data-en="Clean site, on-time delivery">Chantier propre, délais respectés</h4>
+              <p data-fr="Travail soigné, respect de votre propriété et des délais promis. Nous partons en laissant tout impeccable." data-en="Careful work, respect for your property and promised timelines. We leave everything spotless.">Travail soigné, respect de votre propriété et des délais promis. Nous partons en laissant tout impeccable.</p>
             </div>
           </li>
         </ul>
@@ -816,7 +835,7 @@
         <img src="images/pool house.png" alt="Installation Clôture Impress" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0;">
         <div class="why-visual-badge">
           <span class="badge-value">+500</span>
-          <span class="badge-label">projets complétés</span>
+          <span class="badge-label" data-fr="projets complétés" data-en="completed projects">projets complétés</span>
         </div>
       </div>
     </div>
@@ -827,25 +846,25 @@
 <section class="section section-dark" id="temoignages" aria-labelledby="temoignages-heading">
   <div class="container">
     <div class="section-intro reveal">
-      <span class="eyebrow">Avis clients</span>
+      <span class="eyebrow" data-fr="Avis clients" data-en="Customer reviews">Avis clients</span>
       <span class="gold-line"></span>
-      <h2 class="section-heading" id="temoignages-heading">Ce que disent nos clients</h2>
+      <h2 class="section-heading" id="temoignages-heading" data-fr="Ce que disent nos clients" data-en="What our clients say">Ce que disent nos clients</h2>
     </div>
     <div class="testimonials-grid">
       <div class="testimonial-card reveal reveal-delay-1">
         <div class="testimonial-stars" aria-label="5 étoiles sur 5">★★★★★</div>
-        <p class="testimonial-text">"Service impeccable du début à la fin. Équipe professionnelle, installation rapide et résultat vraiment beau. Ma clôture ornementale est exactement ce que je voulais."</p>
-        <span class="testimonial-author">Marie-Claude B. — Laval</span>
+        <p class="testimonial-text" data-fr="&quot;Service impeccable du début à la fin. Équipe professionnelle, installation rapide et résultat vraiment beau. Ma clôture ornementale est exactement ce que je voulais.&quot;" data-en="&quot;Flawless service from start to finish. Professional team, fast installation and a truly beautiful result. My ornamental fence is exactly what I wanted.&quot;">"Service impeccable du début à la fin. Équipe professionnelle, installation rapide et résultat vraiment beau. Ma clôture ornementale est exactement ce que je voulais."</p>
+        <span class="testimonial-author" data-fr="Marie-Claude B. — Montréal, QC" data-en="Marie-Claude B. — Montreal, QC">Marie-Claude B. — Montréal, QC</span>
       </div>
       <div class="testimonial-card reveal reveal-delay-2">
         <div class="testimonial-stars" aria-label="5 étoiles sur 5">★★★★★</div>
-        <p class="testimonial-text">"J'ai eu une soumission en moins de 24 heures. Les travaux ont été faits dans les délais. Très satisfait du résultat final. Je recommande sans hésiter."</p>
-        <span class="testimonial-author">Patrick D. — Repentigny</span>
+        <p class="testimonial-text" data-fr="&quot;J'ai eu une soumission en moins de 24 heures. Les travaux ont été faits dans les délais. Très satisfait du résultat final. Je recommande sans hésiter.&quot;" data-en="&quot;I received a quote in under 24 hours. Work was completed on schedule. Very satisfied with the final result. I recommend without hesitation.&quot;">"J'ai eu une soumission en moins de 24 heures. Les travaux ont été faits dans les délais. Très satisfait du résultat final. Je recommande sans hésiter."</p>
+        <span class="testimonial-author" data-fr="Patrick D. — Calgary, AB" data-en="Patrick D. — Calgary, AB">Patrick D. — Calgary, AB</span>
       </div>
       <div class="testimonial-card reveal reveal-delay-3">
         <div class="testimonial-stars" aria-label="5 étoiles sur 5">★★★★★</div>
-        <p class="testimonial-text">"Excellent rapport qualité-prix. Ils ont pris le temps d'expliquer les options et de respecter notre budget. Le chantier était propre après les travaux. Merci !"</p>
-        <span class="testimonial-author">Sophie T. — Terrebonne</span>
+        <p class="testimonial-text" data-fr="&quot;Excellent rapport qualité-prix. Ils ont pris le temps d'expliquer les options et de respecter notre budget. Le chantier était propre après les travaux. Merci !&quot;" data-en="&quot;Excellent value for money. They took the time to explain the options and respect our budget. The site was clean after the work. Thank you!&quot;">"Excellent rapport qualité-prix. Ils ont pris le temps d'expliquer les options et de respecter notre budget. Le chantier était propre après les travaux. Merci !"</p>
+        <span class="testimonial-author" data-fr="Sophie T. — Ottawa, ON" data-en="Sophie T. — Ottawa, ON">Sophie T. — Ottawa, ON</span>
       </div>
     </div>
   </div>
@@ -855,40 +874,40 @@
 <section class="section section-surface" id="zones" aria-labelledby="zones-heading">
   <div class="container">
     <div class="section-intro reveal">
-      <span class="eyebrow">Zones desservies</span>
+      <span class="eyebrow" data-fr="Couverture nationale" data-en="National coverage">Couverture nationale</span>
       <span class="gold-line"></span>
-      <h2 class="section-heading" id="zones-heading">On installe partout dans la région</h2>
-      <p style="color: var(--color-text-muted); margin-top: var(--space-4);">
-        Clôture Impress dessert Montréal, Laval et toute la Rive-Nord ainsi que plusieurs secteurs de la Rive-Sud. Contactez-nous pour vérifier si votre secteur est couvert.
+      <h2 class="section-heading" id="zones-heading" data-fr="Un réseau d'installateurs partout au Canada" data-en="An installer network across Canada">Un réseau d'installateurs partout au Canada</h2>
+      <p style="color: var(--color-text-muted); margin-top: var(--space-4);" data-fr="Grâce à notre réseau de partenaires installateurs certifiés, Clôture Impress peut desservir autant les grandes villes que les régions éloignées. On fournit les matériaux, nos partenaires locaux s'occupent de l'installation — même standard d'excellence, peu importe où vous êtes." data-en="Thanks to our network of certified installer partners, Cloture Impress can serve major cities and remote regions alike. We supply the materials, our local partners handle installation — same standard of excellence, no matter where you are.">
+        Grâce à notre réseau de partenaires installateurs certifiés, Clôture Impress peut desservir autant les grandes villes que les régions éloignées. On fournit les matériaux, nos partenaires locaux s'occupent de l'installation — même standard d'excellence, peu importe où vous êtes.
       </p>
     </div>
     <div class="zones-grid reveal">
       <span class="zone-chip">Montréal</span>
+      <span class="zone-chip">Québec</span>
       <span class="zone-chip">Laval</span>
-      <span class="zone-chip">Terrebonne</span>
-      <span class="zone-chip">Repentigny</span>
-      <span class="zone-chip">Blainville</span>
-      <span class="zone-chip">Boisbriand</span>
-      <span class="zone-chip">Sainte-Thérèse</span>
-      <span class="zone-chip">Saint-Jérôme</span>
-      <span class="zone-chip">Mirabel</span>
-      <span class="zone-chip">Mascouche</span>
-      <span class="zone-chip">L'Assomption</span>
       <span class="zone-chip">Longueuil</span>
-      <span class="zone-chip">Brossard</span>
-      <span class="zone-chip">Saint-Hubert</span>
-      <span class="zone-chip">Et plus encore...</span>
+      <span class="zone-chip">Toronto</span>
+      <span class="zone-chip">Ottawa</span>
+      <span class="zone-chip">Calgary</span>
+      <span class="zone-chip">Edmonton</span>
+      <span class="zone-chip">Vancouver</span>
+      <span class="zone-chip">Winnipeg</span>
+      <span class="zone-chip">Halifax</span>
+      <span class="zone-chip">Sherbrooke</span>
+      <span class="zone-chip">Trois-Rivières</span>
+      <span class="zone-chip">Gatineau</span>
+      <span class="zone-chip">Et partout ailleurs au Canada</span>
     </div>
   </div>
 </section>
 
 <!-- ===== CTA BANNER ===== -->
 <div class="cta-banner" aria-label="Appel à l'action – obtenir une soumission">
-  <span class="eyebrow">Prêt à commencer?</span>
-  <h2 class="section-heading" style="margin-bottom: var(--space-4);">Obtenez votre soumission gratuite</h2>
-  <p>Réponse en moins de 48 heures. Sans engagement. On s'adapte à votre terrain, votre budget et vos délais.</p>
+  <span class="eyebrow" data-fr="Prêt à commencer?" data-en="Ready to start?">Prêt à commencer?</span>
+  <h2 class="section-heading" style="margin-bottom: var(--space-4);" data-fr="Obtenez votre soumission gratuite" data-en="Get your free quote">Obtenez votre soumission gratuite</h2>
+  <p data-fr="Réponse en moins de 48 heures. Sans engagement. Notre réseau d'installateurs couvre tout le Canada — on s'adapte à votre terrain, votre budget et votre région." data-en="Response in under 48 hours. No commitment. Our installer network covers all of Canada — we adapt to your property, your budget and your region.">Réponse en moins de 48 heures. Sans engagement. Notre réseau d'installateurs couvre tout le Canada — on s'adapte à votre terrain, votre budget et votre région.</p>
   <div style="display:flex; gap: var(--space-4); justify-content:center; flex-wrap:wrap;">
-    <a href="#soumission" class="btn btn-gold btn-large">Demander une soumission</a>
+    <a href="#soumission" class="btn btn-gold btn-large" data-fr="Demander une soumission" data-en="Request a quote">Demander une soumission</a>
     <a href="tel:4506240821" class="btn btn-outline btn-large">(450) 624-0821</a>
   </div>
 </div>
@@ -898,31 +917,31 @@
   <div class="container">
     <div class="contact-section">
       <div class="contact-info reveal">
-        <span class="eyebrow">Nous contacter</span>
+        <span class="eyebrow" data-fr="Nous contacter" data-en="Contact us">Nous contacter</span>
         <span class="gold-line"></span>
-        <h2 class="section-heading" id="soumission-heading">Soumission gratuite</h2>
-        <p style="color: var(--color-text-muted); margin-top: var(--space-4); margin-bottom: var(--space-10);">
+        <h2 class="section-heading" id="soumission-heading" data-fr="Soumission gratuite" data-en="Free quote">Soumission gratuite</h2>
+        <p style="color: var(--color-text-muted); margin-top: var(--space-4); margin-bottom: var(--space-10);" data-fr="Remplissez le formulaire et nous vous répondons dans les 48 heures. Pas de frais, pas d'engagement." data-en="Fill in the form and we'll get back to you within 48 hours. No fees, no commitment.">
           Remplissez le formulaire et nous vous répondons dans les 48 heures. Pas de frais, pas d'engagement.
         </p>
         <div class="contact-item">
           <span class="contact-icon" aria-hidden="true">📞</span>
           <div>
-            <h4>Téléphone</h4>
+            <h4 data-fr="Téléphone" data-en="Phone">Téléphone</h4>
             <a href="tel:4506240821">(450) 624-0821</a>
           </div>
         </div>
         <div class="contact-item">
           <span class="contact-icon" aria-hidden="true">📍</span>
           <div>
-            <h4>Zones desservies</h4>
-            <p>Montréal, Laval, Rive-Nord, Rive-Sud</p>
+            <h4 data-fr="Couverture" data-en="Coverage">Couverture</h4>
+            <p data-fr="Partout au Canada — Québec, Ontario, Alberta, BC et plus" data-en="Anywhere in Canada — Quebec, Ontario, Alberta, BC and more">Partout au Canada — Québec, Ontario, Alberta, BC et plus</p>
           </div>
         </div>
         <div class="contact-item">
           <span class="contact-icon" aria-hidden="true">🕐</span>
           <div>
-            <h4>Heures d'ouverture</h4>
-            <p>Lundi–Vendredi : 7h–18h<br>Samedi : 8h–14h</p>
+            <h4 data-fr="Heures d'ouverture" data-en="Business hours">Heures d'ouverture</h4>
+            <p data-fr="Lundi–Vendredi : 7h–18h&lt;br&gt;Samedi : 8h–14h" data-en="Mon–Fri: 7am–6pm&lt;br&gt;Sat: 8am–2pm">Lundi–Vendredi : 7h–18h<br>Samedi : 8h–14h</p>
           </div>
         </div>
       </div>
@@ -1026,10 +1045,10 @@
     <div class="footer-grid">
       <div class="footer-brand">
         <img src="logo.png" alt="Clôture Impress — L'art de la clôture depuis 2018" style="max-width: 360px; width: 100%; height: auto; margin-bottom: var(--space-5);" loading="lazy">
-        <p>Grossiste en clôtures haut de gamme depuis 2018. Clôture Impress approvisionne et chapeaute un réseau d'installateurs certifiés à travers tout le Canada.</p>
+        <p data-fr="Grossiste en clôtures haut de gamme depuis 2018. Clôture Impress approvisionne et chapeaute un réseau d'installateurs certifiés à travers tout le Canada." data-en="Premium fence wholesaler since 2018. Cloture Impress supplies and leads a network of certified installers across Canada.">Grossiste en clôtures haut de gamme depuis 2018. Clôture Impress approvisionne et chapeaute un réseau d'installateurs certifiés à travers tout le Canada.</p>
       </div>
       <div class="footer-col">
-        <h4>Services</h4>
+        <h4 data-fr="Services" data-en="Services">Services</h4>
         <ul role="list">
           <li><a href="#services">Clôture ornementale</a></li>
           <li><a href="#services">Maille de chaîne</a></li>
@@ -1041,15 +1060,15 @@
         </ul>
       </div>
       <div class="footer-col">
-        <h4>Contact</h4>
+        <h4 data-fr="Contact" data-en="Contact">Contact</h4>
         <ul role="list">
           <li><a href="tel:4506240821">(450) 624-0821</a></li>
-          <li><a href="#soumission">Soumission gratuite</a></li>
-          <li><a href="#zones">Zones desservies</a></li>
+          <li><a href="#soumission" data-fr="Soumission gratuite" data-en="Free quote">Soumission gratuite</a></li>
+          <li><a href="#zones" data-fr="Zones desservies" data-en="Coverage areas">Zones desservies</a></li>
         </ul>
         <div style="margin-top: var(--space-6);">
-          <h4 style="margin-bottom: var(--space-3);">Heures</h4>
-          <p style="font-size: var(--text-xs); color: var(--color-text-faint); line-height: 1.8;">
+          <h4 style="margin-bottom: var(--space-3);" data-fr="Heures" data-en="Hours">Heures</h4>
+          <p style="font-size: var(--text-xs); color: var(--color-text-faint); line-height: 1.8;" data-fr="Lun–Ven : 7h–18h&lt;br&gt;Samedi : 8h–14h&lt;br&gt;Dimanche : Fermé" data-en="Mon–Fri: 7am–6pm&lt;br&gt;Sat: 8am–2pm&lt;br&gt;Sun: Closed">
             Lun–Ven : 7h–18h<br>
             Samedi : 8h–14h<br>
             Dimanche : Fermé
@@ -1058,8 +1077,8 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 Clôture Impress. Tous droits réservés.</span>
-      <span>Montréal · Laval · Rive-Nord · Rive-Sud</span>
+      <span data-fr="© 2026 Clôture Impress. Tous droits réservés." data-en="© 2026 Cloture Impress. All rights reserved.">© 2026 Clôture Impress. Tous droits réservés.</span>
+      <span data-fr="Montréal · Laval · Rive-Nord · Rive-Sud" data-en="Montreal · Toronto · Calgary · Vancouver">Montréal · Laval · Rive-Nord · Rive-Sud</span>
     </div>
   </div>
 </footer>
@@ -1116,6 +1135,56 @@
       }
     });
   });
+  // ── Language switcher ──────────────────────────────────────────────────
+  (function() {
+    var lang = localStorage.getItem('ci_lang') || 'fr';
+    var btn = document.getElementById('lang-switch');
+
+    function applyLang(l) {
+      document.documentElement.lang = l === 'fr' ? 'fr-CA' : 'en-CA';
+      btn.textContent = l === 'fr' ? 'EN' : 'FR';
+      document.querySelectorAll('[data-fr][data-en]').forEach(function(el) {
+        var text = l === 'fr' ? el.getAttribute('data-fr') : el.getAttribute('data-en');
+        // Support HTML entities like <br>
+        if (text && (text.indexOf('<') !== -1 || text.indexOf('&') !== -1)) {
+          el.innerHTML = text;
+        } else if (text) {
+          el.textContent = text;
+        }
+      });
+      // Form labels & placeholders
+      var labels = {
+        fr: { prenom:'Prénom *', nom:'Nom *', telephone:'Téléphone *', email:'Courriel', ville:'Ville *', service:'Type de service *', message:'Message (optionnel)', submit:'Envoyer ma demande', 'ph-prenom':'Jean', 'ph-nom':'Dupont', 'ph-tel':'(450) 000-0000', 'ph-email':'jean@exemple.com', 'ph-ville':'Montréal', 'ph-msg':'Décrivez votre projet...' },
+        en: { prenom:'First name *', nom:'Last name *', telephone:'Phone *', email:'Email', ville:'City *', service:'Service type *', message:'Message (optional)', submit:'Send my request', 'ph-prenom':'John', 'ph-nom':'Smith', 'ph-tel':'(450) 000-0000', 'ph-email':'john@example.com', 'ph-ville':'Montreal', 'ph-msg':'Describe your project...' }
+      };
+      var t = labels[l];
+      var f = document.getElementById('form-soumission');
+      if (!f) return;
+      ['prenom','nom','telephone','email','ville'].forEach(function(id) {
+        var inp = f.querySelector('#'+id);
+        if (inp) inp.placeholder = t['ph-'+id] || '';
+        var lbl = f.querySelector('label[for='+id+']');
+        if (lbl) lbl.textContent = t[id] || '';
+      });
+      var msgArea = f.querySelector('#message');
+      if (msgArea) msgArea.placeholder = t['ph-msg'];
+      var msgLbl = f.querySelector('label[for=message]');
+      if (msgLbl) msgLbl.textContent = t.message;
+      var submitBtn = f.querySelector('button[type=submit]');
+      if (submitBtn && !submitBtn.disabled) submitBtn.textContent = t.submit;
+      var sel = f.querySelector('#service');
+      if (sel) {
+        var opts = { fr:['Clôture ornementale','Maille de chaîne',"Clôture d'intimité",'Commercial &amp; industriel','Portail','Clôture de verre','Autre'], en:['Ornamental fencing','Chain link','Privacy fence','Commercial &amp; industrial','Gate','Glass fencing','Other'] };
+        Array.from(sel.options).forEach(function(o,i){ if(i>0 && opts[l][i-1]) o.text = opts[l][i-1]; });
+      }
+    }
+
+    applyLang(lang);
+    btn.addEventListener('click', function() {
+      lang = lang === 'fr' ? 'en' : 'fr';
+      localStorage.setItem('ci_lang', lang);
+      applyLang(lang);
+    });
+  })();
 </script>
-</body>
 </html>
