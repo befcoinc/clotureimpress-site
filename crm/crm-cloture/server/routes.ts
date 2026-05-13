@@ -576,6 +576,93 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  // -------- Public lead intake (website soumission form) --------
+  // CORS open to clotureimpress.com (apex + www) and the GitHub Pages preview origin.
+  const PUBLIC_LEAD_ORIGINS = new Set([
+    "https://clotureimpress.com",
+    "https://www.clotureimpress.com",
+    "https://befcoinc.github.io",
+    "http://localhost:8080",
+    "http://localhost:3000",
+    "http://127.0.0.1:5500",
+  ]);
+  const applyPublicCors = (req: Request, res: Response) => {
+    const origin = req.headers.origin as string | undefined;
+    if (origin && PUBLIC_LEAD_ORIGINS.has(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+    }
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Max-Age", "86400");
+  };
+  app.options("/api/public/lead", (req, res) => {
+    applyPublicCors(req, res);
+    res.status(204).end();
+  });
+  app.post("/api/public/lead", async (req, res) => {
+    applyPublicCors(req, res);
+    try {
+      const b = req.body || {};
+      // Accept both raw schema fields and the website's French names.
+      const prenom = String(b.prenom || b.firstName || "").trim();
+      const nom = String(b.nom || b.lastName || "").trim();
+      const fullName = String(b.clientName || `${prenom} ${nom}`).trim();
+      const phone = String(b.telephone || b.phone || "").trim() || null;
+      const email = String(b.email || b.courriel || "").trim() || null;
+      const city = String(b.ville || b.city || "").trim() || null;
+      const fenceMap: Record<string, string> = {
+        ornementale: "ornemental",
+        maille: "mailles",
+        intimite: "intimité",
+        commercial: "industrielle",
+        portail: "ornemental",
+        verre: "ornemental",
+        autre: "À confirmer",
+      };
+      const rawService = String(b.service || b.fenceType || "").trim();
+      const fenceType = fenceMap[rawService] || rawService || null;
+      const message = String(b.message || "").trim() || null;
+
+      if (!fullName || (!phone && !email)) {
+        return res.status(400).json({ error: "Nom et au moins un moyen de contact requis." });
+      }
+      // Basic anti-bot honeypot: any value in `website` field rejects silently.
+      if (b.website) return res.json({ ok: true });
+
+      const lead = await storage.createLead({
+        clientName: fullName,
+        phone,
+        email,
+        address: null,
+        city,
+        province: "QC",
+        postalCode: null,
+        neighborhood: city,
+        fenceType,
+        message,
+        source: "web",
+        intimuraId: null,
+        status: "nouveau",
+        assignedSalesId: null,
+        estimatedValue: null,
+        estimatedLength: null,
+      });
+      await storage.createActivity({
+        leadId: lead.id,
+        userId: null,
+        userName: "Site web",
+        userRole: "system",
+        action: "create",
+        note: `Lead créé depuis le formulaire du site — secteur ${lead.sector}`,
+      });
+      res.json({ ok: true, id: lead.id });
+    } catch (err) {
+      console.error("[public/lead] error", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
   // -------- Sector detection helper --------
   app.post("/api/sector/detect", (req, res) => {
     res.json({ sector: detectSector(req.body || {}) });

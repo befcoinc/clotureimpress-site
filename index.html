@@ -926,7 +926,9 @@
         </div>
       </div>
       <div class="reveal reveal-delay-1">
-        <form class="form-grid" name="soumission" method="POST" action="#merci" novalidate>
+        <form id="form-soumission" class="form-grid" name="soumission" method="POST" action="#merci" novalidate>
+          <!-- Honeypot anti-spam: champ caché qui doit rester vide -->
+          <input type="text" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" aria-hidden="true">
           <div class="form-group">
             <label class="form-label" for="prenom">Prénom *</label>
             <input class="form-input" type="text" id="prenom" name="prenom" placeholder="Jean" required autocomplete="given-name">
@@ -968,8 +970,50 @@
             <button type="submit" class="btn btn-gold btn-large" style="width:100%; justify-content:center;">
               Envoyer ma demande →
             </button>
+            <p id="form-soumission-status" role="status" aria-live="polite" style="margin-top: var(--space-3); text-align:center; min-height:1.4em;"></p>
           </div>
         </form>
+        <script>
+          (function () {
+            var form = document.getElementById('form-soumission');
+            if (!form) return;
+            var status = document.getElementById('form-soumission-status');
+            var endpoint = 'https://cloture-crm.onrender.com/api/public/lead';
+            form.addEventListener('submit', function (ev) {
+              ev.preventDefault();
+              if (status) { status.style.color = ''; status.textContent = 'Envoi en cours…'; }
+              var btn = form.querySelector('button[type="submit"]');
+              if (btn) btn.disabled = true;
+              var data = {
+                prenom: form.prenom.value,
+                nom: form.nom.value,
+                telephone: form.telephone.value,
+                email: form.email.value,
+                ville: form.ville.value,
+                service: form.service.value,
+                message: form.message.value,
+                website: form.website ? form.website.value : ''
+              };
+              fetch(endpoint, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+              })
+                .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+                .then(function (res) {
+                  if (!res.ok) throw new Error((res.body && res.body.error) || 'Erreur');
+                  if (status) { status.style.color = '#16a34a'; status.textContent = 'Merci ! Nous vous contactons sous peu.'; }
+                  form.reset();
+                })
+                .catch(function (err) {
+                  console.error(err);
+                  if (status) { status.style.color = '#dc2626'; status.textContent = "Échec de l'envoi. Appelez-nous au 450.624.0821."; }
+                })
+                .finally(function () { if (btn) btn.disabled = false; });
+            });
+          })();
+        </script>
       </div>
     </div>
   </div>
