@@ -5,7 +5,7 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
-import { RoleProvider, useRole } from "@/lib/role-context";
+import { RoleProvider } from "@/lib/role-context";
 import { Layout } from "@/components/Layout";
 import { Login } from "@/pages/Login";
 import { AcceptInvite } from "@/pages/AcceptInvite";
@@ -28,8 +28,7 @@ import { Architecture } from "@/pages/Architecture";
 import { LanguageProvider, useLanguage } from "@/lib/language-context";
 import { InstallerOnboarding } from "@/pages/InstallerOnboarding";
 
-function AppRouter() {
-  const { can } = useRole();
+function AppRouter({ canViewAdmin }: { canViewAdmin: boolean }) {
 
   return (
     <Layout>
@@ -47,8 +46,8 @@ function AppRouter() {
         <Route path="/tableau-ventes" component={TableauVentes} />
         <Route path="/tableau-installation" component={TableauInstallation} />
         <Route path="/secteurs" component={Secteurs} />
-        <Route path="/utilisateurs" component={can("view_admin") ? Utilisateurs : NotFound} />
-        <Route path="/architecture" component={can("view_admin") ? Architecture : NotFound} />
+        <Route path="/utilisateurs" component={canViewAdmin ? Utilisateurs : NotFound} />
+        <Route path="/architecture" component={canViewAdmin ? Architecture : NotFound} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
@@ -84,10 +83,12 @@ function AppWithAuth() {
     return <InstallerOnboarding />;
   }
 
+  const canViewAdmin = ["admin", "sales_director", "install_director"].includes((user as any).role);
+
   return (
     <RoleProvider initialUser={user}>
       <Router hook={useHashLocation}>
-        <AppRouter />
+        <AppRouter canViewAdmin={canViewAdmin} />
       </Router>
     </RoleProvider>
   );
