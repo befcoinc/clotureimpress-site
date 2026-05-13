@@ -14,7 +14,7 @@ import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
 import type { Crew, User } from "@shared/schema";
 import { PROVINCES, ROLES } from "@shared/schema";
-import { Mail, Pencil, Plus, ShieldCheck, Trash2, UsersRound, Wrench } from "lucide-react";
+import { FileText, Mail, Pencil, Plus, ShieldCheck, Trash2, UsersRound, Wrench } from "lucide-react";
 
 const PERMISSIONS_TABLE: Array<{ perm: string; admin: boolean; sdir: boolean; idir: boolean; sales: boolean; install: boolean }> = [
   { perm: "Voir toutes les soumissions", admin: true, sdir: true, idir: true, sales: false, install: false },
@@ -77,6 +77,7 @@ export function Utilisateurs() {
   const { toast } = useToast();
   const [userDialog, setUserDialog] = useState<UserDialogState>(null);
   const [crewDialog, setCrewDialog] = useState<CrewDialogState>(null);
+  const [viewFormUserId, setViewFormUserId] = useState<number | null>(null);
   const [inviteResult, setInviteResult] = useState<null | {
     email: string;
     phone?: string;
@@ -279,7 +280,10 @@ export function Utilisateurs() {
                       <div key={u.id} className="rounded-md border border-card-border bg-card p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="font-semibold text-[13px]">{u.name}</div>
+                            <div
+                              className={`font-semibold text-[13px]${u.role === "installer" && canManageInstallerForms ? " cursor-pointer text-primary hover:underline" : ""}`}
+                              onClick={() => { if (u.role === "installer" && canManageInstallerForms) setViewFormUserId(u.id); }}
+                            >{u.name}</div>
                             <div className="text-[11px] text-muted-foreground truncate">{u.email}</div>
                             <div className="text-[11px] text-muted-foreground">{u.phone || (isEn ? "Phone not set" : "Téléphone non défini")}</div>
                           </div>
@@ -500,7 +504,114 @@ export function Utilisateurs() {
           )}
         </DialogContent>
       </Dialog>
+
+      {viewFormUserId !== null && (
+        <InstallerFormDialog
+          userId={viewFormUserId}
+          userName={users.find(u => u.id === viewFormUserId)?.name || ""}
+          isEn={isEn}
+          onClose={() => setViewFormUserId(null)}
+        />
+      )}
     </>
+  );
+}
+
+// ── InstallerFormDialog ───────────────────────────────────────────────────────
+
+const FORM_FIELDS: Array<{ key: string; label: string; labelEn: string; section: string }> = [
+  { key: "field_0", label: "Nom légal de l'entreprise", labelEn: "Legal company name", section: "1" },
+  { key: "field_1", label: "Nom commercial", labelEn: "Trade name", section: "1" },
+  { key: "field_2", label: "Nom du responsable", labelEn: "Contact name", section: "1" },
+  { key: "field_3", label: "Courriel", labelEn: "Email", section: "1" },
+  { key: "field_4", label: "Téléphone principal", labelEn: "Main phone", section: "1" },
+  { key: "field_5", label: "Téléphone secondaire", labelEn: "Secondary phone", section: "1" },
+  { key: "field_6", label: "Adresse complète", labelEn: "Full address", section: "1" },
+  { key: "field_7", label: "Ville", labelEn: "City", section: "1" },
+  { key: "field_8", label: "Province", labelEn: "Province", section: "1" },
+  { key: "field_9", label: "Code postal", labelEn: "Postal code", section: "1" },
+  { key: "field_10", label: "NEQ / Numéro d'entreprise", labelEn: "Business number (NEQ)", section: "1" },
+  { key: "field_11", label: "Site web", labelEn: "Website", section: "1" },
+  { key: "field_12", label: "Régions desservies", labelEn: "Service regions", section: "2" },
+  { key: "field_13", label: "Rayon à partir du code postal", labelEn: "Radius from postal code", section: "2" },
+  { key: "field_14", label: "Code postal de départ (heatmap)", labelEn: "Starting postal code (heatmap)", section: "2" },
+  { key: "field_15", label: "Disponible hors région : Oui", labelEn: "Available outside region: Yes", section: "2" },
+  { key: "field_16", label: "Disponible hors région : Non", labelEn: "Available outside region: No", section: "2" },
+  { key: "field_17", label: "Province : Québec", labelEn: "Province: Quebec", section: "2" },
+  { key: "field_18", label: "Province : Ontario", labelEn: "Province: Ontario", section: "2" },
+  { key: "field_19", label: "Province : Alberta", labelEn: "Province: Alberta", section: "2" },
+  { key: "field_20", label: "Province : Colombie-Britannique", labelEn: "Province: British Columbia", section: "2" },
+  { key: "field_21", label: "Province : Autres", labelEn: "Province: Other", section: "2" },
+];
+
+const SECTION_LABELS: Record<string, { fr: string; en: string }> = {
+  "1": { fr: "1. Informations générales", en: "1. General information" },
+  "2": { fr: "2. Territoire desservi et secteur heatmap", en: "2. Service territory & heatmap sector" },
+};
+
+function InstallerFormDialog({ userId, userName, isEn, onClose }: { userId: number; userName: string; isEn: boolean; onClose: () => void }) {
+  const { data, isLoading } = useQuery<{ data: Record<string, string | boolean> | null }>({
+    queryKey: [`/api/users/${userId}/installer-form-data`],
+    enabled: userId > 0,
+  });
+
+  const formData = data?.data || null;
+  const sections = [...new Set(FORM_FIELDS.map(f => f.section))];
+
+  function renderValue(field: typeof FORM_FIELDS[0]) {
+    if (!formData) return "—";
+    const val = formData[field.key];
+    if (val === undefined || val === null || val === "") return "—";
+    if (typeof val === "boolean") return val ? "✓" : "✗";
+    return String(val);
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            {isEn ? "Subcontractor form — " : "Fiche sous-traitant — "}{userName}
+          </DialogTitle>
+          <DialogDescription>
+            {isEn ? "Data saved by the installer from their subcontractor form." : "Données enregistrées par l'installateur via sa fiche sous-traitant."}
+          </DialogDescription>
+        </DialogHeader>
+        {isLoading ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">{isEn ? "Loading..." : "Chargement..."}</div>
+        ) : !formData ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">{isEn ? "No form data saved yet." : "Aucune donnée de fiche enregistrée."}</div>
+        ) : (
+          <div className="space-y-4">
+            {sections.map(sec => {
+              const fields = FORM_FIELDS.filter(f => f.section === sec);
+              const sectionLabel = SECTION_LABELS[sec] ? (isEn ? SECTION_LABELS[sec].en : SECTION_LABELS[sec].fr) : `Section ${sec}`;
+              return (
+                <div key={sec}>
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 border-b border-border pb-1">{sectionLabel}</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                    {fields.map(f => {
+                      const val = renderValue(f);
+                      if (val === "—" && typeof formData[f.key] !== "boolean") return null;
+                      return (
+                        <div key={f.key} className="flex flex-col">
+                          <span className="text-[11px] text-muted-foreground">{isEn ? f.labelEn : f.label}</span>
+                          <span className="text-[13px] font-medium">{val}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <div className="flex justify-end pt-2">
+          <Button variant="outline" onClick={onClose}>{isEn ? "Close" : "Fermer"}</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

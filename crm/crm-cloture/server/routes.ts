@@ -266,6 +266,28 @@ export async function registerRoutes(
   });
   // ───────────────────────────────────────────────────────────────────
 
+  // GET /api/users/:id/installer-form-data — read a specific installer's form (admin/directors)
+  app.get("/api/users/:id/installer-form-data", requireAuth, async (req, res, next) => {
+    try {
+      const actor = req.user as any;
+      const allowed = ["admin", "sales_director", "install_director"];
+      if (!allowed.includes(actor?.role)) {
+        return res.status(403).json({ error: "Accès refusé" });
+      }
+      const userId = parseInt(req.params.id, 10);
+      if (isNaN(userId)) return res.status(400).json({ error: "ID invalide" });
+      const raw = await storage.getInstallerProfileFormData(userId);
+      if (!raw) return res.json({ data: null });
+      try {
+        return res.json({ data: JSON.parse(raw) });
+      } catch {
+        return res.json({ data: null });
+      }
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // GET /api/installer-profiles — all installer territories for heatmap (admin/directors/sales_rep)
   app.get("/api/installer-profiles", requireAuth, async (req, res, next) => {
     try {
