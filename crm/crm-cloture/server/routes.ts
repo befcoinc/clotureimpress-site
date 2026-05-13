@@ -389,6 +389,22 @@ export async function registerRoutes(
   app.get("/api/users", async (_req, res) => {
     res.json(await storage.getUsers());
   });
+
+  const userMutationErrorMessage = (error: any) => {
+    const code = String(error?.code || "");
+    const detail = String(error?.detail || "");
+    const message = String(error?.message || "");
+    const full = `${message} ${detail}`.toLowerCase();
+
+    if (code === "23505" || full.includes("duplicate key") || full.includes("users_email_key") || full.includes("email")) {
+      return "Ce courriel est deja utilise par un autre utilisateur.";
+    }
+    if (code === "23502" || full.includes("null value")) {
+      return "Un champ obligatoire est manquant.";
+    }
+    return "Impossible d'enregistrer l'utilisateur.";
+  };
+
   app.post("/api/users", async (req, res) => {
     const parsed = insertUserSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
@@ -417,7 +433,7 @@ export async function registerRoutes(
         smsError: smsResult.error,
       });
     } catch (error: any) {
-      res.status(400).json({ error: error?.message || "Impossible de créer l'utilisateur" });
+      res.status(400).json({ error: userMutationErrorMessage(error) });
     }
   });
   app.post("/api/users/:id/resend-invite", async (req, res) => {
@@ -531,7 +547,7 @@ export async function registerRoutes(
       if (!updated) return res.status(404).json({ error: "Not found" });
       res.json(updated);
     } catch (error: any) {
-      res.status(400).json({ error: error?.message || "Impossible de modifier l'utilisateur" });
+      res.status(400).json({ error: userMutationErrorMessage(error) });
     }
   });
   app.delete("/api/users/:id", async (req, res) => {
