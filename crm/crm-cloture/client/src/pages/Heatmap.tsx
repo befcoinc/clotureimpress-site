@@ -174,7 +174,8 @@ export function Heatmap() {
   const isEn = language === "en";
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
-  const { data: installerProfiles = [] } = useQuery<InstallerProfile[]>({ queryKey: ["/api/installer-profiles"] });
+  const installerProfilesQuery = useQuery<InstallerProfile[]>({ queryKey: ["/api/installer-profiles"] });
+  const installerProfiles = installerProfilesQuery.data ?? [];
   const [province, setProvince] = useState("all");
   const [metric, setMetric] = useState<"count" | "value">("count");
   const [stage, setStage] = useState("all");
@@ -382,6 +383,16 @@ export function Heatmap() {
               <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" /> {isEn ? "Interactive map with zoom" : "Carte réelle avec zoom"}</CardTitle>
             </CardHeader>
             <CardContent>
+              {layers.has("installers") && (
+                <div className="mb-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground" data-testid="diag-installer-profiles">
+                  <span className="font-semibold text-foreground">{isEn ? "Installer layer:" : "Couche installateurs :"}</span>{" "}
+                  {installerProfilesQuery.isLoading
+                    ? (isEn ? "loading…" : "chargement…")
+                    : installerProfilesQuery.error
+                      ? (isEn ? `error → ${(installerProfilesQuery.error as Error).message}` : `erreur → ${(installerProfilesQuery.error as Error).message}`)
+                      : `${installerProfiles.length} ${isEn ? "profile(s) received" : "fiche(s) reçue(s)"}`}
+                </div>
+              )}
               <div className="h-[650px] overflow-hidden rounded-xl border border-border">
                 <MapContainer
                   center={center}
