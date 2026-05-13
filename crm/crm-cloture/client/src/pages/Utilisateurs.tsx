@@ -381,51 +381,6 @@ export function Utilisateurs() {
           );
         })}
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2"><Wrench className="h-4 w-4" /> {isEn ? "Installation crews / subcontractors" : "Équipes d’installation / sous-traitants"} ({crews.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {crews.map(c => (
-                <div key={c.id} className="rounded-md border border-card-border bg-card p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="font-semibold text-[13px]">{c.name}</div>
-                      <div className="text-[11px] text-muted-foreground">{c.contactName || (isEn ? "Contact not set" : "Contact non défini")}</div>
-                      <div className="text-[11px] text-muted-foreground">{c.phone || (isEn ? "Phone not set" : "Téléphone non défini")}</div>
-                    </div>
-                    <Badge variant="outline" className="shrink-0 text-[10px]">{c.status}</Badge>
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-2">
-                    {c.province && <Badge variant="outline" className="text-[10px]">{c.province}</Badge>}
-                    <span className="text-[10px] text-muted-foreground truncate">{formatCities(c.cities, isEn)}</span>
-                  </div>
-                  <div className="mt-2 text-[11px] text-muted-foreground">{isEn ? "Capacity" : "Capacité"} : <span className="font-semibold text-foreground">{c.capacity || 1}/{isEn ? "day" : "jour"}</span> · {isEn ? "Type" : "Type"} : {c.type}</div>
-                  {canManage && (
-                    <div className="mt-3 flex gap-2">
-                      <Button size="sm" variant="outline" className="h-7 gap-1.5" onClick={() => setCrewDialog({ mode: "edit", crew: c })} data-testid={`button-edit-crew-${c.id}`}>
-                        <Pencil className="h-3.5 w-3.5" /> {isEn ? "Edit" : "Modifier"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 gap-1.5 text-destructive hover:text-destructive"
-                        onClick={() => {
-                          if (window.confirm(isEn ? `Delete crew ${c.name}? Assignments will be removed from calendar.` : `Supprimer l’équipe ${c.name}? Ses assignations seront retirées du calendrier.`)) deleteCrew.mutate(c.id);
-                        }}
-                        data-testid={`button-delete-crew-${c.id}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" /> {isEn ? "Delete" : "Supprimer"}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
         {canManage && <Card>
           <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><UsersRound className="h-4 w-4" /> {isEn ? "Permissions matrix" : "Matrice des permissions"}</CardTitle></CardHeader>
           <CardContent>
