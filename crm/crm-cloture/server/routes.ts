@@ -9,7 +9,7 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { storage, detectSector, seed, hashPassword, verifyPassword } from "./storage";
 import { sendInviteEmail, sendInstallerProfileReminderEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail } from "./email";
 import { sendInviteSms, sendInstallerProfileReminderSms } from "./sms";
-import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema } from "@shared/schema";
+import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema, insertInstallerApplicationSchema } from "@shared/schema";
 
 function decodeSvelteData(data: any[]) {
   const decode = (value: any): any => {
@@ -1048,6 +1048,77 @@ export async function registerRoutes(
       res.json({ ok: true, id: lead.id });
     } catch (err) {
       console.error("[public/lead] error", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
+  // -------- Public installer application --------
+  app.options("/api/public/installer-application", (req, res) => {
+    applyPublicCors(req, res);
+    res.status(204).end();
+  });
+  app.post("/api/public/installer-application", async (req, res) => {
+    applyPublicCors(req, res);
+    try {
+      const b = req.body || {};
+      // honeypot
+      if (b.website_url) return res.json({ ok: true });
+
+      const companyName = String(b.companyName || "").trim();
+      const contactName = String(b.contactName || "").trim();
+      const phone = String(b.phone || "").trim();
+      const email = String(b.email || "").trim();
+
+      if (!companyName || !contactName || !phone || !email) {
+        return res.status(400).json({ error: "Champs obligatoires manquants." });
+      }
+
+      const application = await storage.createInstallerApplication({
+        companyName,
+        website: String(b.website || "").trim() || null,
+        address: String(b.address || "").trim() || null,
+        yearFounded: String(b.yearFounded || "").trim() || null,
+        employeeCount: String(b.employeeCount || "").trim() || null,
+        regions: String(b.regions || "").trim() || null,
+        contactName,
+        phone,
+        email,
+        fenceTypes: String(b.fenceTypes || "").trim() || null,
+        yearsExperience: String(b.yearsExperience || "").trim() || null,
+        status: "en_attente",
+        notes: null,
+      });
+
+      return res.json({ ok: true, id: application.id });
+    } catch (err) {
+      console.error("[public/installer-application] error", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
+  app.get("/api/installer-applications", requireAuth, async (req, res) => {
+    try {
+      const applications = await storage.getInstallerApplications();
+      res.json(applications);
+    } catch (err) {
+      console.error("[installer-applications] error", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
+  app.patch("/api/installer-applications/:id", requireAuth, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+      const { status, notes } = req.body || {};
+      const patch: Record<string, string | null> = {};
+      if (typeof status === "string") patch.status = status;
+      if (typeof notes === "string") patch.notes = notes;
+      const updated = await storage.updateInstallerApplication(id, patch);
+      if (!updated) return res.status(404).json({ error: "Not found" });
+      res.json(updated);
+    } catch (err) {
+      console.error("[installer-applications PATCH] error", err);
       res.status(500).json({ error: "Erreur serveur" });
     }
   });

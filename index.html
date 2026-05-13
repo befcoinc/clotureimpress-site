@@ -118,6 +118,15 @@
       border: 1.5px solid var(--color-gold);
     }
     .btn-gold:hover { background: var(--color-gold-hover); border-color: var(--color-gold-hover); transform: translateY(-1px); box-shadow: var(--shadow-gold); }
+    .btn-installer {
+      background: transparent;
+      color: var(--color-gold);
+      border: 1.5px solid var(--color-gold);
+      cursor: pointer;
+      font-family: var(--font-body); font-size: var(--text-sm); font-weight: 500;
+      letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .btn-installer:hover { background: rgba(201,163,90,0.12); transform: translateY(-1px); }
     .btn-outline {
       background: transparent;
       color: var(--color-text);
@@ -613,6 +622,83 @@
       background: var(--color-gold);
       color: #000;
     }
+
+    /* ===== MODAL INSTALLATEUR ===== */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 9000;
+      background: rgba(0,0,0,0.72);
+      backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+      padding: var(--space-4);
+      overflow-y: auto;
+    }
+    .modal-overlay[hidden] { display: none; }
+    .modal-card {
+      position: relative;
+      background: #111;
+      border: 1px solid var(--color-border);
+      border-radius: 18px;
+      padding: var(--space-10);
+      width: 100%; max-width: 700px;
+      max-height: 92vh; overflow-y: auto;
+    }
+    .modal-close {
+      position: absolute; top: var(--space-4); right: var(--space-4);
+      background: rgba(255,255,255,0.08); border: 1px solid var(--color-border);
+      color: var(--color-text-muted); border-radius: 50%;
+      width: 34px; height: 34px; font-size: 1.2rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .modal-close:hover { background: rgba(255,255,255,0.18); }
+    .modal-fieldset {
+      border: 1px solid var(--color-border); border-radius: 12px;
+      padding: var(--space-5) var(--space-6); margin: 0 0 var(--space-5);
+    }
+    .modal-fieldset legend {
+      color: var(--color-text-muted); font-size: var(--text-xs);
+      letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600;
+      padding: 0 var(--space-2);
+    }
+    .modal-grid2 {
+      display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4);
+    }
+    .modal-label {
+      display: flex; flex-direction: column; gap: var(--space-1);
+      font-size: var(--text-xs); font-weight: 600;
+      letter-spacing: 0.05em; text-transform: uppercase;
+      color: var(--color-text-muted);
+    }
+    .modal-span2 { grid-column: span 2; }
+    .modal-input {
+      width: 100%; padding: 10px 14px; border-radius: 8px;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--color-border);
+      color: var(--color-text); font: inherit; font-size: var(--text-sm);
+      transition: border-color 0.2s;
+    }
+    .modal-input:focus { outline: none; border-color: var(--color-gold); }
+    .modal-input option { background: #111; }
+    .modal-checks {
+      display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2);
+    }
+    .modal-check {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--color-border);
+      border-radius: 20px; padding: 5px 12px;
+      cursor: pointer; font-size: var(--text-xs); font-weight: 500;
+      text-transform: none; letter-spacing: 0; color: var(--color-text-muted);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .modal-check:has(input:checked) {
+      background: rgba(201,163,90,0.15); border-color: var(--color-gold);
+      color: var(--color-gold);
+    }
+    .modal-check input { display: none; }
+    @media (max-width: 640px) {
+      .modal-card { padding: var(--space-6); }
+      .modal-grid2 { grid-template-columns: 1fr; }
+      .modal-span2 { grid-column: span 1; }
+    }
   </style>
 </head>
 <body>
@@ -637,6 +723,7 @@
       <div class="nav-cta">
         <a href="tel:4506240821" class="nav-phone" aria-label="Appeler Clôture Impress">450.624.0821</a>
         <a href="#soumission" class="btn btn-gold" data-fr="Soumission gratuite" data-en="Free quote">Soumission gratuite</a>
+        <button id="btn-devenir-installateur" class="btn btn-installer" data-fr="Devenir installateur" data-en="Become installer" aria-haspopup="dialog">Devenir installateur</button>
         <button class="lang-switch" id="lang-switch" aria-label="Switch language">EN</button>
         <a href="https://cloture-crm.onrender.com" class="btn-login-nav" aria-label="Connexion équipe">🔐</a>
       </div>
@@ -651,6 +738,7 @@
     <a href="#zones" class="mobile-link" data-fr="Couverture nationale" data-en="National coverage">Couverture nationale</a>
     <a href="tel:4506240821" class="nav-phone">450.624.0821</a>
     <a href="#soumission" class="btn btn-gold" style="text-align:center;" data-fr="Soumission gratuite" data-en="Free quote">Soumission gratuite</a>
+    <button id="btn-devenir-installateur-mobile" class="btn btn-installer" style="text-align:center;" data-fr="Devenir installateur" data-en="Become installer">Devenir installateur</button>
   </div>
 </header>
 
@@ -1084,6 +1172,104 @@
   </div>
 </footer>
 
+<!-- ===== MODAL DEVENIR INSTALLATEUR ===== -->
+<div id="modal-installateur" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title-install" hidden>
+  <div class="modal-card">
+    <button class="modal-close" id="modal-close-btn" aria-label="Fermer">&times;</button>
+    <span class="eyebrow" style="margin-bottom:8px;" data-fr="Réseau Clôture Impress" data-en="Cloture Impress Network">Réseau Clôture Impress</span>
+    <h2 class="section-heading" id="modal-title-install" style="font-size:1.6rem;margin-bottom:6px;" data-fr="Devenir installateur partenaire" data-en="Become a partner installer">Devenir installateur partenaire</h2>
+    <p style="color:var(--muted);margin-bottom:24px;font-size:.92rem;" data-fr="Remplissez ce formulaire et notre équipe vous contactera sous 48h." data-en="Fill out this form and our team will contact you within 48h.">Remplissez ce formulaire et notre équipe vous contactera sous 48h.</p>
+
+    <form id="form-installateur" novalidate>
+      <!-- honeypot -->
+      <input type="text" name="website_url" tabindex="-1" style="display:none" autocomplete="off">
+
+      <fieldset class="modal-fieldset">
+        <legend data-fr="Informations sur la compagnie" data-en="Company information">Informations sur la compagnie</legend>
+        <div class="modal-grid2">
+          <label class="modal-label">
+            <span data-fr="Nom de la compagnie *" data-en="Company name *">Nom de la compagnie *</span>
+            <input type="text" name="companyName" class="modal-input" required placeholder="Ex: Clôtures ABC Inc." autocomplete="organization">
+          </label>
+          <label class="modal-label">
+            <span data-fr="Site web" data-en="Website">Site web</span>
+            <input type="url" name="website" class="modal-input" placeholder="https://...">
+          </label>
+          <label class="modal-label">
+            <span data-fr="Adresse principale" data-en="Main address">Adresse principale</span>
+            <input type="text" name="address" class="modal-input" placeholder="123 rue Principale, Montréal, QC">
+          </label>
+          <label class="modal-label">
+            <span data-fr="Année de fondation" data-en="Year founded">Année de fondation</span>
+            <input type="number" name="yearFounded" class="modal-input" min="1900" max="2026" placeholder="Ex: 2010">
+          </label>
+          <label class="modal-label">
+            <span data-fr="Nombre d'employés" data-en="Number of employees">Nombre d'employés</span>
+            <select name="employeeCount" class="modal-input">
+              <option value="" data-fr="Sélectionnez..." data-en="Select...">Sélectionnez...</option>
+              <option value="1-2" data-fr="1-2 (micro)" data-en="1-2 (micro)">1–2 (micro)</option>
+              <option value="3-5" data-fr="3-5 (petite)" data-en="3-5 (small)">3–5 (petite)</option>
+              <option value="6-15" data-fr="6-15 (moyenne)" data-en="6-15 (medium)">6–15 (moyenne)</option>
+              <option value="15+" data-fr="15+ (grande)" data-en="15+ (large)">15+ (grande)</option>
+            </select>
+          </label>
+          <label class="modal-label">
+            <span data-fr="Régions desservies" data-en="Regions served">Régions desservies</span>
+            <input type="text" name="regions" class="modal-input" placeholder="Ex: Montréal, Laval, Rive-Nord">
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="modal-fieldset">
+        <legend data-fr="Personne de contact" data-en="Contact person">Personne de contact</legend>
+        <div class="modal-grid2">
+          <label class="modal-label">
+            <span data-fr="Nom du responsable *" data-en="Contact name *">Nom du responsable *</span>
+            <input type="text" name="contactName" class="modal-input" required placeholder="Jean Tremblay" autocomplete="name">
+          </label>
+          <label class="modal-label">
+            <span data-fr="Téléphone *" data-en="Phone *">Téléphone *</span>
+            <input type="tel" name="phone" class="modal-input" required placeholder="(450) 000-0000" autocomplete="tel">
+          </label>
+          <label class="modal-label modal-span2">
+            <span data-fr="Courriel *" data-en="Email *">Courriel *</span>
+            <input type="email" name="email" class="modal-input" required placeholder="info@monentreprise.ca" autocomplete="email">
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset class="modal-fieldset">
+        <legend data-fr="Expertise en installation" data-en="Installation expertise">Expertise en installation</legend>
+        <div class="modal-grid2">
+          <label class="modal-label modal-span2">
+            <span data-fr="Types de clôtures installées" data-en="Types of fences installed">Types de clôtures installées</span>
+            <div class="modal-checks">
+              <label class="modal-check"><input type="checkbox" name="fenceTypes" value="ornementale"><span data-fr="Ornementale" data-en="Ornamental">Ornementale</span></label>
+              <label class="modal-check"><input type="checkbox" name="fenceTypes" value="maille"><span data-fr="Maille de chaîne" data-en="Chain link">Maille de chaîne</span></label>
+              <label class="modal-check"><input type="checkbox" name="fenceTypes" value="intimite"><span data-fr="Intimité" data-en="Privacy">Intimité</span></label>
+              <label class="modal-check"><input type="checkbox" name="fenceTypes" value="bois"><span data-fr="Bois traité" data-en="Treated wood">Bois traité</span></label>
+              <label class="modal-check"><input type="checkbox" name="fenceTypes" value="commercial"><span data-fr="Commercial / Industriel" data-en="Commercial / Industrial">Commercial / Industriel</span></label>
+            </div>
+          </label>
+          <label class="modal-label">
+            <span data-fr="Années d'expérience en installation" data-en="Years of installation experience">Années d'expérience</span>
+            <select name="yearsExperience" class="modal-input">
+              <option value="" data-fr="Sélectionnez..." data-en="Select...">Sélectionnez...</option>
+              <option value="moins1" data-fr="Moins d'1 an" data-en="Less than 1 year">Moins d'1 an</option>
+              <option value="1-3" data-fr="1–3 ans" data-en="1–3 years">1–3 ans</option>
+              <option value="3-7" data-fr="3–7 ans" data-en="3–7 years">3–7 ans</option>
+              <option value="7+" data-fr="7 ans et plus" data-en="7+ years">7 ans et plus</option>
+            </select>
+          </label>
+        </div>
+      </fieldset>
+
+      <div id="form-install-msg" style="display:none;padding:12px 16px;border-radius:12px;font-size:.9rem;margin-bottom:12px;"></div>
+      <button type="submit" class="btn btn-gold btn-full" id="form-install-submit" data-fr="Envoyer ma candidature" data-en="Submit my application">Envoyer ma candidature</button>
+    </form>
+  </div>
+</div>
+
 <!-- ===== FLOATING CTA ===== -->
 <div class="floating-cta" aria-label="Boutons flottants">
   <a href="tel:4506240821" class="floating-call" aria-label="Appeler maintenant">
@@ -1191,6 +1377,91 @@
       lang = lang === 'fr' ? 'en' : 'fr';
       localStorage.setItem('ci_lang', lang);
       applyLang(lang);
+    });
+  })();
+  // ── Devenir installateur modal ──────────────────────────────────────────
+  (function() {
+    var modal = document.getElementById('modal-installateur');
+    var openBtns = [
+      document.getElementById('btn-devenir-installateur'),
+      document.getElementById('btn-devenir-installateur-mobile')
+    ];
+    var closeBtn = document.getElementById('modal-close-btn');
+    var form = document.getElementById('form-installateur');
+    var msgEl = document.getElementById('form-install-msg');
+    var submitBtn = document.getElementById('form-install-submit');
+
+    function openModal() {
+      modal.hidden = false;
+      document.body.style.overflow = 'hidden';
+      modal.querySelector('input[name="companyName"]').focus();
+      // Close mobile menu if open
+      if (!mobileMenu.hidden) {
+        mobileMenu.hidden = true;
+        mobileMenu.style.display = 'none';
+        hamburger.setAttribute('aria-expanded', 'false');
+      }
+    }
+    function closeModal() {
+      modal.hidden = true;
+      document.body.style.overflow = '';
+    }
+    openBtns.forEach(function(btn) { if (btn) btn.addEventListener('click', openModal); });
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && !modal.hidden) closeModal(); });
+
+    function showMsg(text, isError) {
+      msgEl.textContent = text;
+      msgEl.style.display = 'block';
+      msgEl.style.background = isError ? '#ffe0e0' : '#e4f7ef';
+      msgEl.style.color = isError ? '#c0392b' : '#1e7e50';
+      msgEl.style.border = isError ? '1px solid #f5c6c6' : '1px solid #a8d5bc';
+    }
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      // honeypot
+      if (form.website_url && form.website_url.value) return;
+      var data = new FormData(form);
+      var payload = {
+        companyName: (data.get('companyName') || '').toString().trim(),
+        website: (data.get('website') || '').toString().trim(),
+        address: (data.get('address') || '').toString().trim(),
+        yearFounded: (data.get('yearFounded') || '').toString().trim(),
+        employeeCount: (data.get('employeeCount') || '').toString().trim(),
+        regions: (data.get('regions') || '').toString().trim(),
+        contactName: (data.get('contactName') || '').toString().trim(),
+        phone: (data.get('phone') || '').toString().trim(),
+        email: (data.get('email') || '').toString().trim(),
+        fenceTypes: data.getAll('fenceTypes').join(','),
+        yearsExperience: (data.get('yearsExperience') || '').toString().trim(),
+      };
+      if (!payload.companyName || !payload.contactName || !payload.phone || !payload.email) {
+        showMsg('Veuillez remplir tous les champs obligatoires (*).', true);
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Envoi en cours...';
+      fetch('https://cloture-crm.onrender.com/api/public/installer-application', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      .then(function(r) {
+        if (!r.ok) throw new Error('Erreur serveur');
+        return r.json();
+      })
+      .then(function() {
+        showMsg('Votre candidature a été reçue ! Notre équipe vous contactera sous 48h.', false);
+        submitBtn.textContent = 'Candidature envoyée ✓';
+        form.reset();
+      })
+      .catch(function() {
+        showMsg('Une erreur est survenue. Veuillez réessayer ou nous appeler au 450.624.0821.', true);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Envoyer ma candidature';
+      });
     });
   })();
 </script>

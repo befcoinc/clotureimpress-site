@@ -1,10 +1,11 @@
 import {
-  users, leads, quotes, crews, activities,
+  users, leads, quotes, crews, activities, installerApplications,
   type User, type InsertUser,
   type Lead, type InsertLead,
   type Quote, type InsertQuote,
   type Crew, type InsertCrew,
   type Activity, type InsertActivity,
+  type InstallerApplication, type InsertInstallerApplication,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -178,6 +179,25 @@ async function migrate() {
       user_id INTEGER PRIMARY KEY,
       form_data TEXT NOT NULL DEFAULT '{}',
       updated_at TEXT NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+    )
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS installer_applications (
+      id SERIAL PRIMARY KEY,
+      company_name TEXT NOT NULL,
+      website TEXT,
+      address TEXT,
+      year_founded TEXT,
+      employee_count TEXT,
+      regions TEXT,
+      contact_name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      email TEXT NOT NULL,
+      fence_types TEXT,
+      years_experience TEXT,
+      status TEXT NOT NULL DEFAULT 'en_attente',
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
     )
   `);
 }
@@ -454,6 +474,16 @@ export class DatabaseStorage implements IStorage {
   }
   async createActivity(data: InsertActivity) {
     return (await db.insert(activities).values(data).returning())[0];
+  }
+
+  async getInstallerApplications(): Promise<InstallerApplication[]> {
+    return db.select().from(installerApplications).orderBy(desc(installerApplications.id));
+  }
+  async createInstallerApplication(data: InsertInstallerApplication): Promise<InstallerApplication> {
+    return (await db.insert(installerApplications).values(data).returning())[0];
+  }
+  async updateInstallerApplication(id: number, data: Partial<InsertInstallerApplication>): Promise<InstallerApplication | undefined> {
+    return (await db.update(installerApplications).set(data).where(eq(installerApplications.id, id)).returning())[0];
   }
 }
 

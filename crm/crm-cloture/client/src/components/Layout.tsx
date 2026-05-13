@@ -29,8 +29,7 @@ interface NavItem {
     | "nav.sectorHeatmap"
     | "nav.salesBoard"
     | "nav.installBoard"
-    | "nav.installerProfile"
-    | "nav.sectorsPlanning"
+    | "nav.installerProfile"    | "nav.installerApplications"    | "nav.sectorsPlanning"
     | "nav.usersRoles"
     | "nav.architecture";
   icon: any;
@@ -65,6 +64,7 @@ const NAV_SECTIONS: { labelKey: "nav.operations" | "nav.pilotage" | "nav.system"
   {
     labelKey: "nav.system",
     items: [
+      { href: "/applications-installateurs", labelKey: "nav.installerApplications", icon: Hammer, perm: "view_admin" },
       { href: "/utilisateurs", labelKey: "nav.usersRoles", icon: Users, perm: "view_admin" },
       { href: "/architecture", labelKey: "nav.architecture", icon: Network, perm: "view_admin" },
     ],

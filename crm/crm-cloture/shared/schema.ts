@@ -124,6 +124,29 @@ export const insertActivitySchema = createInsertSchema(activities).omit({ id: tr
 export type InsertActivity = z.infer<typeof insertActivitySchema>;
 export type Activity = typeof activities.$inferSelect;
 
+// ============= INSTALLER APPLICATIONS =============
+export const installerApplications = pgTable("installer_applications", {
+  id: serial("id").primaryKey(),
+  companyName: text("company_name").notNull(),
+  website: text("website"),
+  address: text("address"),
+  yearFounded: text("year_founded"),
+  employeeCount: text("employee_count"),
+  regions: text("regions"),
+  contactName: text("contact_name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email").notNull(),
+  fenceTypes: text("fence_types"),
+  yearsExperience: text("years_experience"),
+  status: text("status").notNull().default("en_attente"), // en_attente, approuve, refuse
+  notes: text("notes"),
+  createdAt: text("created_at").notNull().default("CURRENT_TIMESTAMP"),
+});
+
+export const insertInstallerApplicationSchema = createInsertSchema(installerApplications).omit({ id: true, createdAt: true });
+export type InsertInstallerApplication = z.infer<typeof insertInstallerApplicationSchema>;
+export type InstallerApplication = typeof installerApplications.$inferSelect;
+
 // ============= CONSTANTS / ENUMS =============
 export const PROVINCES = ["QC", "ON", "AB", "BC", "MB", "SK", "NS", "NB", "PE", "NL"] as const;
 
