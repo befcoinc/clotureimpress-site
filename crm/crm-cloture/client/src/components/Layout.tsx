@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/lib/language-context";
 import { cn } from "@/lib/utils";
 import type { Permission } from "@/lib/role-context";
-import type { Lead, Quote } from "@shared/schema";
+import type { InstallerApplication, Lead, Quote } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -78,6 +78,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const { language, setLanguage, t } = useLanguage();
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"], enabled: can("view_sales") || can("assign_sales") });
   const unassignedLeadsCount = useMemo(() => leads.filter((lead) => !lead.assignedSalesId).length, [leads]);
+  const { data: installerApps = [] } = useQuery<InstallerApplication[]>({ queryKey: ["/api/installer-applications"], enabled: can("view_admin") });
+  const pendingAppsCount = useMemo(() => installerApps.filter((a) => a.status === "en_attente").length, [installerApps]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -152,6 +154,10 @@ export function Layout({ children }: { children: ReactNode }) {
                             {item.href === "/dispatch-vendeur" && unassignedLeadsCount > 0 ? (
                               <span className="ml-auto rounded-full bg-sidebar-primary px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-primary-foreground">
                                 {unassignedLeadsCount}
+                              </span>
+                            ) : item.href === "/applications-installateurs" && pendingAppsCount > 0 ? (
+                              <span className="ml-auto rounded-full bg-sidebar-primary px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-primary-foreground">
+                                {pendingAppsCount}
                               </span>
                             ) : item.badge ? (
                               <span className="ml-auto rounded-full bg-sidebar-primary px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-primary-foreground">
