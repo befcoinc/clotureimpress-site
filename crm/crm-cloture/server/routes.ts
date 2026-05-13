@@ -168,6 +168,8 @@ export async function registerRoutes(
   // ── Protect all other /api routes ──────────────────────────────────
   app.use("/api", (req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/auth/")) return next();
+    if (req.path.startsWith("/public/")) return next();
+    if (req.method === "OPTIONS") return next();
     return requireAuth(req, res, next);
   });
   // ───────────────────────────────────────────────────────────────────
