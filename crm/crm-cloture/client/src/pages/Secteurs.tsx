@@ -26,6 +26,7 @@ export function Secteurs() {
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
   const activeLeads = leads.filter(l => l.status !== "test");
   const [expandedCity, setExpandedCity] = useState<string | null>(null);
+  const [expandedSector, setExpandedSector] = useState<string | null>(null);
 
   const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
 
@@ -217,18 +218,89 @@ export function Secteurs() {
             <CardHeader className="pb-3"><CardTitle className="text-base">{isEn ? "Detailed sectors (province > city > neighborhood)" : "Secteurs détaillés (province › ville › quartier)"}</CardTitle></CardHeader>
             <CardContent>
               <ul className="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
-                {bySector.map(([sector, info]) => (
-                  <li key={sector} className="flex items-center justify-between gap-3 rounded-md border border-card-border bg-card p-2.5 hover-elevate">
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium text-[12px] truncate">{info.label}</div>
-                      <div className="text-[10px] text-muted-foreground">{info.count} lead(s) · {info.quotes} {isEn ? "quote(s)" : "soumission(s)"}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-[14px] tabular">{info.count + info.quotes}</div>
-                      <div className="text-[10px] text-muted-foreground tabular">{moneyFmt.format(info.value)}</div>
-                    </div>
-                  </li>
-                ))}
+                {bySector.map(([sector, info]) => {
+                  const isOpen = expandedSector === sector;
+                  const sectorNorm = sector;
+                  const sectorLeads = activeLeads.filter(l => (normalizeForSearch(l.sector || (isEn ? "Unclassified" : "Non classé")) || (isEn ? "unclassified" : "non classe")) === sectorNorm);
+                  const sectorQuotes = quotes.filter(q => (normalizeForSearch(q.sector || (isEn ? "Unclassified" : "Non classé")) || (isEn ? "unclassified" : "non classe")) === sectorNorm);
+                  return (
+                    <li key={sector} className="rounded-md border border-card-border bg-card overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSector(isOpen ? null : sector)}
+                        className="w-full flex items-center justify-between gap-3 p-2.5 hover-elevate text-left"
+                        data-testid={`btn-sector-${sectorNorm || "unknown"}`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          {isOpen ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-[12px] truncate">{info.label}</div>
+                            <div className="text-[10px] text-muted-foreground">{info.count} lead(s) · {info.quotes} {isEn ? "quote(s)" : "soumission(s)"}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-[14px] tabular">{info.count + info.quotes}</div>
+                          <div className="text-[10px] text-muted-foreground tabular">{moneyFmt.format(info.value)}</div>
+                        </div>
+                      </button>
+                      {isOpen && (
+                        <div className="border-t border-card-border bg-muted/30 p-2.5 space-y-2">
+                          {sectorQuotes.length > 0 && (
+                            <div>
+                              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                                {isEn ? "Quotes" : "Soumissions"} ({sectorQuotes.length})
+                              </div>
+                              <ul className="space-y-1">
+                                {sectorQuotes.map(q => (
+                                  <li key={q.id}>
+                                    <Link
+                                      href={`/soumissions/${q.id}`}
+                                      className="flex items-center justify-between gap-2 rounded border border-card-border bg-card p-2 text-[12px] hover-elevate"
+                                      data-testid={`link-sector-quote-${q.id}`}
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <div className="font-medium truncate">{q.clientName || q.id}</div>
+                                        <div className="text-[10px] text-muted-foreground truncate">{q.address || ""}</div>
+                                      </div>
+                                      <div className="text-right shrink-0">
+                                        <div className="text-[10px] tabular">{moneyFmt.format(q.estimatedPrice || 0)}</div>
+                                        {q.salesStatus && <Badge variant="outline" className="text-[9px] mt-0.5">{q.salesStatus}</Badge>}
+                                      </div>
+                                    </Link>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {sectorLeads.length > 0 && (
+                            <div>
+                              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                                Leads ({sectorLeads.length})
+                              </div>
+                              <ul className="space-y-1">
+                                {sectorLeads.map(l => (
+                                  <li key={l.id} className="flex items-center justify-between gap-2 rounded border border-card-border bg-card p-2 text-[12px]">
+                                    <div className="min-w-0 flex-1">
+                                      <div className="font-medium truncate">{l.clientName || l.id}</div>
+                                      <div className="text-[10px] text-muted-foreground truncate">{l.address || l.email || ""}</div>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                      <div className="text-[10px] tabular">{moneyFmt.format(l.estimatedValue || 0)}</div>
+                                      {l.status && <Badge variant="outline" className="text-[9px] mt-0.5">{l.status}</Badge>}
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {sectorLeads.length === 0 && sectorQuotes.length === 0 && (
+                            <div className="text-[11px] text-muted-foreground italic">{isEn ? "No items" : "Aucun élément"}</div>
+                          )}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </CardContent>
           </Card>
