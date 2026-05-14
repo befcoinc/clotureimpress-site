@@ -54,6 +54,10 @@ export function Leads() {
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const { data: quotes = [] } = useQuery<any[]>({ queryKey: ["/api/quotes"] });
+  const { data: intimuraCreds } = useQuery<{ hasCookie?: boolean; hasCfServiceToken?: boolean }>({
+    queryKey: ["/api/intimura/credentials"],
+    enabled: currentUser?.role === "admin",
+  });
   const quoteByLeadId = useMemo(() => {
     const m = new Map<number, any>();
     for (const q of quotes) if (q?.leadId) m.set(q.leadId, q);
@@ -181,6 +185,7 @@ export function Leads() {
 
   const isAdmin = currentUser?.role === "admin";
   const canSyncIntimura = currentUser?.role === "admin" || currentUser?.role === "sales_director";
+  const canServerSyncIntimura = !!(intimuraCreds?.hasCookie || intimuraCreds?.hasCfServiceToken);
 
   // Handler pour aller à la page de setup du bookmarklet
   const handleGoToBookmarkletSetup = () => {
@@ -222,9 +227,21 @@ export function Leads() {
       });
     },
     onError: (err: any) => {
+      const raw = String(err?.message || "");
+      const credsMissing = raw.includes("INTIMURA_CREDENTIALS_MISSING");
+      if (credsMissing) {
+        toast({
+          title: isEn ? "Use bookmarklet sync" : "Utilise la synchronisation bookmarklet",
+          description: isEn
+            ? "Server credentials are not configured. Opening bookmarklet setup."
+            : "Les identifiants serveur ne sont pas configurés. Ouverture du setup bookmarklet.",
+        });
+        handleGoToBookmarkletSetup();
+        return;
+      }
       toast({
         title: isEn ? "Sync failed" : "Synchronisation échouée",
-        description: String(err?.message || ""),
+        description: raw,
         variant: "destructive",
       });
     },
@@ -247,7 +264,7 @@ export function Leads() {
                 {isEn ? "Sync from Intimura" : "Synchroniser depuis Intimura"}
               </Button>
             )}
-            {isAdmin ? (
+            {isAdmin && canServerSyncIntimura ? (
               <Button
                 data-testid="button-intimura-server-sync"
                 variant="outline"
