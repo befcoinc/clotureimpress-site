@@ -460,7 +460,7 @@ export function Leads() {
                         <Pencil className="h-3 w-3" />
                         {isEn ? "Edit" : "Modifier"}
                       </Button>
-                      {lead.status !== "test" && (
+                      {lead.status !== "test" && can("assign_sales") && (
                         <Button
                           size="sm"
                           variant="secondary"
