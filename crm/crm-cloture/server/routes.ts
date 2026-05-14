@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "node:http";
 import type { Server } from "node:http";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import path from "node:path";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
@@ -1374,8 +1374,23 @@ export async function registerRoutes(
     writeFileSync(intimuraCredsPath, JSON.stringify({ ...creds, updatedAt: new Date().toISOString() }, null, 2), "utf8");
   }
   function ensureBookmarkletToken(): string {
+    // Prefer an explicit env var so it stays stable across Render deploys
+    // (Render's filesystem is ephemeral, so a randomly generated token would
+    // rotate on every deploy and break the bookmarklet).
+    const envToken = process.env.INTIMURA_BOOKMARKLET_TOKEN || "";
+    if (envToken && envToken.length >= 32) return envToken;
     const creds = readIntimuraCreds();
     if (creds.bookmarkletToken && creds.bookmarkletToken.length >= 32) return creds.bookmarkletToken;
+    // Derive a deterministic token from SESSION_SECRET so it survives deploys
+    // even without dedicated config (the secret itself stays the same).
+    if (process.env.SESSION_SECRET) {
+      const derived = createHash("sha256")
+        .update("intimura-bookmarklet-v1:" + process.env.SESSION_SECRET)
+        .digest("hex")
+        .slice(0, 48);
+      writeIntimuraCreds({ ...creds, bookmarkletToken: derived });
+      return derived;
+    }
     const token = randomBytes(24).toString("hex");
     writeIntimuraCreds({ ...creds, bookmarkletToken: token });
     return token;
@@ -1650,7 +1665,18 @@ export async function registerRoutes(
     };
     return {
       quote: sanitize(decoded.quote),
-      customer: sanitize(decoded.customer),
+      customer: (() => {
+        // The Svelte payload puts customer details in a `customers` array keyed
+        // by id, while the quote only carries customer_id. Resolve the matching
+        // customer object so the UI has phone/address/postal_code/etc.
+        if (decoded.customer && typeof decoded.customer === "object") return sanitize(decoded.customer);
+        const cid = decoded.quote?.customer_id;
+        if (cid && Array.isArray(decoded.customers)) {
+          const found = decoded.customers.find((c: any) => c?.id === cid);
+          if (found) return sanitize(found);
+        }
+        return null;
+      })(),
       items: Array.isArray(decoded.items) ? decoded.items.map((i: any) => sanitize(i)) : [],
       taxes: Array.isArray(decoded.taxes) ? decoded.taxes.map((i: any) => sanitize(i)) : [],
       metadata: Array.isArray(decoded.metadata) ? decoded.metadata.map((i: any) => sanitize(i)) : [],
