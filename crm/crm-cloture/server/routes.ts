@@ -1509,6 +1509,37 @@ export async function registerRoutes(
     let createdQuotes = 0;
     let skipped = 0;
 
+    // Pre-load all leads once to enable secondary dedup by name/phone/email
+    // when the Intimura quote id differs (e.g. bookmarklet-scraped row vs
+    // server-side fetched record). This prevents creating duplicates of
+    // leads that were already imported under a different intimuraId or that
+    // are already assigned to a vendor.
+    const allLeads = await storage.getLeads();
+    const normName = (s: string) =>
+      String(s || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9 ]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    const normPhone = (s: string) => String(s || "").replace(/\D+/g, "").slice(-10);
+    const normEmail = (s: string) => String(s || "").trim().toLowerCase();
+    // First two name tokens (e.g. "RICHARD BOUTIN" from "RICHARD BOUTIN x Saint-Pamphile")
+    const nameKey = (s: string) => normName(s).split(" ").slice(0, 2).join(" ");
+
+    const byNameKey = new Map<string, typeof allLeads[number]>();
+    const byPhone = new Map<string, typeof allLeads[number]>();
+    const byEmail = new Map<string, typeof allLeads[number]>();
+    for (const l of allLeads) {
+      const k = nameKey(l.clientName || "");
+      if (k && !byNameKey.has(k)) byNameKey.set(k, l);
+      const p = normPhone(l.phone || "");
+      if (p && p.length >= 10 && !byPhone.has(p)) byPhone.set(p, l);
+      const e = normEmail(l.email || "");
+      if (e && !byEmail.has(e)) byEmail.set(e, l);
+    }
+
     for (const iq of intimuraQuotes) {
       if (!iq?.id) continue;
       const existing = await storage.getLeadByIntimuraId(iq.id);
@@ -1516,6 +1547,25 @@ export async function registerRoutes(
         skipped++;
         continue;
       }
+
+      // Secondary dedup: same person already exists under a different intimuraId
+      const candName = iq.customer_name || iq.title || "";
+      const candPhoneKey = normPhone(iq.customer_phone || "");
+      const candEmailKey = normEmail(iq.customer_email || "");
+      const candNameKey = nameKey(candName);
+      const dupe =
+        (candPhoneKey && candPhoneKey.length >= 10 ? byPhone.get(candPhoneKey) : undefined) ||
+        (candEmailKey ? byEmail.get(candEmailKey) : undefined) ||
+        (candNameKey ? byNameKey.get(candNameKey) : undefined);
+      if (dupe) {
+        // Backfill intimuraId on the existing lead so future syncs match by id directly.
+        if (!dupe.intimuraId) {
+          try { await storage.updateLead(dupe.id, { intimuraId: iq.id }); } catch {}
+        }
+        skipped++;
+        continue;
+      }
+
       const city = extractCity(iq.title || "");
       const province = inferProvince(city);
       const salesStatus = mapIntimuraStatus(iq.status);
