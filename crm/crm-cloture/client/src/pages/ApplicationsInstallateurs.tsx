@@ -272,15 +272,7 @@ export function ApplicationsInstallateurs() {
                       </span>
                       <span className="flex items-center gap-1">
                         <Phone size={13} />
-                    <div className="space-y-3">
-                      {showArchived && (
-                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                          {isFr
-                            ? "Ces fiches sont retirées de la liste active. Elles restent conservées et peuvent être remises dans la liste au besoin."
-                            : "These applications are removed from the active list. They are kept in the database and can be restored anytime."}
-                        </div>
-                      )}
-                      <div className="grid gap-3">
+                        {app.phone}
                       </span>
                       <span className="flex items-center gap-1">
                         <Mail size={13} />
