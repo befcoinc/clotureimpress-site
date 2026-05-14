@@ -491,6 +491,10 @@ export async function registerRoutes(
   app.use("/api", (req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/auth/")) return next();
     if (req.path.startsWith("/public/")) return next();
+    // Intimura bookmarklet endpoints have their own per-token auth and are
+    // called from crm.intimura.com (cross-origin), so they must bypass the
+    // session-cookie auth gate.
+    if (req.path === "/intimura/ingest" || req.path === "/intimura/ingest-details") return next();
     if (req.method === "OPTIONS") return next();
     return requireAuth(req, res, next);
   });
