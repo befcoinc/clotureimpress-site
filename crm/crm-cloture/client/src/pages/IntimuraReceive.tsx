@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, Info } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-type Status = "loading" | "ok" | "error";
+type Status = "loading" | "ok" | "error" | "no-data";
 
 interface Result {
   fetched?: number;
@@ -76,8 +76,10 @@ export function IntimuraReceive() {
         localStorage.removeItem("intimura_payload");
 
         if (!token || !dataRaw) {
-          setStatus("error");
-          setResult({ message: "Donnees manquantes. Le bookmarklet n'a pas transmis les informations correctement. Hash: " + window.location.hash.substring(0, 100) });
+          // Old bookmarklet opened this page without payload (legacy flow).
+          // Show a friendly message instead of a red error and route the user
+          // to the new bookmarklet setup so they can replace the old favorite.
+          setStatus("no-data");
           return;
         }
 
@@ -170,6 +172,29 @@ export function IntimuraReceive() {
                     onClick={() => window.close()}
                   >
                     Fermer cet onglet
+                  </Button>
+                </div>
+              </div>
+            )}
+            {status === "no-data" && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-amber-700">
+                  <Info className="h-6 w-6" />
+                  <span className="text-lg font-semibold">Bookmarklet à mettre à jour</span>
+                </div>
+                <div className="text-sm p-3 rounded bg-amber-50 border border-amber-200 text-amber-900 space-y-2">
+                  <p>Tu utilises encore l'ancien bookmarklet qui ouvrait cette page pour transférer les leads.</p>
+                  <p>Le nouveau bookmarklet envoie les leads <strong>directement</strong> à ton CRM, plus besoin d'ouvrir cet onglet. Remplace ton favori actuel pour ne plus voir ce message.</p>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button onClick={() => (window.location.hash = "#/intimura-bookmarklet")}>
+                    Obtenir le nouveau bookmarklet
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => (window.location.hash = "#/leads")}
+                  >
+                    Voir les leads
                   </Button>
                 </div>
               </div>
