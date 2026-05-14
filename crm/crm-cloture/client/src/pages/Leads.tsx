@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Mail, Phone, MapPin, Filter, Globe, Database, Clock } from "lucide-react";
+import { Plus, Mail, Phone, MapPin, Filter, Globe, Database, Clock, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -101,6 +101,29 @@ export function Leads() {
       toast({ title: isEn ? "Lead assigned" : "Lead assigné" });
     },
   });
+
+  const deleteLeadMut = useMutation({
+    mutationFn: async (id: number) => apiRequest("DELETE", `/api/leads/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      toast({ title: isEn ? "Lead deleted" : "Lead supprimé" });
+    },
+    onError: (err: any) => {
+      toast({ title: isEn ? "Delete failed" : "Suppression échouée", description: err?.message || "", variant: "destructive" });
+    },
+  });
+
+  const isAdmin = currentUser?.role === "admin";
+  const handleDeleteLead = (lead: Lead) => {
+    const msg = isEn
+      ? `Permanently delete the lead "${lead.clientName}"? This action cannot be undone.`
+      : `Supprimer définitivement le lead « ${lead.clientName} » ? Cette action est irréversible.`;
+    if (window.confirm(msg)) {
+      deleteLeadMut.mutate(lead.id);
+    }
+  };
 
   return (
     <>
@@ -296,6 +319,22 @@ export function Leads() {
                           → {v}
                         </Button>
                       ))}
+                    </div>
+                  )}
+
+                  {isAdmin && (
+                    <div className="flex justify-end pt-1 border-t border-border/50">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-[11px] text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+                        onClick={() => handleDeleteLead(lead)}
+                        disabled={deleteLeadMut.isPending}
+                        data-testid={`button-delete-lead-${lead.id}`}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        {isEn ? "Delete" : "Supprimer"}
+                      </Button>
                     </div>
                   )}
                 </CardContent>

@@ -965,6 +965,34 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  // Delete lead (admin only)
+  app.delete("/api/leads/:id", requireAuth, async (req, res) => {
+    const actor = req.user as any;
+    if (actor?.role !== "admin") {
+      return res.status(403).json({ error: "Acces refuse — admin requis" });
+    }
+    const leadId = Number(req.params.id);
+    if (isNaN(leadId)) return res.status(400).json({ error: "ID invalide" });
+
+    const lead = await storage.getLead(leadId);
+    if (!lead) return res.status(404).json({ error: "Lead introuvable" });
+
+    try {
+      await storage.deleteLead(leadId);
+      await storage.createActivity({
+        userId: actor?.id || null,
+        userName: actor?.name || "Admin",
+        userRole: actor?.role || "admin",
+        action: "lead_deleted",
+        note: `Lead supprime: ${lead.clientName} (id ${leadId}, source ${lead.source || "n/a"})`,
+      });
+      res.json({ ok: true });
+    } catch (err: any) {
+      console.error("[DELETE /api/leads/:id] error", err);
+      res.status(500).json({ error: err?.message || "Erreur serveur" });
+    }
+  });
+
   // -------- Public lead intake (website soumission form) --------
   // CORS open to clotureimpress.com (apex + www) and the GitHub Pages preview origin.
   const PUBLIC_LEAD_ORIGINS = new Set([

@@ -439,6 +439,13 @@ export class DatabaseStorage implements IStorage {
   async updateLead(id: number, data: Partial<InsertLead>) {
     return (await db.update(leads).set(data).where(eq(leads.id, id)).returning())[0];
   }
+  async deleteLead(id: number): Promise<boolean> {
+    // Detach related quotes (set lead_id to NULL) and remove related activities, then delete the lead.
+    await db.update(quotes).set({ leadId: null }).where(eq(quotes.leadId, id));
+    await db.delete(activities).where(eq(activities.leadId, id));
+    const deleted = await db.delete(leads).where(eq(leads.id, id)).returning();
+    return deleted.length > 0;
+  }
 
   async getQuotes() { return db.select().from(quotes).orderBy(desc(quotes.id)); }
   async getQuote(id: number) { return (await db.select().from(quotes).where(eq(quotes.id, id)))[0]; }
