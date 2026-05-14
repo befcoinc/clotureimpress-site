@@ -23,21 +23,21 @@ export function IntimuraReceive() {
   useEffect(() => {
     (async () => {
       try {
-        // Hash format: #/intimura-receive?token=XXX&data=...
-        const hash = window.location.hash || "";
-        const qIdx = hash.indexOf("?");
-        const qs = qIdx >= 0 ? hash.slice(qIdx + 1) : "";
-        const params = new URLSearchParams(qs);
-        const token = params.get("token") || "";
-        const dataRaw = params.get("data") || "";
+        // Retrieve token and payload from sessionStorage set by the bookmarklet
+        const token = sessionStorage.getItem("intimura_token") || "";
+        const dataRaw = sessionStorage.getItem("intimura_payload") || "";
+        // Clean up immediately so refresh doesn't reprocess
+        sessionStorage.removeItem("intimura_token");
+        sessionStorage.removeItem("intimura_payload");
+
         if (!token || !dataRaw) {
           setStatus("error");
-          setResult({ message: "Lien invalide : token ou données manquants." });
+          setResult({ message: "Donnees manquantes. Le bookmarklet n'a pas transmis les informations correctement." });
           return;
         }
         let payload: any;
         try {
-          payload = JSON.parse(decodeURIComponent(dataRaw));
+          payload = JSON.parse(dataRaw);
         } catch {
           setStatus("error");
           setResult({ message: "Données illisibles (JSON invalide)." });
