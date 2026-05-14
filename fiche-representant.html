@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr-CA">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cloture Impress - Fiche representant</title>
+  <style>
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#f5f6f8; color:#1f2937; }
+    .wrap { max-width: 920px; margin: 24px auto; background:#fff; border:1px solid #e5e7eb; border-radius: 14px; overflow:hidden; }
+    .head { background:#0f766e; color:#fff; padding:18px 22px; }
+    .content { padding: 20px 22px; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .full { grid-column: 1 / -1; }
+    label { display:block; font-size:13px; font-weight:600; margin-bottom:4px; color:#374151; }
+    input, textarea, select { width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:10px; padding:10px 12px; font: inherit; }
+    textarea { min-height: 90px; resize: vertical; }
+    .actions { display:flex; gap:10px; margin-top:16px; }
+    button { border:0; border-radius:10px; padding:10px 14px; font-weight:700; cursor:pointer; }
+    .primary { background:#0f766e; color:#fff; }
+    .secondary { background:#e5e7eb; color:#111827; }
+    .status { margin:12px 0; padding:10px 12px; border-radius:10px; font-size:13px; display:none; }
+    .ok { display:block; background:#e8f6f0; color:#0f5132; border:1px solid #bcdccb; }
+    .err { display:block; background:#fee2e2; color:#991b1b; border:1px solid #f5b7b7; }
+    @media (max-width: 720px) { .grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <h1 style="margin:0;font-size:24px;">Fiche representant</h1>
+      <p style="margin:6px 0 0;opacity:.9;">Completez votre profil pour finaliser votre candidature.</p>
+    </div>
+    <div class="content">
+      <div id="status" class="status"></div>
+      <form id="rep-form">
+        <div class="grid">
+          <div><label>Raison sociale</label><input name="companyLegalName" /></div>
+          <div><label>Nom du representant</label><input name="contactName" /></div>
+          <div><label>Courriel</label><input name="email" type="email" /></div>
+          <div><label>Telephone</label><input name="phonePrimary" /></div>
+          <div class="full"><label>Adresse</label><input name="address" /></div>
+          <div><label>Regions desservies</label><input name="regions" /></div>
+          <div><label>Code postal principal (heatmap)</label><input name="postalCodeHeatmap" /></div>
+          <div><label>Annees d'experience</label><input name="yearsExperience" /></div>
+          <div><label>Experience vente (B2B/B2C)</label><input name="salesExperience" /></div>
+          <div class="full"><label>Specialites / type de clientele</label><textarea name="specialties"></textarea></div>
+          <div class="full"><label>Commentaires</label><textarea name="comments"></textarea></div>
+          <div><label>Nom du signataire</label><input name="sigName" /></div>
+          <div><label>Date</label><input name="sigDate" type="date" /></div>
+        </div>
+        <div class="actions">
+          <button type="button" class="secondary" id="save-btn">Sauvegarder</button>
+          <button type="button" class="primary" id="submit-btn">Soumettre la fiche</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const API_BASE = "https://cloture-crm.onrender.com";
+      const token = new URLSearchParams(window.location.search).get("token");
+      const form = document.getElementById("rep-form");
+      const status = document.getElementById("status");
+      const saveBtn = document.getElementById("save-btn");
+      const submitBtn = document.getElementById("submit-btn");
+
+      function show(msg, ok) {
+        status.textContent = msg;
+        status.className = "status " + (ok ? "ok" : "err");
+      }
+
+      if (!token) {
+        show("Lien invalide: token manquant.", false);
+        saveBtn.disabled = true;
+        submitBtn.disabled = true;
+        return;
+      }
+
+      function collectData() {
+        const fd = new FormData(form);
+        const out = {};
+        fd.forEach((v, k) => out[k] = String(v || "").trim());
+        return out;
+      }
+
+      function fillData(data) {
+        if (!data || typeof data !== "object") return;
+        Object.keys(data).forEach((k) => {
+          const el = form.elements.namedItem(k);
+          if (el && "value" in el) el.value = data[k] == null ? "" : String(data[k]);
+        });
+      }
+
+      fetch(API_BASE + "/api/public/representative-fiche/" + encodeURIComponent(token))
+        .then((r) => r.ok ? r.json() : Promise.reject(new Error("Lien invalide")))
+        .then((payload) => {
+          fillData(payload.application || {});
+          fillData(payload.data || {});
+          if (payload.completed) show("Fiche deja soumise. Vous pouvez la mettre a jour puis soumettre de nouveau.", true);
+        })
+        .catch(() => show("Impossible de charger la fiche. Verifiez le lien.", false));
+
+      function send(submitted) {
+        const data = collectData();
+        return fetch(API_BASE + "/api/public/representative-fiche/" + encodeURIComponent(token), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data, submitted }),
+        })
+          .then((r) => r.ok ? r.json() : Promise.reject(new Error("Erreur serveur")))
+          .then(() => show(submitted ? "Fiche soumise avec succes." : "Fiche sauvegardee.", true))
+          .catch(() => show("Une erreur est survenue. Veuillez reessayer.", false));
+      }
+
+      saveBtn.addEventListener("click", () => send(false));
+      submitBtn.addEventListener("click", () => send(true));
+    })();
+  </script>
+</body>
+</html>

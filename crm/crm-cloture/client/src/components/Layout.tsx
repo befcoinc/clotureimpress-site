@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/lib/language-context";
 import { cn } from "@/lib/utils";
 import type { Permission } from "@/lib/role-context";
-import type { InstallerApplication, Lead, Quote } from "@shared/schema";
+import type { InstallerApplication, RepresentativeApplication, Lead, Quote } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -29,7 +29,10 @@ interface NavItem {
     | "nav.sectorHeatmap"
     | "nav.salesBoard"
     | "nav.installBoard"
-    | "nav.installerProfile"    | "nav.installerApplications"    | "nav.sectorsPlanning"
+    | "nav.installerProfile"
+    | "nav.installerApplications"
+    | "nav.representativeApplications"
+    | "nav.sectorsPlanning"
     | "nav.usersRoles"
     | "nav.architecture";
   icon: any;
@@ -64,6 +67,7 @@ const NAV_SECTIONS: { labelKey: "nav.operations" | "nav.pilotage" | "nav.system"
     labelKey: "nav.system",
     items: [
       { href: "/applications-installateurs", labelKey: "nav.installerApplications", icon: Hammer, perm: "view_admin" },
+      { href: "/applications-representants", labelKey: "nav.representativeApplications", icon: UserCheck, perm: "view_admin" },
       { href: "/utilisateurs", labelKey: "nav.usersRoles", icon: Users, perm: "view_admin" },
       { href: "/architecture", labelKey: "nav.architecture", icon: Network, perm: "view_admin" },
     ],
@@ -79,6 +83,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const unassignedLeadsCount = useMemo(() => leads.filter((lead) => lead.status !== "test" && !lead.assignedSalesId).length, [leads]);
   const { data: installerApps = [] } = useQuery<InstallerApplication[]>({ queryKey: ["/api/installer-applications"], enabled: can("view_admin") });
   const pendingAppsCount = useMemo(() => installerApps.filter((a) => a.status === "en_attente").length, [installerApps]);
+  const { data: representativeApps = [] } = useQuery<RepresentativeApplication[]>({ queryKey: ["/api/representative-applications"], enabled: can("view_admin") });
+  const pendingRepAppsCount = useMemo(() => representativeApps.filter((a) => a.status === "en_attente").length, [representativeApps]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -157,6 +163,10 @@ export function Layout({ children }: { children: ReactNode }) {
                             ) : item.href === "/applications-installateurs" && pendingAppsCount > 0 ? (
                               <span className="ml-auto rounded-full bg-sidebar-primary px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-primary-foreground">
                                 {pendingAppsCount}
+                              </span>
+                            ) : item.href === "/applications-representants" && pendingRepAppsCount > 0 ? (
+                              <span className="ml-auto rounded-full bg-sidebar-primary px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-primary-foreground">
+                                {pendingRepAppsCount}
                               </span>
                             ) : item.badge ? (
                               <span className="ml-auto rounded-full bg-sidebar-primary px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-primary-foreground">

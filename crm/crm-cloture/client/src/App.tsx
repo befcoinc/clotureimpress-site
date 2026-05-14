@@ -30,6 +30,7 @@ import { Architecture } from "@/pages/Architecture";
 import { LanguageProvider, useLanguage } from "@/lib/language-context";
 import { InstallerOnboarding } from "@/pages/InstallerOnboarding";
 import { ApplicationsInstallateurs } from "@/pages/ApplicationsInstallateurs";
+import { ApplicationsRepresentants } from "@/pages/ApplicationsRepresentants";
 
 function AppRouter({ canViewAdmin, isInstaller }: { canViewAdmin: boolean; isInstaller: boolean }) {
 
@@ -54,6 +55,7 @@ function AppRouter({ canViewAdmin, isInstaller }: { canViewAdmin: boolean; isIns
         <Route path="/secteurs" component={Secteurs} />
         <Route path="/utilisateurs" component={canViewAdmin ? Utilisateurs : NotFound} />
         <Route path="/applications-installateurs" component={canViewAdmin ? ApplicationsInstallateurs : NotFound} />
+        <Route path="/applications-representants" component={canViewAdmin ? ApplicationsRepresentants : NotFound} />
         <Route path="/architecture" component={canViewAdmin ? Architecture : NotFound} />
         <Route component={NotFound} />
       </Switch>

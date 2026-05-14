@@ -21,6 +21,7 @@ type TranslationKey =
   | "nav.installBoard"
   | "nav.installerProfile"
   | "nav.installerApplications"
+  | "nav.representativeApplications"
   | "nav.sectorsPlanning"
   | "nav.usersRoles"
   | "nav.architecture"
@@ -56,6 +57,7 @@ const TRANSLATIONS: Record<AppLanguage, Record<TranslationKey, string>> = {
     "nav.installBoard": "Tableau installation",
     "nav.installerProfile": "Ma fiche sous-traitant",
     "nav.installerApplications": "Applications installateurs",
+    "nav.representativeApplications": "Applications representants",
     "nav.sectorsPlanning": "Secteurs et planification",
     "nav.usersRoles": "Utilisateurs et roles",
     "nav.architecture": "Architecture CRM",
@@ -90,6 +92,7 @@ const TRANSLATIONS: Record<AppLanguage, Record<TranslationKey, string>> = {
     "nav.installBoard": "Installation Board",
     "nav.installerProfile": "My subcontractor form",
     "nav.installerApplications": "Installer Applications",
+    "nav.representativeApplications": "Representative Applications",
     "nav.sectorsPlanning": "Sectors and Planning",
     "nav.usersRoles": "Users and Roles",
     "nav.architecture": "CRM Architecture",

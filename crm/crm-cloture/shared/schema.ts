@@ -153,6 +153,35 @@ export const insertInstallerApplicationSchema = createInsertSchema(installerAppl
 export type InsertInstallerApplication = z.infer<typeof insertInstallerApplicationSchema>;
 export type InstallerApplication = typeof installerApplications.$inferSelect;
 
+// ============= SALES REPRESENTATIVE APPLICATIONS =============
+export const representativeApplications = pgTable("representative_applications", {
+  id: serial("id").primaryKey(),
+  companyName: text("company_name").notNull(),
+  website: text("website"),
+  address: text("address"),
+  yearFounded: text("year_founded"),
+  employeeCount: text("employee_count"),
+  regions: text("regions"),
+  contactName: text("contact_name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email").notNull(),
+  yearsExperience: text("years_experience"),
+  salesExperience: text("sales_experience"),
+  preferredMarket: text("preferred_market"),
+  status: text("status").notNull().default("en_attente"), // en_attente, approuve, refuse
+  notes: text("notes"),
+  formToken: text("form_token"),
+  ficheData: text("fiche_data"),
+  ficheCompletedAt: text("fiche_completed_at"),
+  convertedUserId: integer("converted_user_id"),
+  archivedAt: text("archived_at"),
+  createdAt: text("created_at").notNull().default("CURRENT_TIMESTAMP"),
+});
+
+export const insertRepresentativeApplicationSchema = createInsertSchema(representativeApplications).omit({ id: true, createdAt: true, formToken: true, ficheData: true, ficheCompletedAt: true, convertedUserId: true, archivedAt: true });
+export type InsertRepresentativeApplication = z.infer<typeof insertRepresentativeApplicationSchema>;
+export type RepresentativeApplication = typeof representativeApplications.$inferSelect;
+
 // ============= CONSTANTS / ENUMS =============
 export const PROVINCES = ["QC", "ON", "AB", "BC", "MB", "SK", "NS", "NB", "PE", "NL"] as const;
 

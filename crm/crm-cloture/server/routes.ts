@@ -7,9 +7,9 @@ import path from "node:path";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage, detectSector, seed, hashPassword, verifyPassword } from "./storage";
-import { sendInviteEmail, sendInstallerProfileReminderEmail, sendInstallerFicheLinkEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail } from "./email";
+import { sendInviteEmail, sendInstallerProfileReminderEmail, sendInstallerFicheLinkEmail, sendRepresentativeFicheLinkEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail } from "./email";
 import { sendInviteSms, sendInstallerProfileReminderSms } from "./sms";
-import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema, insertInstallerApplicationSchema } from "@shared/schema";
+import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema, insertInstallerApplicationSchema, insertRepresentativeApplicationSchema } from "@shared/schema";
 
 function decodeSvelteData(data: any[]) {
   // Cycle/depth-protected resolver. Some Svelte payloads contain self-referential
@@ -1482,6 +1482,293 @@ export async function registerRoutes(
       res.json({ ok: true, submitted });
     } catch (err: any) {
       console.error("[public/installer-fiche POST] error", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
+  // -------- Public representative application --------
+  app.options("/api/public/representative-application", (req, res) => {
+    applyPublicCors(req, res);
+    res.status(204).end();
+  });
+  app.post("/api/public/representative-application", async (req, res) => {
+    applyPublicCors(req, res);
+    try {
+      const b = req.body || {};
+      if (b.website_url) return res.json({ ok: true });
+
+      const parsed = insertRepresentativeApplicationSchema.parse({
+        companyName: String(b.companyName || "").trim(),
+        website: String(b.website || "").trim() || null,
+        address: String(b.address || "").trim() || null,
+        yearFounded: String(b.yearFounded || "").trim() || null,
+        employeeCount: String(b.employeeCount || "").trim() || null,
+        regions: String(b.regions || "").trim() || null,
+        contactName: String(b.contactName || "").trim(),
+        phone: String(b.phone || "").trim(),
+        email: String(b.email || "").trim(),
+        yearsExperience: String(b.yearsExperience || "").trim() || null,
+        salesExperience: String(b.salesExperience || "").trim() || null,
+        preferredMarket: String(b.preferredMarket || "").trim() || null,
+        status: "en_attente",
+        notes: null,
+      });
+
+      if (!parsed.companyName || !parsed.contactName || !parsed.phone || !parsed.email) {
+        return res.status(400).json({ error: "Champs obligatoires manquants." });
+      }
+
+      const application = await storage.createRepresentativeApplication(parsed);
+      return res.json({ ok: true, id: application.id });
+    } catch (err: any) {
+      console.error("[public/representative-application] error", err);
+      res.status(500).json({ error: err?.message || "Erreur serveur" });
+    }
+  });
+
+  app.get("/api/representative-applications", requireAuth, async (req, res) => {
+    try {
+      const includeArchived = String(req.query.archived || "").toLowerCase();
+      const applications = await storage.getRepresentativeApplications({
+        includeArchived: includeArchived === "1" || includeArchived === "true" || includeArchived === "yes",
+      });
+      res.json(applications);
+    } catch (err) {
+      console.error("[representative-applications] error", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
+  app.patch("/api/representative-applications/:id", requireAuth, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+      const { status, notes } = req.body || {};
+      const patch: Record<string, string | null> = {};
+      if (typeof status === "string") patch.status = status;
+      if (typeof notes === "string") patch.notes = notes;
+      const updated = await storage.updateRepresentativeApplication(id, patch);
+      if (!updated) return res.status(404).json({ error: "Not found" });
+      res.json(updated);
+    } catch (err) {
+      console.error("[representative-applications PATCH] error", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
+  app.post("/api/representative-applications/:id/archive", requireAuth, async (req, res) => {
+    try {
+      const actor = req.user as any;
+      if (!( ["admin", "sales_director", "install_director"].includes(actor?.role) )) {
+        return res.status(403).json({ error: "Acces refuse" });
+      }
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+      const updated = await storage.archiveRepresentativeApplication(id);
+      if (!updated) return res.status(404).json({ error: "Application introuvable" });
+      await storage.createActivity({
+        userId: actor?.id || null,
+        userName: actor?.name || "Admin",
+        userRole: actor?.role || "admin",
+        action: "representative_application_archived",
+        note: `Application representant archivee: ${updated.contactName} (${updated.companyName})`,
+      });
+      res.json({ ok: true, archivedAt: updated.archivedAt });
+    } catch (err) {
+      console.error("[representative-applications/archive] error", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
+  app.post("/api/representative-applications/:id/restore", requireAuth, async (req, res) => {
+    try {
+      const actor = req.user as any;
+      if (!( ["admin", "sales_director", "install_director"].includes(actor?.role) )) {
+        return res.status(403).json({ error: "Acces refuse" });
+      }
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+      const updated = await storage.restoreRepresentativeApplication(id);
+      if (!updated) return res.status(404).json({ error: "Application introuvable" });
+      await storage.createActivity({
+        userId: actor?.id || null,
+        userName: actor?.name || "Admin",
+        userRole: actor?.role || "admin",
+        action: "representative_application_restored",
+        note: `Application representant restauree: ${updated.contactName} (${updated.companyName})`,
+      });
+      res.json({ ok: true, archivedAt: updated.archivedAt });
+    } catch (err) {
+      console.error("[representative-applications/restore] error", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
+  app.post("/api/representative-applications/:id/convert", requireAuth, async (req, res) => {
+    try {
+      const actor = req.user as any;
+      if (!(["admin", "sales_director", "install_director"].includes(actor?.role))) {
+        return res.status(403).json({ error: "Acces refuse" });
+      }
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+
+      const app = await storage.getRepresentativeApplication(id);
+      if (!app) return res.status(404).json({ error: "Application introuvable" });
+
+      const existing = await storage.getUserByEmailWithHash(app.email);
+      if (existing) {
+        return res.status(409).json({ error: "Un compte existe deja pour ce courriel." });
+      }
+
+      let ficheParsed: any = null;
+      if (app.ficheData) {
+        try { ficheParsed = JSON.parse(app.ficheData); } catch { ficheParsed = null; }
+      }
+      const region = String(ficheParsed?.regions || "").trim() || app.regions || null;
+      const citiesArr = region ? region.split(/[,;|\/]+/).map((s: string) => s.trim()).filter(Boolean) : [];
+      const cities = citiesArr.length ? JSON.stringify(citiesArr) : null;
+
+      const newUser = await storage.createUser({
+        name: app.contactName,
+        email: app.email,
+        role: "sales_rep",
+        phone: app.phone,
+        region,
+        cities,
+        active: true,
+      });
+
+      const token = randomBytes(32).toString("hex");
+      const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+      await storage.setInviteToken(newUser.id, token, expiresAt);
+      const baseUrl = process.env.APP_URL || "https://cloture-crm.onrender.com";
+      const inviteUrl = `${baseUrl}/i/${token}`;
+      const [emailResult, smsResult] = await Promise.all([
+        sendInviteEmail(newUser.email, newUser.name, newUser.role, inviteUrl),
+        sendInviteSms(newUser.phone ?? "", newUser.smsCarrier ?? "", newUser.name, newUser.role, inviteUrl),
+      ]);
+
+      await storage.updateRepresentativeApplication(id, { status: "approuve", notes: `Converti en compte representant (userId: ${newUser.id}) le ${new Date().toLocaleDateString("fr-CA")}` });
+      await storage.setRepresentativeApplicationConvertedUserId(id, newUser.id);
+
+      res.json({
+        ok: true,
+        userId: newUser.id,
+        inviteUrl,
+        emailSent: emailResult.ok,
+        emailError: emailResult.error,
+        smsSent: smsResult.ok,
+        smsError: smsResult.error,
+      });
+    } catch (err: any) {
+      console.error("[representative-applications/convert] error", err);
+      res.status(500).json({ error: err?.message || "Erreur serveur" });
+    }
+  });
+
+  app.post("/api/representative-applications/:id/send-fiche", requireAuth, async (req, res) => {
+    try {
+      const actor = req.user as any;
+      if (!(["admin", "sales_director", "install_director"].includes(actor?.role))) {
+        return res.status(403).json({ error: "Acces refuse" });
+      }
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+
+      const app = await storage.getRepresentativeApplication(id);
+      if (!app) return res.status(404).json({ error: "Application introuvable" });
+
+      const token = app.formToken || randomBytes(24).toString("hex");
+      if (!app.formToken) {
+        await storage.setRepresentativeApplicationFormToken(id, token);
+      }
+
+      const siteUrl = process.env.SITE_URL || "https://clotureimpress.com";
+      const ficheUrl = `${siteUrl}/fiche-representant.html?token=${token}`;
+      const emailResult = await sendRepresentativeFicheLinkEmail(app.email, app.contactName, app.companyName, ficheUrl);
+
+      await storage.createActivity({
+        userId: actor?.id || null,
+        userName: actor?.name || "Admin",
+        userRole: actor?.role || "admin",
+        action: "representative_application_send_fiche",
+        note: `Lien fiche representant envoye a ${app.contactName} (${app.email}) pour ${app.companyName}${emailResult.ok ? "" : ` - erreur: ${emailResult.error}`}`,
+      });
+
+      res.json({ ok: true, ficheUrl, emailSent: emailResult.ok, emailError: emailResult.error });
+    } catch (err: any) {
+      console.error("[representative-applications/send-fiche] error", err);
+      res.status(500).json({ error: err?.message || "Erreur serveur" });
+    }
+  });
+
+  app.options("/api/public/representative-fiche/:token", (req, res) => {
+    applyPublicCors(req, res);
+    res.status(204).end();
+  });
+  app.get("/api/public/representative-fiche/:token", async (req, res) => {
+    applyPublicCors(req, res);
+    try {
+      const token = String(req.params.token || "");
+      if (!token) return res.status(400).json({ error: "Token manquant" });
+      const app = await storage.getRepresentativeApplicationByToken(token);
+      if (!app) return res.status(404).json({ error: "Lien invalide ou expire" });
+
+      let parsed: any = null;
+      if (app.ficheData) {
+        try { parsed = JSON.parse(app.ficheData); } catch { parsed = null; }
+      }
+
+      res.json({
+        ok: true,
+        application: {
+          companyName: app.companyName,
+          contactName: app.contactName,
+          email: app.email,
+          phone: app.phone,
+          address: app.address,
+          regions: app.regions,
+        },
+        data: parsed,
+        completed: !!app.ficheCompletedAt,
+      });
+    } catch (err: any) {
+      console.error("[public/representative-fiche GET] error", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+  app.post("/api/public/representative-fiche/:token", async (req, res) => {
+    applyPublicCors(req, res);
+    try {
+      const token = String(req.params.token || "");
+      if (!token) return res.status(400).json({ error: "Token manquant" });
+      const app = await storage.getRepresentativeApplicationByToken(token);
+      if (!app) return res.status(404).json({ error: "Lien invalide ou expire" });
+
+      const data = req.body?.data;
+      if (!data || typeof data !== "object") {
+        return res.status(400).json({ error: "Donnees invalides" });
+      }
+      const submitted = req.body?.submitted === true;
+
+      const serialized = JSON.stringify(data);
+      const completedAt = submitted ? new Date().toISOString() : (app.ficheCompletedAt || "");
+      await storage.setRepresentativeApplicationFicheData(app.id, serialized, completedAt);
+
+      if (submitted) {
+        await storage.createActivity({
+          userId: null,
+          userName: app.contactName,
+          userRole: "representative_applicant",
+          action: "representative_application_fiche_submitted",
+          note: `Fiche representant soumise par ${app.contactName} (${app.email}) pour ${app.companyName}`,
+        });
+      }
+
+      res.json({ ok: true, submitted });
+    } catch (err: any) {
+      console.error("[public/representative-fiche POST] error", err);
       res.status(500).json({ error: "Erreur serveur" });
     }
   });

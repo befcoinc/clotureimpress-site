@@ -722,7 +722,7 @@
       </ul>
       <div class="nav-cta">
         <a href="tel:4506240821" class="nav-phone" aria-label="Appeler Clôture Impress">450.624.0821</a>
-        <a href="#soumission" class="btn btn-gold" data-fr="Soumission gratuite" data-en="Free quote">Soumission gratuite</a>
+        <button id="btn-devenir-representant" class="btn btn-gold" data-fr="Devenir representant" data-en="Become representative" aria-haspopup="dialog">Devenir representant</button>
         <button id="btn-devenir-installateur" class="btn btn-installer" data-fr="Devenir installateur" data-en="Become installer" aria-haspopup="dialog">Devenir installateur</button>
         <button class="lang-switch" id="lang-switch" aria-label="Switch language">EN</button>
         <a href="https://cloture-crm.onrender.com" class="btn-login-nav" aria-label="Connexion équipe">🔐</a>
@@ -737,7 +737,7 @@
     <a href="#a-propos" class="mobile-link" data-fr="À propos" data-en="About">À propos</a>
     <a href="#zones" class="mobile-link" data-fr="Couverture nationale" data-en="National coverage">Couverture nationale</a>
     <a href="tel:4506240821" class="nav-phone">450.624.0821</a>
-    <a href="#soumission" class="btn btn-gold" style="text-align:center;" data-fr="Soumission gratuite" data-en="Free quote">Soumission gratuite</a>
+    <button id="btn-devenir-representant-mobile" class="btn btn-gold" style="text-align:center;" data-fr="Devenir representant" data-en="Become representative">Devenir representant</button>
     <button id="btn-devenir-installateur-mobile" class="btn btn-installer" style="text-align:center;" data-fr="Devenir installateur" data-en="Become installer">Devenir installateur</button>
   </div>
 </header>
@@ -769,7 +769,7 @@
       Clôture Impress est grossiste en clôtures haut de gamme et chapeaute un réseau d'installateurs certifiés d'un océan à l'autre. Résidentiel, commercial, industriel — on fournit les matériaux, nos partenaires installent avec le même standard d'excellence.
     </p>
     <div class="hero-actions reveal reveal-delay-3">
-      <a href="#soumission" class="btn btn-gold btn-large" data-fr="Soumission gratuite" data-en="Free quote">Soumission gratuite</a>
+      <button id="btn-devenir-representant-hero" class="btn btn-gold btn-large" data-fr="Devenir representant" data-en="Become representative">Devenir representant</button>
     </div>
     <div class="hero-stats reveal">
       <div>
@@ -1172,6 +1172,50 @@
   </div>
 </footer>
 
+<!-- ===== MODAL DEVENIR REPRESENTANT ===== -->
+<div id="modal-representant" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title-rep" hidden>
+  <div class="modal-card">
+    <button class="modal-close" id="modal-close-btn-rep" aria-label="Fermer">&times;</button>
+    <span class="eyebrow" style="margin-bottom:8px;" data-fr="Equipe ventes Cloture Impress" data-en="Cloture Impress Sales Team">Equipe ventes Cloture Impress</span>
+    <h2 class="section-heading" id="modal-title-rep" style="font-size:1.6rem;margin-bottom:6px;" data-fr="Devenir representant vendeur" data-en="Become a sales representative">Devenir representant vendeur</h2>
+    <p style="color:var(--muted);margin-bottom:24px;font-size:.92rem;" data-fr="Remplissez ce formulaire et notre equipe vous contactera sous 48h." data-en="Fill out this form and our team will contact you within 48h.">Remplissez ce formulaire et notre equipe vous contactera sous 48h.</p>
+
+    <form id="form-representant" novalidate>
+      <input type="text" name="website_url" tabindex="-1" style="display:none" autocomplete="off">
+      <fieldset class="modal-fieldset">
+        <legend data-fr="Informations sur la compagnie" data-en="Company information">Informations sur la compagnie</legend>
+        <div class="modal-grid2">
+          <label class="modal-label"><span data-fr="Nom de la compagnie *" data-en="Company name *">Nom de la compagnie *</span><input type="text" name="companyName" class="modal-input" required></label>
+          <label class="modal-label"><span data-fr="Site web" data-en="Website">Site web</span><input type="url" name="website" class="modal-input" placeholder="https://..."></label>
+          <label class="modal-label"><span data-fr="Adresse principale" data-en="Main address">Adresse principale</span><input type="text" name="address" class="modal-input"></label>
+          <label class="modal-label"><span data-fr="Région desservie" data-en="Service area">Région desservie</span><input type="text" name="regions" class="modal-input" placeholder="Ex: Montreal, Laval"></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="modal-fieldset">
+        <legend data-fr="Personne de contact" data-en="Contact person">Personne de contact</legend>
+        <div class="modal-grid2">
+          <label class="modal-label"><span data-fr="Nom du responsable *" data-en="Contact name *">Nom du responsable *</span><input type="text" name="contactName" class="modal-input" required></label>
+          <label class="modal-label"><span data-fr="Téléphone *" data-en="Phone *">Téléphone *</span><input type="tel" name="phone" class="modal-input" required></label>
+          <label class="modal-label modal-span2"><span data-fr="Courriel *" data-en="Email *">Courriel *</span><input type="email" name="email" class="modal-input" required></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="modal-fieldset">
+        <legend data-fr="Expérience commerciale" data-en="Sales experience">Expérience commerciale</legend>
+        <div class="modal-grid2">
+          <label class="modal-label"><span data-fr="Années d'expérience" data-en="Years of experience">Années d'expérience</span><input type="text" name="yearsExperience" class="modal-input" placeholder="Ex: 5"></label>
+          <label class="modal-label"><span data-fr="Expérience en vente" data-en="Sales background">Expérience en vente</span><input type="text" name="salesExperience" class="modal-input" placeholder="Ex: B2C, B2B"></label>
+          <label class="modal-label modal-span2"><span data-fr="Marché préféré" data-en="Preferred market">Marché préféré</span><input type="text" name="preferredMarket" class="modal-input" placeholder="Ex: Residentiel, commercial"></label>
+        </div>
+      </fieldset>
+
+      <div id="form-rep-msg" style="display:none;padding:12px 16px;border-radius:12px;font-size:.9rem;margin-bottom:12px;"></div>
+      <button type="submit" class="btn btn-gold btn-full" id="form-rep-submit" data-fr="Envoyer ma candidature" data-en="Submit my application">Envoyer ma candidature</button>
+    </form>
+  </div>
+</div>
+
 <!-- ===== MODAL DEVENIR INSTALLATEUR ===== -->
 <div id="modal-installateur" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title-install" hidden>
   <div class="modal-card">
@@ -1392,6 +1436,125 @@
       localStorage.setItem('ci_lang', lang);
       applyLang(lang);
     });
+  })();
+  // ── Devenir representant modal ────────────────────────────────────────
+  (function() {
+    var modal = document.getElementById('modal-representant');
+    var openBtns = [
+      document.getElementById('btn-devenir-representant'),
+      document.getElementById('btn-devenir-representant-mobile'),
+      document.getElementById('btn-devenir-representant-hero')
+    ];
+    var closeBtn = document.getElementById('modal-close-btn-rep');
+    var form = document.getElementById('form-representant');
+    var msgEl = document.getElementById('form-rep-msg');
+    var submitBtn = document.getElementById('form-rep-submit');
+
+    function shouldOpenFromUrl() {
+      var params = new URLSearchParams(window.location.search || '');
+      var popup = (params.get('popup') || params.get('modal') || '').toLowerCase();
+      var hash = (window.location.hash || '').toLowerCase();
+      if (popup === 'representant' || popup === 'representative' || popup === 'devenir-representant' || popup === 'devenir_representant') return true;
+      if (hash === '#devenir-representant' || hash === '#representant' || hash === '#representative') return true;
+      return false;
+    }
+
+    function syncUrlWithModalOpen() {
+      var url = new URL(window.location.href);
+      url.searchParams.set('popup', 'representant');
+      if (!url.hash) url.hash = 'devenir-representant';
+      window.history.replaceState({}, '', url.toString());
+    }
+
+    function clearModalParamsFromUrl() {
+      var url = new URL(window.location.href);
+      var popup = (url.searchParams.get('popup') || '').toLowerCase();
+      var modalParam = (url.searchParams.get('modal') || '').toLowerCase();
+      if (popup === 'representant' || popup === 'representative') url.searchParams.delete('popup');
+      if (modalParam === 'representant' || modalParam === 'representative') url.searchParams.delete('modal');
+      if (['#devenir-representant', '#representant', '#representative'].indexOf((url.hash || '').toLowerCase()) !== -1) {
+        url.hash = '';
+      }
+      window.history.replaceState({}, '', url.toString());
+    }
+
+    function openModal() {
+      modal.hidden = false;
+      document.body.style.overflow = 'hidden';
+      syncUrlWithModalOpen();
+      modal.querySelector('input[name="companyName"]').focus();
+      if (!mobileMenu.hidden) {
+        mobileMenu.hidden = true;
+        mobileMenu.style.display = 'none';
+        hamburger.setAttribute('aria-expanded', 'false');
+      }
+    }
+    function closeModal() {
+      modal.hidden = true;
+      document.body.style.overflow = '';
+      clearModalParamsFromUrl();
+    }
+
+    openBtns.forEach(function(btn) { if (btn) btn.addEventListener('click', openModal); });
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && !modal.hidden) closeModal(); });
+
+    function showMsg(text, isError) {
+      msgEl.textContent = text;
+      msgEl.style.display = 'block';
+      msgEl.style.background = isError ? '#ffe0e0' : '#e4f7ef';
+      msgEl.style.color = isError ? '#c0392b' : '#1e7e50';
+      msgEl.style.border = isError ? '1px solid #f5c6c6' : '1px solid #a8d5bc';
+    }
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      if (form.website_url && form.website_url.value) return;
+      var data = new FormData(form);
+      var payload = {
+        companyName: (data.get('companyName') || '').toString().trim(),
+        website: (data.get('website') || '').toString().trim(),
+        address: (data.get('address') || '').toString().trim(),
+        regions: (data.get('regions') || '').toString().trim(),
+        contactName: (data.get('contactName') || '').toString().trim(),
+        phone: (data.get('phone') || '').toString().trim(),
+        email: (data.get('email') || '').toString().trim(),
+        yearsExperience: (data.get('yearsExperience') || '').toString().trim(),
+        salesExperience: (data.get('salesExperience') || '').toString().trim(),
+        preferredMarket: (data.get('preferredMarket') || '').toString().trim(),
+      };
+      if (!payload.companyName || !payload.contactName || !payload.phone || !payload.email) {
+        showMsg('Veuillez remplir tous les champs obligatoires (*).', true);
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Envoi en cours...';
+
+      fetch('https://cloture-crm.onrender.com/api/public/representative-application', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      .then(function(r) {
+        if (!r.ok) throw new Error('Erreur serveur');
+        return r.json();
+      })
+      .then(function() {
+        showMsg('Votre candidature representant a ete recue ! Notre equipe vous contactera sous 48h.', false);
+        submitBtn.textContent = 'Candidature envoyee ✓';
+        form.reset();
+      })
+      .catch(function() {
+        showMsg('Une erreur est survenue. Veuillez reessayer ou nous appeler au 450.624.0821.', true);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Envoyer ma candidature';
+      });
+    });
+
+    if (shouldOpenFromUrl()) {
+      window.requestAnimationFrame(openModal);
+    }
   })();
   // ── Devenir installateur modal ──────────────────────────────────────────
   (function() {

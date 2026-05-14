@@ -1,11 +1,12 @@
 import {
-  users, leads, quotes, crews, activities, installerApplications,
+  users, leads, quotes, crews, activities, installerApplications, representativeApplications,
   type User, type InsertUser,
   type Lead, type InsertLead,
   type Quote, type InsertQuote,
   type Crew, type InsertCrew,
   type Activity, type InsertActivity,
   type InstallerApplication, type InsertInstallerApplication,
+  type RepresentativeApplication, type InsertRepresentativeApplication,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
@@ -207,6 +208,33 @@ async function migrate() {
   await db.execute(sql`ALTER TABLE installer_applications ADD COLUMN IF NOT EXISTS fiche_completed_at TEXT`);
   await db.execute(sql`ALTER TABLE installer_applications ADD COLUMN IF NOT EXISTS converted_user_id INTEGER`);
   await db.execute(sql`ALTER TABLE installer_applications ADD COLUMN IF NOT EXISTS archived_at TEXT`);
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS representative_applications (
+      id SERIAL PRIMARY KEY,
+      company_name TEXT NOT NULL,
+      website TEXT,
+      address TEXT,
+      year_founded TEXT,
+      employee_count TEXT,
+      regions TEXT,
+      contact_name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      email TEXT NOT NULL,
+      years_experience TEXT,
+      sales_experience TEXT,
+      preferred_market TEXT,
+      status TEXT NOT NULL DEFAULT 'en_attente',
+      notes TEXT,
+      archived_at TEXT,
+      created_at TEXT NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
+    )
+  `);
+  await db.execute(sql`ALTER TABLE representative_applications ADD COLUMN IF NOT EXISTS form_token TEXT`);
+  await db.execute(sql`ALTER TABLE representative_applications ADD COLUMN IF NOT EXISTS fiche_data TEXT`);
+  await db.execute(sql`ALTER TABLE representative_applications ADD COLUMN IF NOT EXISTS fiche_completed_at TEXT`);
+  await db.execute(sql`ALTER TABLE representative_applications ADD COLUMN IF NOT EXISTS converted_user_id INTEGER`);
+  await db.execute(sql`ALTER TABLE representative_applications ADD COLUMN IF NOT EXISTS archived_at TEXT`);
   // Intimura full submission blob on quotes
   await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS intimura_data TEXT`);
 }
@@ -360,6 +388,18 @@ export interface IStorage {
   setInstallerApplicationConvertedUserId(id: number, userId: number): Promise<void>;
   archiveInstallerApplication(id: number): Promise<InstallerApplication | undefined>;
   restoreInstallerApplication(id: number): Promise<InstallerApplication | undefined>;
+
+  // Representative applications
+  getRepresentativeApplications(options?: { includeArchived?: boolean }): Promise<RepresentativeApplication[]>;
+  getRepresentativeApplication(id: number): Promise<RepresentativeApplication | undefined>;
+  createRepresentativeApplication(data: InsertRepresentativeApplication): Promise<RepresentativeApplication>;
+  updateRepresentativeApplication(id: number, data: Partial<InsertRepresentativeApplication>): Promise<RepresentativeApplication | undefined>;
+  getRepresentativeApplicationByToken(token: string): Promise<RepresentativeApplication | undefined>;
+  setRepresentativeApplicationFormToken(id: number, token: string | null): Promise<void>;
+  setRepresentativeApplicationFicheData(id: number, ficheData: string, ficheCompletedAt: string): Promise<void>;
+  setRepresentativeApplicationConvertedUserId(id: number, userId: number): Promise<void>;
+  archiveRepresentativeApplication(id: number): Promise<RepresentativeApplication | undefined>;
+  restoreRepresentativeApplication(id: number): Promise<RepresentativeApplication | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -540,6 +580,41 @@ export class DatabaseStorage implements IStorage {
   }
   async restoreInstallerApplication(id: number): Promise<InstallerApplication | undefined> {
     return (await db.update(installerApplications).set({ archivedAt: null }).where(eq(installerApplications.id, id)).returning())[0];
+  }
+
+  async getRepresentativeApplications(options?: { includeArchived?: boolean }): Promise<RepresentativeApplication[]> {
+    const includeArchived = !!options?.includeArchived;
+    const query = db.select().from(representativeApplications);
+    return includeArchived
+      ? query.orderBy(desc(representativeApplications.id))
+      : query.where(sql`${representativeApplications.archivedAt} IS NULL`).orderBy(desc(representativeApplications.id));
+  }
+  async getRepresentativeApplication(id: number): Promise<RepresentativeApplication | undefined> {
+    return (await db.select().from(representativeApplications).where(eq(representativeApplications.id, id)))[0];
+  }
+  async createRepresentativeApplication(data: InsertRepresentativeApplication): Promise<RepresentativeApplication> {
+    return (await db.insert(representativeApplications).values(data).returning())[0];
+  }
+  async updateRepresentativeApplication(id: number, data: Partial<InsertRepresentativeApplication>): Promise<RepresentativeApplication | undefined> {
+    return (await db.update(representativeApplications).set(data).where(eq(representativeApplications.id, id)).returning())[0];
+  }
+  async getRepresentativeApplicationByToken(token: string): Promise<RepresentativeApplication | undefined> {
+    return (await db.select().from(representativeApplications).where(eq(representativeApplications.formToken, token)))[0];
+  }
+  async setRepresentativeApplicationFormToken(id: number, token: string | null): Promise<void> {
+    await db.update(representativeApplications).set({ formToken: token }).where(eq(representativeApplications.id, id));
+  }
+  async setRepresentativeApplicationFicheData(id: number, ficheData: string, ficheCompletedAt: string): Promise<void> {
+    await db.update(representativeApplications).set({ ficheData, ficheCompletedAt }).where(eq(representativeApplications.id, id));
+  }
+  async setRepresentativeApplicationConvertedUserId(id: number, userId: number): Promise<void> {
+    await db.update(representativeApplications).set({ convertedUserId: userId }).where(eq(representativeApplications.id, id));
+  }
+  async archiveRepresentativeApplication(id: number): Promise<RepresentativeApplication | undefined> {
+    return (await db.update(representativeApplications).set({ archivedAt: new Date().toISOString() }).where(eq(representativeApplications.id, id)).returning())[0];
+  }
+  async restoreRepresentativeApplication(id: number): Promise<RepresentativeApplication | undefined> {
+    return (await db.update(representativeApplications).set({ archivedAt: null }).where(eq(representativeApplications.id, id)).returning())[0];
   }
 }
 
