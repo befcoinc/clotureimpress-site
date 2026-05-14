@@ -382,13 +382,31 @@ export function Heatmap() {
 
   const routeDays = useMemo(() => {
     return hotspots
-      .map((h) => ({
-        zone: `${h.province} · ${h.city}`,
-        clients: h.count,
-        value: h.value,
-        installReady: h.installReady,
-        sectors: [h.sector],
-      }))
+      .map((h) => {
+        const stops = h.quotes
+          .map(q => {
+            const parts = [q.address, q.city, q.province, q.postalCode].filter(Boolean).join(", ");
+            return parts || `${q.mapCity}, ${q.province}`;
+          })
+          .filter((v, i, arr) => arr.indexOf(v) === i);
+        const params = new URLSearchParams({ api: "1", travelmode: "driving" });
+        if (stops.length > 0) {
+          params.set("destination", stops[stops.length - 1]);
+          if (stops.length > 1) params.set("waypoints", stops.slice(0, -1).join("|"));
+        } else {
+          params.set("destination", `${h.city}, ${h.province}`);
+        }
+        const mapsUrl = `https://www.google.com/maps/dir/?${params.toString()}`;
+        return {
+          zone: `${h.province} · ${h.city}`,
+          clients: h.count,
+          value: h.value,
+          installReady: h.installReady,
+          sectors: [h.sector],
+          mapsUrl,
+          stopsCount: stops.length,
+        };
+      })
       .sort((a, b) => b.clients - a.clients || b.value - a.value)
       .slice(0, 8);
   }, [hotspots]);
@@ -605,13 +623,22 @@ export function Heatmap() {
               <CardContent>
                 <div className="space-y-2">
                   {routeDays.map((day, index) => (
-                    <div key={day.zone} className="rounded-lg border border-border bg-card p-3" data-testid={`route-day-${index}`}>
+                    <a
+                      key={day.zone}
+                      href={day.mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-lg border border-border bg-card p-3 hover:border-primary hover:bg-accent/40 transition-colors cursor-pointer"
+                      data-testid={`route-day-${index}`}
+                      title={isEn ? "Open route in Google Maps" : "Ouvrir l'itinéraire dans Google Maps"}
+                    >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="font-semibold text-[13px]">{day.zone}</div>
+                        <div className="font-semibold text-[13px] flex items-center gap-1.5"><Route className="h-3.5 w-3.5 text-primary" /> {day.zone}</div>
                         <Badge variant={day.installReady ? "default" : "secondary"} className="text-[10px]">{day.installReady} {isEn ? "to schedule" : "à planifier"}</Badge>
                       </div>
                       <div className="mt-1 text-[11px] text-muted-foreground">{day.clients} {isEn ? "quote(s) in the same sector" : "soumission(s) dans le même secteur"} · {moneyFmt.format(day.value)}</div>
-                    </div>
+                      <div className="mt-1 text-[10px] text-primary/80">{isEn ? `Open route in Google Maps (${day.stopsCount} stop${day.stopsCount > 1 ? "s" : ""})` : `Ouvrir l'itinéraire dans Google Maps (${day.stopsCount} arrêt${day.stopsCount > 1 ? "s" : ""})`}</div>
+                    </a>
                   ))}
                 </div>
               </CardContent>
