@@ -12,14 +12,25 @@ import { sendInviteSms, sendInstallerProfileReminderSms } from "./sms";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema, insertInstallerApplicationSchema } from "@shared/schema";
 
 function decodeSvelteData(data: any[]) {
-  const decode = (value: any): any => {
-    if (typeof value === "number" && Number.isInteger(value) && value >= 0 && value < data.length) return decode(data[value]);
+  // Cycle/depth-protected resolver. Some Svelte payloads contain self-referential
+  // index pointers that would otherwise overflow the stack.
+  const cache = new Map<number, any>();
+  const decode = (value: any, depth = 0): any => {
+    if (depth > 200) return value;
+    if (typeof value === "number" && Number.isInteger(value) && value >= 0 && value < data.length) {
+      if (cache.has(value)) return cache.get(value);
+      const placeholder: any = {};
+      cache.set(value, placeholder);
+      const resolved = decode(data[value], depth + 1);
+      cache.set(value, resolved);
+      return resolved;
+    }
     if (Array.isArray(value)) {
       if (value[0] === "Date") return value[1];
-      return value.map(decode);
+      return value.map((v) => decode(v, depth + 1));
     }
     if (value && typeof value === "object") {
-      return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, decode(v)]));
+      return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, decode(v, depth + 1)]));
     }
     return value;
   };
@@ -1611,6 +1622,124 @@ export async function registerRoutes(
       console.error("[intimura/ingest] error", err);
       res.status(500).json({ error: "SERVER_ERROR", message: err?.message || "Erreur serveur" });
     }
+  });
+
+  // -------- Intimura quote DETAILS (per-submission) --------
+  // Picks the subset of a decoded Svelte payload we care about for display/edit.
+  function pickIntimuraDetails(decoded: any): any {
+    if (!decoded || typeof decoded !== "object") return null;
+    const sanitize = (v: any, depth = 0): any => {
+      if (depth > 6) return null;
+      if (v == null) return v;
+      if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") return v;
+      if (Array.isArray(v)) return v.map((x) => sanitize(x, depth + 1));
+      if (typeof v === "object") {
+        const out: any = {};
+        for (const [k, val] of Object.entries(v)) {
+          // Skip self-referential quote pointers that show up in some sort_order fields
+          if (val && typeof val === "object" && (val as any).id && (val as any).title === decoded?.quote?.title) continue;
+          out[k] = sanitize(val, depth + 1);
+        }
+        return out;
+      }
+      return null;
+    };
+    return {
+      quote: sanitize(decoded.quote),
+      customer: sanitize(decoded.customer),
+      items: Array.isArray(decoded.items) ? decoded.items.map((i: any) => sanitize(i)) : [],
+      taxes: Array.isArray(decoded.taxes) ? decoded.taxes.map((i: any) => sanitize(i)) : [],
+      metadata: Array.isArray(decoded.metadata) ? decoded.metadata.map((i: any) => sanitize(i)) : [],
+      payments: Array.isArray(decoded.payments) ? decoded.payments.map((i: any) => sanitize(i)) : [],
+      timeline: Array.isArray(decoded.timeline) ? decoded.timeline.map((i: any) => sanitize(i)) : [],
+      firstPaymentId: decoded.firstPaymentId || null,
+      firstPaymentPaid: decoded.firstPaymentPaid || false,
+      fetchedAt: new Date().toISOString(),
+    };
+  }
+
+  async function applyIntimuraDetails(intimuraId: string, decoded: any) {
+    const details = pickIntimuraDetails(decoded);
+    if (!details || !intimuraId) return { ok: false, reason: "EMPTY" };
+    const quote = await storage.getQuoteByIntimuraId(intimuraId);
+    if (!quote) return { ok: false, reason: "QUOTE_NOT_FOUND" };
+    const subtotal = (details.items || []).reduce(
+      (sum: number, it: any) => sum + Number(it?.qty || 0) * Number(it?.unit_price || 0),
+      0
+    );
+    const updates: any = { intimuraData: JSON.stringify(details) };
+    if (subtotal > 0) updates.estimatedPrice = subtotal;
+    if (details.customer?.address && !quote.address) updates.address = details.customer.address;
+    if (details.customer?.city && !quote.city) updates.city = details.customer.city;
+    if (details.customer?.state && !quote.province) updates.province = details.customer.state;
+    await storage.updateQuote(quote.id, updates);
+    // Also enrich the lead with phone / email / address if missing
+    if (quote.leadId) {
+      const lead = await storage.getLead(quote.leadId);
+      if (lead) {
+        const leadUpd: any = {};
+        if (!lead.phone && details.customer?.phone) leadUpd.phone = details.customer.phone;
+        if (!lead.email && details.customer?.email) leadUpd.email = details.customer.email;
+        if (!lead.address && details.customer?.address) leadUpd.address = details.customer.address;
+        if (!lead.postalCode && details.customer?.postal_code) leadUpd.postalCode = details.customer.postal_code;
+        if (Object.keys(leadUpd).length) await storage.updateLead(lead.id, leadUpd);
+      }
+    }
+    return { ok: true, quoteId: quote.id };
+  }
+
+  app.options("/api/intimura/ingest-details", (req, res) => { ingestCors(req, res); res.status(204).end(); });
+  app.post("/api/intimura/ingest-details", async (req, res) => {
+    ingestCors(req, res);
+    try {
+      const provided = String(req.query.token || req.headers["x-bookmarklet-token"] || req.body?.token || "");
+      const expected = ensureBookmarkletToken();
+      if (!provided || provided !== expected) {
+        return res.status(401).json({ error: "INVALID_TOKEN" });
+      }
+      // Accepts either: { items: [{ intimuraId, decoded }] } OR { intimuraId, decoded }
+      const items = Array.isArray(req.body?.items) ? req.body.items : [{ intimuraId: req.body?.intimuraId, decoded: req.body?.decoded }];
+      const results: any[] = [];
+      for (const item of items) {
+        const r = await applyIntimuraDetails(String(item?.intimuraId || ""), item?.decoded);
+        results.push({ intimuraId: item?.intimuraId, ...r });
+      }
+      const updated = results.filter(r => r.ok).length;
+      res.json({ received: items.length, updated, results });
+    } catch (err: any) {
+      console.error("[intimura/ingest-details] error", err);
+      res.status(500).json({ error: "SERVER_ERROR", message: err?.message });
+    }
+  });
+
+  // Server-side fetch of details for every quote that has an intimura_id but no
+  // stored details. Requires Intimura credentials on the server.
+  app.post("/api/intimura/sync-details", async (_req, res) => {
+    const headers = buildIntimuraHeaders();
+    if (!headers) {
+      return res.status(400).json({ error: "INTIMURA_CREDENTIALS_MISSING" });
+    }
+    const all = await storage.getQuotes();
+    const targets = all.filter((q: any) => q.intimuraId && !q.intimuraData);
+    let updated = 0;
+    const errors: any[] = [];
+    for (const q of targets) {
+      try {
+        const url = `https://crm.intimura.com/app/quotes/${q.intimuraId}/__data.json?x-sveltekit-invalidated=001`;
+        const r = await fetch(url, { headers });
+        if (!r.ok) { errors.push({ id: q.intimuraId, status: r.status }); continue; }
+        const payload = await r.json() as any;
+        const node = payload?.nodes?.find((n: any) => n?.type === "data");
+        if (!node?.data) { errors.push({ id: q.intimuraId, reason: "NO_DATA_NODE" }); continue; }
+        const decoded = decodeSvelteData(node.data);
+        const result = await applyIntimuraDetails(q.intimuraId, decoded);
+        if (result.ok) updated++;
+        else errors.push({ id: q.intimuraId, reason: result.reason });
+      } catch (err: any) {
+        errors.push({ id: q.intimuraId, error: err?.message });
+      }
+    }
+    res.json({ candidates: targets.length, updated, errors });
   });
 
   // Poll Intimura automatically while the CRM server is running, but only when

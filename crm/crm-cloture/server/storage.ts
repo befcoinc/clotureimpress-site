@@ -205,6 +205,8 @@ async function migrate() {
   await db.execute(sql`ALTER TABLE installer_applications ADD COLUMN IF NOT EXISTS fiche_data TEXT`);
   await db.execute(sql`ALTER TABLE installer_applications ADD COLUMN IF NOT EXISTS fiche_completed_at TEXT`);
   await db.execute(sql`ALTER TABLE installer_applications ADD COLUMN IF NOT EXISTS converted_user_id INTEGER`);
+  // Intimura full submission blob on quotes
+  await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS intimura_data TEXT`);
 }
 
 // =============== PASSWORD SEEDING ===============

@@ -47,6 +47,33 @@ export function QuoteDetail() {
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const { data: crews = [] } = useQuery<Crew[]>({ queryKey: ["/api/crews"] });
   const { data: lead } = useQuery<Lead>({ queryKey: ["/api/leads", quote?.leadId], enabled: !!quote?.leadId });
+
+  // Parse the Intimura submission blob attached to this quote (if any).
+  let intimura: any = null;
+  try { intimura = quote?.intimuraData ? JSON.parse(quote.intimuraData as any) : null; } catch { intimura = null; }
+  const intimuraCustomer = intimura?.customer || null;
+  const intimuraQuote = intimura?.quote || null;
+  const initialItems = Array.isArray(intimura?.items) ? intimura.items : [];
+  const [itemsDraft, setItemsDraft] = useState<any[] | null>(null);
+  const items = itemsDraft ?? initialItems;
+  const itemsDirty = itemsDraft !== null;
+  const updateItem = (idx: number, patch: any) => {
+    const next = items.map((it: any, i: number) => i === idx ? { ...it, ...patch } : it);
+    setItemsDraft(next);
+  };
+  const removeItem = (idx: number) => setItemsDraft(items.filter((_: any, i: number) => i !== idx));
+  const addItem = () => setItemsDraft([...items, { id: `new-${Date.now()}`, description: "", qty: "1", unit_price: "0", catalog_item_id: null, catalog_item_variant_id: null }]);
+  const subtotal = items.reduce((s: number, it: any) => s + Number(it?.qty || 0) * Number(it?.unit_price || 0), 0);
+  const saveItems = () => {
+    if (!intimura) return;
+    const updatedBlob = { ...intimura, items, modifiedInCrmAt: new Date().toISOString() };
+    updateMut.mutate({
+      intimuraData: JSON.stringify(updatedBlob),
+      estimatedPrice: subtotal,
+      _note: isEn ? "Intimura items edited" : "Items Intimura modifiés",
+    });
+    setItemsDraft(null);
+  };
   const { data: activities = [] } = useQuery<Activity[]>({
     queryKey: ["/api/activities", { quoteId: id }],
     queryFn: async () => {
@@ -114,16 +141,132 @@ export function QuoteDetail() {
           <Card>
             <CardHeader className="pb-3"><CardTitle className="text-base">{isEn ? "Client & address" : "Client & adresse"}</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-              <Info icon={<UserIcon className="h-3.5 w-3.5" />} label={isEn ? "Client" : "Client"} value={quote.clientName} />
-              <Info icon={<MapPin className="h-3.5 w-3.5" />} label={isEn ? "Address" : "Adresse"} value={`${quote.address || ""}, ${quote.city || ""}`} />
-              <Info icon={<Phone className="h-3.5 w-3.5" />} label={isEn ? "Phone" : "Téléphone"} value={lead?.phone || "—"} />
-              <Info icon={<Mail className="h-3.5 w-3.5" />} label={isEn ? "Email" : "Courriel"} value={lead?.email || "—"} />
+              <Info icon={<UserIcon className="h-3.5 w-3.5" />} label={isEn ? "Client" : "Client"} value={intimuraCustomer?.name || quote.clientName} />
+              <Info icon={<MapPin className="h-3.5 w-3.5" />} label={isEn ? "Address" : "Adresse"} value={`${intimuraCustomer?.address || quote.address || ""}${intimuraCustomer?.city || quote.city ? `, ${intimuraCustomer?.city || quote.city}` : ""}${intimuraCustomer?.postal_code ? ` ${intimuraCustomer.postal_code}` : ""}`} />
+              <Info icon={<Phone className="h-3.5 w-3.5" />} label={isEn ? "Phone" : "Téléphone"} value={intimuraCustomer?.phone || lead?.phone || "—"} />
+              <Info icon={<Mail className="h-3.5 w-3.5" />} label={isEn ? "Email" : "Courriel"} value={intimuraCustomer?.email || lead?.email || "—"} />
               <Info icon={<Ruler className="h-3.5 w-3.5" />} label={isEn ? "Estimated length" : "Longueur estimée"} value={quote.estimatedLength ? `${quote.estimatedLength} ${isEn ? "ft" : "pi"}` : "—"} />
               <Info icon={<DollarSign className="h-3.5 w-3.5" />} label={isEn ? "Estimated price" : "Prix estimé"} value={quote.estimatedPrice ? moneyFmt.format(quote.estimatedPrice) : "—"} />
               <Info icon={<UserIcon className="h-3.5 w-3.5" />} label={isEn ? "Sales rep" : "Vendeur"} value={rep?.name || (isEn ? "Unassigned" : "Non assigné")} />
               <Info icon={<UserIcon className="h-3.5 w-3.5" />} label={isEn ? "Installer" : "Installateur"} value={installer?.name || (isEn ? "Unassigned" : "Non assigné")} />
             </CardContent>
           </Card>
+
+          {/* Intimura submission (if synced) */}
+          {intimura && (
+            <Card>
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-base">{isEn ? "Intimura submission" : "Soumission Intimura"}</CardTitle>
+                <a
+                  href={`https://crm.intimura.com/app/quotes/${quote.intimuraId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11px] text-primary hover:underline"
+                >
+                  {isEn ? "Open in Intimura ↗" : "Ouvrir dans Intimura ↗"}
+                </a>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                {intimuraQuote && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <Info icon={<Calendar className="h-3.5 w-3.5" />} label={isEn ? "Issued" : "Émise"} value={intimuraQuote.issued_at || "—"} />
+                    <Info icon={<Calendar className="h-3.5 w-3.5" />} label={isEn ? "Valid until" : "Valide jusqu'au"} value={intimuraQuote.valid_until || "—"} />
+                    <Info icon={<DollarSign className="h-3.5 w-3.5" />} label={isEn ? "First payment" : "1er paiement"} value={intimuraQuote.first_payment_amount ? `$${intimuraQuote.first_payment_amount}` : "—"} />
+                    <Info icon={<UserIcon className="h-3.5 w-3.5" />} label={isEn ? "Assigned" : "Assigné à"} value={intimuraQuote.assigned_user_name || "—"} />
+                  </div>
+                )}
+
+                {Array.isArray(intimura.metadata) && intimura.metadata.length > 0 && (
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{isEn ? "Specifications" : "Spécifications"}</div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {intimura.metadata.map((m: any) => (
+                        <div key={m.id} className="text-[12px]">
+                          <span className="text-muted-foreground">{m.label}: </span>
+                          <span className="font-medium">{m.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {intimuraQuote?.internal_notes && (
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{isEn ? "Internal notes" : "Notes internes"}</div>
+                    <pre className="whitespace-pre-wrap text-[12px] bg-muted/40 rounded p-2">{intimuraQuote.internal_notes}</pre>
+                  </div>
+                )}
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">{isEn ? "Line items" : "Articles"}</div>
+                    {canEditSales && (
+                      <Button size="sm" variant="outline" onClick={addItem} data-testid="button-add-intimura-item">+ {isEn ? "Add item" : "Ajouter article"}</Button>
+                    )}
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[12px]">
+                      <thead className="text-muted-foreground text-left">
+                        <tr>
+                          <th className="font-medium py-1 pr-2">{isEn ? "Description" : "Description"}</th>
+                          <th className="font-medium py-1 px-2 w-20">{isEn ? "Qty" : "Qté"}</th>
+                          <th className="font-medium py-1 px-2 w-28">{isEn ? "Unit $" : "Prix unit."}</th>
+                          <th className="font-medium py-1 pl-2 w-28 text-right">{isEn ? "Total" : "Total"}</th>
+                          {canEditSales && <th className="w-8"></th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.map((it: any, idx: number) => {
+                          const lineTotal = Number(it?.qty || 0) * Number(it?.unit_price || 0);
+                          return (
+                            <tr key={it.id || idx} className="border-t">
+                              <td className="py-1 pr-2">
+                                {canEditSales ? (
+                                  <Input value={it.description || ""} onChange={(e) => updateItem(idx, { description: e.target.value })} className="h-7 text-[12px]" />
+                                ) : (it.description || "—")}
+                              </td>
+                              <td className="py-1 px-2">
+                                {canEditSales ? (
+                                  <Input type="number" step="0.01" value={it.qty ?? ""} onChange={(e) => updateItem(idx, { qty: e.target.value })} className="h-7 text-[12px]" />
+                                ) : it.qty}
+                              </td>
+                              <td className="py-1 px-2">
+                                {canEditSales ? (
+                                  <Input type="number" step="0.01" value={it.unit_price ?? ""} onChange={(e) => updateItem(idx, { unit_price: e.target.value })} className="h-7 text-[12px]" />
+                                ) : it.unit_price}
+                              </td>
+                              <td className="py-1 pl-2 text-right tabular-nums">${lineTotal.toFixed(2)}</td>
+                              {canEditSales && (
+                                <td className="py-1 pl-2">
+                                  <button type="button" onClick={() => removeItem(idx)} className="text-muted-foreground hover:text-destructive" title={isEn ? "Remove" : "Supprimer"}>×</button>
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                        {items.length === 0 && (
+                          <tr><td colSpan={canEditSales ? 5 : 4} className="py-3 text-center text-muted-foreground">{isEn ? "No items." : "Aucun article."}</td></tr>
+                        )}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t font-semibold">
+                          <td colSpan={3} className="py-2 text-right">{isEn ? "Subtotal" : "Sous-total"}</td>
+                          <td className="py-2 pl-2 text-right tabular-nums">${subtotal.toFixed(2)}</td>
+                          {canEditSales && <td></td>}
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                  {canEditSales && itemsDirty && (
+                    <div className="flex gap-2 mt-2 justify-end">
+                      <Button size="sm" variant="outline" onClick={() => setItemsDraft(null)} data-testid="button-cancel-intimura-items">{isEn ? "Cancel" : "Annuler"}</Button>
+                      <Button size="sm" onClick={saveItems} data-testid="button-save-intimura-items">{isEn ? "Save items" : "Enregistrer articles"}</Button>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Status controls */}
           <Card>
