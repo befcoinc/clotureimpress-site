@@ -44,7 +44,6 @@ const NAV_SECTIONS: { labelKey: "nav.operations" | "nav.pilotage" | "nav.system"
     items: [
       { href: "/", labelKey: "nav.dashboard", icon: LayoutDashboard, perm: "view_admin" },
       { href: "/leads", labelKey: "nav.leads", icon: Inbox, perm: "view_sales" },
-      { href: "/intimura", labelKey: "nav.intimuraImport", icon: UploadCloud, perm: "edit_lead", badge: "source" },
       { href: "/dispatch-vendeur", labelKey: "nav.salesDispatch", icon: UserCheck, perm: "assign_sales" },
       { href: "/soumissions", labelKey: "nav.quotes", icon: FileText, perm: "view_sales" },
       { href: "/calendrier", labelKey: "nav.sharedCalendar", icon: CalendarDays, badge: "team" },
