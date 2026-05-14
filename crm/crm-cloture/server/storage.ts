@@ -359,6 +359,7 @@ export interface IStorage {
   setInstallerApplicationFicheData(id: number, ficheData: string, ficheCompletedAt: string): Promise<void>;
   setInstallerApplicationConvertedUserId(id: number, userId: number): Promise<void>;
   archiveInstallerApplication(id: number): Promise<InstallerApplication | undefined>;
+  restoreInstallerApplication(id: number): Promise<InstallerApplication | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -536,6 +537,9 @@ export class DatabaseStorage implements IStorage {
   }
   async archiveInstallerApplication(id: number): Promise<InstallerApplication | undefined> {
     return (await db.update(installerApplications).set({ archivedAt: new Date().toISOString() }).where(eq(installerApplications.id, id)).returning())[0];
+  }
+  async restoreInstallerApplication(id: number): Promise<InstallerApplication | undefined> {
+    return (await db.update(installerApplications).set({ archivedAt: null }).where(eq(installerApplications.id, id)).returning())[0];
   }
 }
 

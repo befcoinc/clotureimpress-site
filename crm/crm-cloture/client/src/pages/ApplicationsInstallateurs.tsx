@@ -161,6 +161,29 @@ export function ApplicationsInstallateurs() {
     }
   }
 
+  async function restoreApplication(app: InstallerApplication) {
+    if (!confirm(isFr
+      ? `Remettre ${app.companyName} dans la liste active?`
+      : `Restore ${app.companyName} to the active list?`
+    )) return;
+    setIsArchiving(true);
+    try {
+      const res = await apiRequest("POST", `/api/installer-applications/${app.id}/restore`, {});
+      const data = await res.json().catch(() => ({})) as any;
+      if (!res.ok) {
+        toast({ title: data?.error || (isFr ? "Erreur" : "Error"), variant: "destructive" });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/installer-applications"] });
+      toast({ title: isFr ? "Remis dans la liste active" : "Restored to active list" });
+      setSelected(null);
+    } catch {
+      toast({ title: isFr ? "Erreur réseau" : "Network error", variant: "destructive" });
+    } finally {
+      setIsArchiving(false);
+    }
+  }
+
   const isFr = language === "fr";
   const statusLabels = isFr ? STATUS_LABELS : STATUS_LABELS_EN;
 
@@ -385,6 +408,16 @@ export function ApplicationsInstallateurs() {
                   >
                     {isFr ? "Retirer de la liste" : "Remove from list"}
                   </Button>
+                  {showArchived && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isArchiving}
+                      onClick={() => restoreApplication(selected)}
+                    >
+                      {isFr ? "Remettre dans la liste" : "Restore to list"}
+                    </Button>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setSelected(null)}>

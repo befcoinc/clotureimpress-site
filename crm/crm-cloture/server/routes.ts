@@ -1263,6 +1263,33 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/installer-applications/:id/restore", requireAuth, async (req, res) => {
+    try {
+      const actor = req.user as any;
+      if (!(["admin", "sales_director", "install_director"].includes(actor?.role))) {
+        return res.status(403).json({ error: "Acces refuse" });
+      }
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+
+      const updated = await storage.restoreInstallerApplication(id);
+      if (!updated) return res.status(404).json({ error: "Application introuvable" });
+
+      await storage.createActivity({
+        userId: actor?.id || null,
+        userName: actor?.name || "Admin",
+        userRole: actor?.role || "admin",
+        action: "installer_application_restored",
+        note: `Application restaurée: ${updated.contactName} (${updated.companyName})`,
+      });
+
+      res.json({ ok: true, archivedAt: updated.archivedAt });
+    } catch (err) {
+      console.error("[installer-applications/restore] error", err);
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
   // Convert an installer application → create user account + send invite
   app.post("/api/installer-applications/:id/convert", requireAuth, async (req, res) => {
     try {
