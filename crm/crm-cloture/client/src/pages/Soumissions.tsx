@@ -19,6 +19,22 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 
 type QuoteDialogState = { mode: "create" | "edit"; quote?: Quote } | null;
 
+function normalizeForSearch(value: string) {
+  return (value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function readHashParams() {
+  const hash = window.location.hash || "#/soumissions";
+  const queryPart = hash.includes("?") ? hash.slice(hash.indexOf("?") + 1) : "";
+  return new URLSearchParams(queryPart);
+}
+
 export function Soumissions() {
   const { currentUser, role, can } = useRole();
   const { language } = useLanguage();
@@ -30,12 +46,27 @@ export function Soumissions() {
   const [search, setSearch] = useState("");
   const [quoteDialog, setQuoteDialog] = useState<QuoteDialogState>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [cityFilter, setCityFilter] = useState<string>("");
+  const [provinceFilter, setProvinceFilter] = useState<string>("");
 
-  // Read ?filter=xxx from URL on mount
+  const syncUrl = (nextStatus: string, nextCity: string, nextProvince: string) => {
+    const params = new URLSearchParams();
+    if (nextStatus && nextStatus !== "all") params.set("filter", nextStatus);
+    if (nextCity) params.set("city", nextCity);
+    if (nextProvince) params.set("province", nextProvince);
+    const qs = params.toString();
+    window.location.hash = qs ? `#/soumissions?${qs}` : "#/soumissions";
+  };
+
+  // Read filters from URL on mount
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = readHashParams();
     const f = params.get("filter");
+    const city = params.get("city");
+    const province = params.get("province");
     if (f) setStatusFilter(f);
+    if (city) setCityFilter(city);
+    if (province) setProvinceFilter(province);
   }, []);
 
   const canManageQuotes = can("edit_sales") || role === "admin" || role === "sales_director";
@@ -45,21 +76,32 @@ export function Soumissions() {
     let list = quotes;
     if (role === "sales_rep") list = list.filter(q => q.assignedSalesId === currentUser?.id);
     if (role === "installer") list = list.filter(q => q.assignedInstallerId === currentUser?.id);
+    if (cityFilter) {
+      const cityNorm = normalizeForSearch(cityFilter);
+      const provinceNorm = normalizeForSearch(provinceFilter);
+      list = list.filter(q => {
+        const qCityNorm = normalizeForSearch(q.city || "");
+        const qProvinceNorm = normalizeForSearch(q.province || "");
+        if (qCityNorm !== cityNorm) return false;
+        if (!provinceNorm) return true;
+        return qProvinceNorm === provinceNorm;
+      });
+    }
     if (statusFilter === "in-progress") {
       list = list.filter(q => !["signee", "perdue"].includes(q.salesStatus));
     } else if (statusFilter !== "all") {
       list = list.filter(q => q.salesStatus === statusFilter);
     }
     if (search) {
-      const s = search.toLowerCase();
+      const s = normalizeForSearch(search);
       list = list.filter(q =>
-        q.clientName.toLowerCase().includes(s) ||
-        (q.city || "").toLowerCase().includes(s) ||
-        (q.phone || "").toLowerCase().includes(s)
+        normalizeForSearch(q.clientName).includes(s) ||
+        normalizeForSearch(q.city || "").includes(s) ||
+        normalizeForSearch((q as any).phone || "").includes(s)
       );
     }
     return list;
-  }, [quotes, role, currentUser, search, statusFilter]);
+  }, [quotes, role, currentUser, search, statusFilter, cityFilter, provinceFilter]);
 
   const createQuote = useMutation({
     mutationFn: async (payload: any) => apiRequest("POST", "/api/quotes", {
@@ -119,10 +161,16 @@ export function Soumissions() {
         <div className="flex items-center gap-2">
           <Input placeholder={isEn ? "Search client, phone or city..." : "Rechercher client, téléphone ou ville..."} className="max-w-sm" value={search} onChange={e => setSearch(e.target.value)} data-testid="input-search-quotes" />
           {statusFilter !== "all" && (
-            <Badge variant="secondary" className="gap-1.5 cursor-pointer" onClick={() => { setStatusFilter("all"); window.history.replaceState(null, "", "/soumissions"); }}>
+            <Badge variant="secondary" className="gap-1.5 cursor-pointer" onClick={() => { setStatusFilter("all"); syncUrl("all", cityFilter, provinceFilter); }}>
               {statusFilter === "in-progress"
                 ? (isEn ? "In progress" : "En cours")
                 : (SALES_STATUSES as Record<string, string>)[statusFilter] || statusFilter}
+              <span aria-hidden>×</span>
+            </Badge>
+          )}
+          {cityFilter && (
+            <Badge variant="secondary" className="gap-1.5 cursor-pointer" onClick={() => { setCityFilter(""); setProvinceFilter(""); syncUrl(statusFilter, "", ""); }}>
+              {isEn ? "City" : "Ville"}: {cityFilter}{provinceFilter ? ` (${provinceFilter})` : ""}
               <span aria-hidden>×</span>
             </Badge>
           )}

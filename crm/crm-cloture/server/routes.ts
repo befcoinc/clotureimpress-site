@@ -1873,9 +1873,14 @@ export async function registerRoutes(
     }
     const actor = req.user as any;
     let quotes = await storage.getQuotes();
-    // Sales reps only see their own quotes.
+    // Sales reps can see quotes assigned to them directly, or linked to their assigned leads.
     if (actor?.role === "sales_rep") {
-      quotes = quotes.filter((q: any) => q.assignedSalesId === actor.id);
+      const assignedLeadIds = new Set(
+        (await storage.getLeads())
+          .filter((l: any) => l.assignedSalesId === actor.id)
+          .map((l: any) => l.id),
+      );
+      quotes = quotes.filter((q: any) => q.assignedSalesId === actor.id || (q.leadId && assignedLeadIds.has(q.leadId)));
     }
     setCachedApiResponse(req, quotes);
     res.json(quotes);
@@ -1885,7 +1890,10 @@ export async function registerRoutes(
     if (!q) return res.status(404).json({ error: "Not found" });
     const actor = req.user as any;
     if (actor?.role === "sales_rep" && q.assignedSalesId !== actor.id) {
-      return res.status(403).json({ error: "Acces refuse" });
+      const linkedLead = q.leadId ? await storage.getLead(q.leadId) : null;
+      if (!linkedLead || linkedLead.assignedSalesId !== actor.id) {
+        return res.status(403).json({ error: "Acces refuse" });
+      }
     }
     res.json(q);
   });

@@ -27,6 +27,16 @@ const formSchema = insertLeadSchema.extend({
   province: z.string().min(2, "Province requise"),
 });
 
+function normalizeForSearch(value: string) {
+  return (value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function Leads() {
   const { currentUser, can } = useRole();
   const { language } = useLanguage();
@@ -56,8 +66,9 @@ export function Leads() {
       if (filterStatus !== "all" && l.status !== filterStatus) return false;
       if (filterProvince !== "all" && l.province !== filterProvince) return false;
       if (search) {
-        const s = search.toLowerCase();
-        return (l.clientName.toLowerCase().includes(s) || (l.city || "").toLowerCase().includes(s) || (l.email || "").toLowerCase().includes(s));
+        const s = normalizeForSearch(search);
+        const searchable = [l.clientName, l.city || "", l.email || ""].map(normalizeForSearch).join(" ");
+        return searchable.includes(s);
       }
       return true;
     });

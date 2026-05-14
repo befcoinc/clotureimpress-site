@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,16 @@ import { MapPin } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 import type { Lead, Quote } from "@shared/schema";
 import { PROVINCES } from "@shared/schema";
+
+function normalizeForSearch(value: string) {
+  return (value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 export function Secteurs() {
   const { language } = useLanguage();
@@ -50,16 +61,22 @@ export function Secteurs() {
 
   // Group by city
   const byCity = useMemo(() => {
-    const map = new Map<string, { province: string; leads: number; value: number; quotes: number }>();
+    const map = new Map<string, { city: string; province: string; leads: number; value: number; quotes: number }>();
     for (const l of activeLeads) {
-      const key = `${l.city || "?"}`;
-      const cur = map.get(key) || { province: l.province || "?", leads: 0, value: 0, quotes: 0 };
+      const cityRaw = (l.city || "?").trim() || "?";
+      const province = l.province || "?";
+      const key = `${province}|${normalizeForSearch(cityRaw) || "?"}`;
+      const cur = map.get(key) || { city: cityRaw, province, leads: 0, value: 0, quotes: 0 };
+      if (cur.city === "?" && cityRaw !== "?") cur.city = cityRaw;
       cur.leads += 1; cur.value += l.estimatedValue || 0;
       map.set(key, cur);
     }
     for (const q of quotes) {
-      const key = `${q.city || "?"}`;
-      const cur = map.get(key) || { province: q.province || "?", leads: 0, value: 0, quotes: 0 };
+      const cityRaw = (q.city || "?").trim() || "?";
+      const province = q.province || "?";
+      const key = `${province}|${normalizeForSearch(cityRaw) || "?"}`;
+      const cur = map.get(key) || { city: cityRaw, province, leads: 0, value: 0, quotes: 0 };
+      if (cur.city === "?" && cityRaw !== "?") cur.city = cityRaw;
       cur.quotes += 1;
       map.set(key, cur);
     }
@@ -98,16 +115,35 @@ export function Secteurs() {
             <CardHeader className="pb-3"><CardTitle className="text-base">{isEn ? "Top cities" : "Top villes"}</CardTitle></CardHeader>
             <CardContent>
               <ul className="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
-                {byCity.map(([city, info]) => (
-                  <li key={city} className="flex items-center justify-between gap-3 rounded-md border border-card-border bg-card p-2.5 hover-elevate">
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium text-[13px] truncate">{city}</div>
-                      <div className="text-[10px] text-muted-foreground"><Badge variant="outline" className="text-[10px] mr-1">{info.province}</Badge> {info.quotes} {isEn ? "quote(s)" : "soumission(s)"}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-[14px] tabular">{info.leads}</div>
-                      <div className="text-[10px] text-muted-foreground tabular">{moneyFmt.format(info.value)}</div>
-                    </div>
+                {byCity.map(([cityKey, info]) => (
+                  <li key={cityKey}>
+                    {info.city !== "?" ? (
+                      <Link
+                        href={`/soumissions?city=${encodeURIComponent(info.city)}&province=${encodeURIComponent(info.province)}`}
+                        className="flex items-center justify-between gap-3 rounded-md border border-card-border bg-card p-2.5 hover-elevate"
+                        data-testid={`link-city-${normalizeForSearch(info.city) || "unknown"}`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-[13px] truncate">{info.city}</div>
+                          <div className="text-[10px] text-muted-foreground"><Badge variant="outline" className="text-[10px] mr-1">{info.province}</Badge> {info.quotes} {isEn ? "quote(s)" : "soumission(s)"}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-[14px] tabular">{info.leads}</div>
+                          <div className="text-[10px] text-muted-foreground tabular">{moneyFmt.format(info.value)}</div>
+                        </div>
+                      </Link>
+                    ) : (
+                      <div className="flex items-center justify-between gap-3 rounded-md border border-card-border bg-card p-2.5 hover-elevate">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-[13px] truncate">{info.city}</div>
+                          <div className="text-[10px] text-muted-foreground"><Badge variant="outline" className="text-[10px] mr-1">{info.province}</Badge> {info.quotes} {isEn ? "quote(s)" : "soumission(s)"}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-[14px] tabular">{info.leads}</div>
+                          <div className="text-[10px] text-muted-foreground tabular">{moneyFmt.format(info.value)}</div>
+                        </div>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
