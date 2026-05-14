@@ -37,7 +37,13 @@ export function IntimuraReceive() {
         if (dataMatch && tokenMatch) {
           // URL hash method (preferred)
           console.log("[IntimuraReceive] Reading from URL hash");
-          dataRaw = atob(decodeURIComponent(dataMatch[1]));
+          const encoded64 = decodeURIComponent(dataMatch[1]);
+          const binaryString = atob(encoded64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          dataRaw = new TextDecoder().decode(bytes);
           token = decodeURIComponent(tokenMatch[1]);
         } else {
           // Fallback to localStorage (legacy)
