@@ -1584,11 +1584,8 @@ export async function registerRoutes(
     let createdQuotes = 0;
     let skipped = 0;
 
-    // Pre-load all leads once to enable secondary dedup by name/phone/email
-    // when the Intimura quote id differs (e.g. bookmarklet-scraped row vs
-    // server-side fetched record). This prevents creating duplicates of
-    // leads that were already imported under a different intimuraId or that
-    // are already assigned to a vendor.
+    // Pre-load all leads once to enable robust secondary dedup when the
+    // Intimura quote id differs (bookmarklet row vs API row).
     const allLeads = await storage.getLeads();
     const normName = (s: string) =>
       String(s || "")
@@ -1600,20 +1597,71 @@ export async function registerRoutes(
         .trim();
     const normPhone = (s: string) => String(s || "").replace(/\D+/g, "").slice(-10);
     const normEmail = (s: string) => String(s || "").trim().toLowerCase();
-    // First two name tokens (e.g. "RICHARD BOUTIN" from "RICHARD BOUTIN x Saint-Pamphile")
+    // First two tokens + first/last token key to absorb variants like
+    // "RICHARD BOUTIN x Saint-Pamphile" vs "RICHARD BOUTIN".
     const nameKey = (s: string) => normName(s).split(" ").slice(0, 2).join(" ");
+    const personKey = (s: string) => {
+      const cleaned = normName(s).split(/\bx\b/)[0].trim();
+      const tokens = cleaned.split(" ").filter(Boolean);
+      if (!tokens.length) return "";
+      if (tokens.length === 1) return tokens[0];
+      return `${tokens[0]} ${tokens[tokens.length - 1]}`;
+    };
+    const sameZone = (a: any, city: string, province: string) => {
+      const aCity = String(a?.city || "").trim().toLowerCase();
+      const cCity = String(city || "").trim().toLowerCase();
+      const aProv = String(a?.province || "").trim().toUpperCase();
+      const cProv = String(province || "").trim().toUpperCase();
+      const cityOk = !aCity || !cCity || aCity === cCity;
+      const provOk = !aProv || !cProv || aProv === cProv;
+      return cityOk && provOk;
+    };
 
-    const byNameKey = new Map<string, typeof allLeads[number]>();
-    const byPhone = new Map<string, typeof allLeads[number]>();
-    const byEmail = new Map<string, typeof allLeads[number]>();
+    const byNameKey = new Map<string, Array<typeof allLeads[number]>>();
+    const byPersonKey = new Map<string, Array<typeof allLeads[number]>>();
+    const byPhone = new Map<string, Array<typeof allLeads[number]>>();
+    const byEmail = new Map<string, Array<typeof allLeads[number]>>();
+    const pushMap = <T>(m: Map<string, T[]>, k: string, v: T) => {
+      if (!k) return;
+      const arr = m.get(k);
+      if (arr) arr.push(v); else m.set(k, [v]);
+    };
     for (const l of allLeads) {
       const k = nameKey(l.clientName || "");
-      if (k && !byNameKey.has(k)) byNameKey.set(k, l);
+      pushMap(byNameKey, k, l);
+      pushMap(byPersonKey, personKey(l.clientName || ""), l);
       const p = normPhone(l.phone || "");
-      if (p && p.length >= 10 && !byPhone.has(p)) byPhone.set(p, l);
+      if (p && p.length >= 10) pushMap(byPhone, p, l);
       const e = normEmail(l.email || "");
-      if (e && !byEmail.has(e)) byEmail.set(e, l);
+      if (e) pushMap(byEmail, e, l);
     }
+
+    const pickBestDuplicate = (candName: string, candPhoneKey: string, candEmailKey: string, city: string, province: string) => {
+      const direct = [
+        ...(candPhoneKey && candPhoneKey.length >= 10 ? (byPhone.get(candPhoneKey) || []) : []),
+        ...(candEmailKey ? (byEmail.get(candEmailKey) || []) : []),
+      ];
+      const seen = new Set<number>();
+      const fuzzy = [
+        ...(byPersonKey.get(personKey(candName)) || []),
+        ...(byNameKey.get(nameKey(candName)) || []),
+      ];
+      const all = [...direct, ...fuzzy].filter((l) => {
+        if (!l || seen.has(l.id)) return false;
+        seen.add(l.id);
+        return true;
+      });
+      if (!all.length) return undefined;
+
+      const scored = all
+        .filter((l) => sameZone(l, city, province))
+        .sort((a, b) => {
+          const sa = (a.assignedSalesId ? 100 : 0) + (a.intimuraId ? 20 : 0) + (a.source !== "intimura" ? 10 : 0);
+          const sb = (b.assignedSalesId ? 100 : 0) + (b.intimuraId ? 20 : 0) + (b.source !== "intimura" ? 10 : 0);
+          return sb - sa;
+        });
+      return scored[0] || all[0];
+    };
 
     for (const iq of intimuraQuotes) {
       if (!iq?.id) continue;
@@ -1623,26 +1671,42 @@ export async function registerRoutes(
         continue;
       }
 
-      // Secondary dedup: same person already exists under a different intimuraId
+      // Secondary dedup: same person already exists under another Intimura id
+      const city = extractCity(iq.title || "");
+      const province = inferProvince(city);
       const candName = iq.customer_name || iq.title || "";
       const candPhoneKey = normPhone(iq.customer_phone || "");
       const candEmailKey = normEmail(iq.customer_email || "");
-      const candNameKey = nameKey(candName);
-      const dupe =
-        (candPhoneKey && candPhoneKey.length >= 10 ? byPhone.get(candPhoneKey) : undefined) ||
-        (candEmailKey ? byEmail.get(candEmailKey) : undefined) ||
-        (candNameKey ? byNameKey.get(candNameKey) : undefined);
+      const dupe = pickBestDuplicate(candName, candPhoneKey, candEmailKey, city, province);
       if (dupe) {
         // Backfill intimuraId on the existing lead so future syncs match by id directly.
         if (!dupe.intimuraId) {
           try { await storage.updateLead(dupe.id, { intimuraId: iq.id }); } catch {}
         }
+
+        // If there are stale unassigned duplicates for the same person,
+        // copy the known seller assignment so they stop reappearing in
+        // "Leads à assigner".
+        if (dupe.assignedSalesId) {
+          const pk = personKey(candName);
+          const stale = byPersonKey.get(pk) || [];
+          for (const s of stale) {
+            if (s.id === dupe.id) continue;
+            if (s.assignedSalesId) continue;
+            if (!sameZone(s, city, province)) continue;
+            try {
+              await storage.updateLead(s.id, {
+                assignedSalesId: dupe.assignedSalesId,
+                status: s.status === "nouveau" ? "assigne" : s.status,
+              });
+              s.assignedSalesId = dupe.assignedSalesId;
+            } catch {}
+          }
+        }
+
         skipped++;
         continue;
       }
-
-      const city = extractCity(iq.title || "");
-      const province = inferProvince(city);
       const salesStatus = mapIntimuraStatus(iq.status);
       const lead = await storage.createLead({
         clientName: iq.customer_name || iq.title || "Client Intimura",
@@ -1663,6 +1727,14 @@ export async function registerRoutes(
         estimatedLength: null,
       });
       createdLeads++;
+
+      // Keep in-memory indexes fresh to avoid duplicates within the same payload.
+      pushMap(byNameKey, nameKey(lead.clientName || ""), lead as any);
+      pushMap(byPersonKey, personKey(lead.clientName || ""), lead as any);
+      const lp = normPhone(lead.phone || "");
+      if (lp && lp.length >= 10) pushMap(byPhone, lp, lead as any);
+      const le = normEmail(lead.email || "");
+      if (le) pushMap(byEmail, le, lead as any);
 
       await storage.createQuote({
         leadId: lead.id,
