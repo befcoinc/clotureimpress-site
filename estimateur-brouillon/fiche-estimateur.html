@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estimateur ClotureImpress | Prix instantane</title>
+  <meta name="description" content="Estimateur intelligent ClotureImpress: obtenez une estimation instantanee de votre projet de cloture selon vos options, votre terrain et votre region.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f4efe7;
+      --ink: #1f1a16;
+      --ink-soft: #5d5349;
+      --line: #d6c8b8;
+      --card: #fffcf8;
+      --accent: #176f61;
+      --accent-2: #f28f3b;
+      --accent-3: #103a34;
+      --ok: #167f52;
+      --warn: #8a5d22;
+      --radius: 20px;
+      --shadow: 0 20px 40px rgba(23, 16, 9, 0.08);
+      --max: 1180px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: "Work Sans", system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 10%, rgba(242, 143, 59, 0.14), transparent 30%),
+        radial-gradient(circle at 80% 15%, rgba(23, 111, 97, 0.18), transparent 35%),
+        var(--bg);
+      line-height: 1.5;
+    }
+
+    .wrap {
+      width: min(calc(100% - 2rem), var(--max));
+      margin: 0 auto;
+      padding: 1.25rem 0 3rem;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.1rem;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 700;
+      font-family: "Space Grotesk", sans-serif;
+      letter-spacing: 0.01em;
+    }
+
+    .brand-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 0 4px rgba(23, 111, 97, 0.14);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 0.72rem 1.05rem;
+      font: inherit;
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 12px 25px rgba(23, 111, 97, 0.22);
+    }
+
+    .btn-secondary {
+      background: #fff;
+      border-color: var(--line);
+      color: var(--ink);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .hero-main,
+    .hero-side {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.2rem;
+    }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-3);
+      font-weight: 700;
+      margin-bottom: 0.65rem;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: clamp(1.8rem, 3.3vw, 2.8rem);
+      line-height: 1.05;
+      max-width: 14ch;
+    }
+
+    .lead {
+      margin-top: 0.8rem;
+      color: var(--ink-soft);
+      max-width: 60ch;
+    }
+
+    .hero-badges {
+      margin-top: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .badge {
+      border-radius: 999px;
+      border: 1px solid #c6dbd4;
+      background: #eff8f6;
+      color: #0f443b;
+      padding: 0.35rem 0.65rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .hero-side h2 {
+      margin: 0 0 0.7rem;
+      font-size: 1.1rem;
+      font-family: "Space Grotesk", sans-serif;
+    }
+
+    .formula {
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 0.95rem;
+      line-height: 1.45;
+      color: #2c241d;
+      background: #fff7ef;
+      border: 1px dashed #e5b07b;
+      border-radius: 14px;
+      padding: 0.75rem;
+    }
+
+    .formula small {
+      display: block;
+      margin-top: 0.5rem;
+      color: #6e5234;
+      font-family: "Work Sans", sans-serif;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 330px;
+      gap: 1rem;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1rem;
+    }
+
+    .panel h3 {
+      margin: 0 0 0.8rem;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 1.15rem;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.8rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .field label {
+      font-size: 0.85rem;
+      color: var(--ink-soft);
+      font-weight: 600;
+    }
+
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      padding: 0.66rem 0.7rem;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    input:focus, select:focus {
+      outline: 2px solid rgba(23, 111, 97, 0.18);
+      border-color: var(--accent);
+    }
+
+    .inline {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+    }
+
+    .inline input[type="checkbox"] {
+      width: auto;
+      transform: scale(1.15);
+      accent-color: var(--accent);
+      margin-right: 0.2rem;
+    }
+
+    .inline span { color: var(--ink-soft); font-size: 0.92rem; }
+
+    .muted {
+      margin: 0.25rem 0 0;
+      font-size: 0.82rem;
+      color: #74695f;
+    }
+
+    .summary {
+      position: sticky;
+      top: 1rem;
+    }
+
+    .price {
+      margin: 0;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: clamp(2rem, 4vw, 2.6rem);
+      line-height: 1;
+    }
+
+    .range {
+      margin: 0.35rem 0 1rem;
+      color: var(--ink-soft);
+      font-weight: 600;
+    }
+
+    .chipline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .chip {
+      background: #f2f9f7;
+      border: 1px solid #cde4dd;
+      color: #11473d;
+      border-radius: 999px;
+      padding: 0.3rem 0.55rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .splitline {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.7rem;
+      border-bottom: 1px dashed #ddcfbf;
+      padding: 0.44rem 0;
+      font-size: 0.92rem;
+    }
+
+    .splitline strong { font-family: "Space Grotesk", sans-serif; }
+
+    .splitline.total {
+      border-bottom: none;
+      padding-top: 0.75rem;
+      margin-top: 0.2rem;
+      font-size: 1rem;
+      color: #0f332d;
+    }
+
+    .notice {
+      margin-top: 0.8rem;
+      padding: 0.7rem;
+      border-radius: 12px;
+      border: 1px solid #e7dccf;
+      background: #fbf7f2;
+      color: #5f5448;
+      font-size: 0.84rem;
+    }
+
+    .foot-actions {
+      display: flex;
+      gap: 0.55rem;
+      margin-top: 0.8rem;
+      flex-wrap: wrap;
+    }
+
+    .legend {
+      margin-top: 1rem;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.7rem;
+    }
+
+    .legend-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 0.72rem;
+    }
+
+    .legend-card h4 {
+      margin: 0;
+      font-size: 0.92rem;
+      font-family: "Space Grotesk", sans-serif;
+    }
+
+    .legend-card p {
+      margin: 0.35rem 0 0;
+      color: var(--ink-soft);
+      font-size: 0.84rem;
+    }
+
+    .pill {
+      display: inline-block;
+      margin-top: 0.45rem;
+      border-radius: 999px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.73rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .pill.ok { background: #e7f7ef; color: var(--ok); }
+    .pill.warn { background: #fff1e2; color: var(--warn); }
+
+    @media (max-width: 1020px) {
+      .hero, .grid { grid-template-columns: 1fr; }
+      .summary { position: static; }
+    }
+
+    @media (max-width: 760px) {
+      .row { grid-template-columns: 1fr; }
+      .legend { grid-template-columns: 1fr; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .top-actions { width: 100%; }
+      .top-actions .btn { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="../index.html">
+        <span class="brand-dot" aria-hidden="true"></span>
+        ClotureImpress Estimation Studio
+      </a>
+      <div class="top-actions">
+        <a class="btn btn-secondary" href="../index.html#soumission">Formulaire classique</a>
+        <a class="btn btn-primary" href="tel:4506240821">Parler a un conseiller</a>
+      </div>
+    </header>
+
+    <section class="hero">
+      <article class="hero-main">
+        <span class="kicker">Algorithme proprietaire v1</span>
+        <h1>Estimation instantanee, plus fine qu'un simple prix au pied.</h1>
+        <p class="lead">
+          Cette page s'inspire du principe de configurateur en ligne, mais utilise une logique ClotureImpress: le calcul integre la hauteur, le type de panneau, la complexite du terrain, la region, le niveau d'urgence et les options de chantier.
+        </p>
+        <div class="hero-badges">
+          <span class="badge">Modele distinctif</span>
+          <span class="badge">Ajustements terrain reels</span>
+          <span class="badge">Projection budget + acompte</span>
+        </div>
+      </article>
+      <aside class="hero-side">
+        <h2>Formule maison (version simplifiee)</h2>
+        <div class="formula">
+          Total = (Materiaux + Poteaux + Portes + Installation + Extras) x Multiplicateurs - Remise volume
+          <small>
+            Multiplicateurs = hauteur x terrain x region x urgence x saison
+          </small>
+        </div>
+        <p class="muted">
+          Resultat affiche comme plage budgetaire pour absorber les variables de terrain mesurees a la visite.
+        </p>
+      </aside>
+    </section>
+
+    <section class="grid" aria-label="Configurateur de projet">
+      <form class="panel" id="quote-form" autocomplete="off">
+        <h3>1) Configuration du projet</h3>
+
+        <div class="row">
+          <div class="field">
+            <label for="length">Longueur totale (pi)</label>
+            <input id="length" type="number" min="4" step="1" value="84">
+          </div>
+          <div class="field">
+            <label for="height">Hauteur de la cloture</label>
+            <select id="height">
+              <option value="48">4 pi</option>
+              <option value="60" selected>5 pi</option>
+              <option value="72">6 pi</option>
+              <option value="84">7 pi</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="material">Famille de produit</label>
+            <select id="material">
+              <option value="ornementale">Ornementale premium</option>
+              <option value="maille">Maille de chaine</option>
+              <option value="intimite" selected>Intimite composite</option>
+              <option value="bois">Bois traite select</option>
+              <option value="pvc">PVC architectural</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="service">Type de service</label>
+            <select id="service">
+              <option value="material-only">Materiaux seulement</option>
+              <option value="installation" selected>Fourniture + installation</option>
+            </select>
+          </div>
+        </div>
+
+        <h3>2) Conditions chantier</h3>
+
+        <div class="row">
+          <div class="field">
+            <label for="terrain">Difficulte du terrain</label>
+            <select id="terrain">
+              <option value="easy">Plat et degage</option>
+              <option value="standard" selected>Standard</option>
+              <option value="hard">Pente moderee</option>
+              <option value="rocky">Sol rocheux/complexe</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="region">Region de projet</label>
+            <select id="region">
+              <option value="montreal" selected>Montreal</option>
+              <option value="laval">Laval</option>
+              <option value="rive-nord">Rive-Nord</option>
+              <option value="rive-sud">Rive-Sud</option>
+              <option value="quebec">Quebec / Capitale</option>
+              <option value="autre">Autres zones</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="urgency">Delai souhaite</label>
+            <select id="urgency">
+              <option value="normal" selected>Planifie (4-8 semaines)</option>
+              <option value="priority">Prioritaire (2-4 semaines)</option>
+              <option value="express">Express (moins de 2 semaines)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="season">Saison de realisation</label>
+            <select id="season">
+              <option value="spring">Printemps</option>
+              <option value="summer" selected>Ete</option>
+              <option value="autumn">Automne</option>
+              <option value="winter">Hiver</option>
+            </select>
+          </div>
+        </div>
+
+        <h3>3) Options</h3>
+
+        <div class="row">
+          <div class="field">
+            <label for="smallGate">Portes standard (3-4 pi)</label>
+            <input id="smallGate" type="number" min="0" step="1" value="1">
+          </div>
+          <div class="field">
+            <label for="largeGate">Portes larges (5-8 pi)</label>
+            <input id="largeGate" type="number" min="0" step="1" value="0">
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="inline" for="removeOld">
+            <input id="removeOld" type="checkbox" checked>
+            <span>Inclure demantelement de l'ancienne cloture</span>
+          </label>
+          <label class="inline" for="commercial">
+            <input id="commercial" type="checkbox">
+            <span>Projet commercial/industriel</span>
+          </label>
+        </div>
+
+        <h3>4) Coordonnees pour envoyer au CRM</h3>
+
+        <div class="row">
+          <div class="field">
+            <label for="firstName">Prenom</label>
+            <input id="firstName" type="text" placeholder="Jean">
+          </div>
+          <div class="field">
+            <label for="lastName">Nom</label>
+            <input id="lastName" type="text" placeholder="Tremblay">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="phone">Telephone</label>
+            <input id="phone" type="tel" placeholder="(450) 000-0000">
+          </div>
+          <div class="field">
+            <label for="email">Courriel</label>
+            <input id="email" type="email" placeholder="jean@email.com">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="city">Ville</label>
+            <input id="city" type="text" placeholder="Montreal">
+          </div>
+          <div class="field">
+            <label for="notes">Notes client (optionnel)</label>
+            <input id="notes" type="text" placeholder="Contraintes, acces, budget...">
+          </div>
+        </div>
+
+        <p class="muted">
+          Le calcul se met a jour automatiquement. Cette version sert de pre-qualification budgetaire avant validation technique.
+        </p>
+      </form>
+
+      <aside class="panel summary" aria-live="polite">
+        <h3>Resume budget</h3>
+        <p class="price" id="price-main">$0</p>
+        <p class="range" id="price-range">Plage: $0 a $0</p>
+
+        <div class="chipline" id="chips"></div>
+
+        <div class="splitline"><span>Materiaux + panneaux</span><strong id="line-material">$0</strong></div>
+        <div class="splitline"><span>Poteaux et quincaillerie</span><strong id="line-posts">$0</strong></div>
+        <div class="splitline"><span>Portes</span><strong id="line-gates">$0</strong></div>
+        <div class="splitline"><span>Main-d'oeuvre</span><strong id="line-labour">$0</strong></div>
+        <div class="splitline"><span>Supplements chantier</span><strong id="line-extras">$0</strong></div>
+        <div class="splitline"><span>Remise volume</span><strong id="line-discount">-$0</strong></div>
+        <div class="splitline total"><span>Total estime</span><strong id="line-total">$0</strong></div>
+
+        <div class="notice" id="notice"></div>
+        <p class="muted" id="crm-status" style="min-height: 1.3em; margin-top: 0.45rem;"></p>
+
+        <div class="foot-actions">
+          <button class="btn btn-primary" id="crm-submit-btn" type="button">Envoyer ce scenario au CRM</button>
+          <a class="btn btn-secondary" id="mailto-btn" href="mailto:info@clotureimpress.com">Envoyer par courriel</a>
+          <a class="btn btn-secondary" href="../index.html#soumission">Demander visite terrain</a>
+        </div>
+      </aside>
+    </section>
+
+    <section class="legend" aria-label="Comparatif de precision">
+      <article class="legend-card">
+        <h4>Approche basique</h4>
+        <p>Prix lineaire au pied, sans contexte terrain ni urgence.</p>
+        <span class="pill warn">Precision limitee</span>
+      </article>
+      <article class="legend-card">
+        <h4>Approche ClotureImpress</h4>
+        <p>Formule multicritere avec coefficients chantiers et remises intelligentes.</p>
+        <span class="pill ok">Plus realiste</span>
+      </article>
+      <article class="legend-card">
+        <h4>Etape suivante</h4>
+        <p>Validation finale par conseiller + mesures exactes sur place.</p>
+        <span class="pill ok">Processus complet</span>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    const DEFAULT_PRICING = {
+      endpoint: "https://cloture-crm.onrender.com/api/public/estimate",
+      annualRate: 0.079,
+      depositRate: 0.35,
+      rangeLow: 0.93,
+      rangeHigh: 1.09,
+      discountTiers: [
+        { minLength: 180, rate: 0.09 },
+        { minLength: 120, rate: 0.06 },
+        { minLength: 75, rate: 0.035 }
+      ],
+      materials: {
+        "ornementale": { name: "Ornementale premium", materialPerFt: 54, installPerFt: 39, post: 88, gateSmall: 750, gateLarge: 1320, minBase: 2800 },
+        "maille": { name: "Maille de chaine", materialPerFt: 24, installPerFt: 20, post: 54, gateSmall: 390, gateLarge: 730, minBase: 1450 },
+        "intimite": { name: "Intimite composite", materialPerFt: 46, installPerFt: 35, post: 81, gateSmall: 860, gateLarge: 1490, minBase: 2400 },
+        "bois": { name: "Bois traite select", materialPerFt: 34, installPerFt: 29, post: 66, gateSmall: 560, gateLarge: 990, minBase: 1900 },
+        "pvc": { name: "PVC architectural", materialPerFt: 42, installPerFt: 33, post: 74, gateSmall: 640, gateLarge: 1160, minBase: 2150 }
+      },
+      factors: {
+        height: { "48": 0.9, "60": 1, "72": 1.16, "84": 1.34 },
+        terrain: { "easy": 0.95, "standard": 1, "hard": 1.12, "rocky": 1.25 },
+        region: { "montreal": 1, "laval": 1.03, "rive-nord": 1.05, "rive-sud": 1.04, "quebec": 1.07, "autre": 1.12 },
+        urgency: { "normal": 1, "priority": 1.08, "express": 1.16 },
+        season: { "spring": 1.03, "summer": 1.06, "autumn": 1, "winter": 1.08 }
+      }
+    };
+
+    let PRICING = JSON.parse(JSON.stringify(DEFAULT_PRICING));
+
+    const fmt = new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
+
+    const ids = [
+      "length", "height", "material", "service", "terrain", "region", "urgency", "season",
+      "smallGate", "largeGate", "removeOld", "commercial"
+    ];
+
+    const state = Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
+
+    function clamp(n, min, max) {
+      return Math.min(Math.max(n, min), max);
+    }
+
+    function round10(value) {
+      return Math.round(value / 10) * 10;
+    }
+
+    function volumeDiscount(lengthFt) {
+      for (const tier of PRICING.discountTiers || []) {
+        if (lengthFt >= Number(tier.minLength || 0)) return Number(tier.rate || 0);
+      }
+      return 0;
+    }
+
+    function monthlyPayment(total, months, annualRate) {
+      const r = annualRate / 12;
+      if (r === 0) return total / months;
+      return (total * r) / (1 - Math.pow(1 + r, -months));
+    }
+
+    function collect() {
+      const length = clamp(Number(state.length.value || 0), 4, 3000);
+      const height = state.height.value;
+      const materialKey = state.material.value;
+      const material = PRICING.materials[materialKey];
+      const service = state.service.value;
+      const terrain = state.terrain.value;
+      const region = state.region.value;
+      const urgency = state.urgency.value;
+      const season = state.season.value;
+      const smallGate = clamp(Number(state.smallGate.value || 0), 0, 20);
+      const largeGate = clamp(Number(state.largeGate.value || 0), 0, 20);
+      const removeOld = Boolean(state.removeOld.checked);
+      const commercial = Boolean(state.commercial.checked);
+      return { length, height, materialKey, material, service, terrain, region, urgency, season, smallGate, largeGate, removeOld, commercial };
+    }
+
+    function compute() {
+      const data = collect();
+      const sections = Math.ceil(data.length / 8);
+      const postsCount = sections + 1;
+
+      const h = PRICING.factors.height[data.height];
+      const m = data.material;
+
+      const materialCost = data.length * m.materialPerFt * h;
+      const postsCost = postsCount * m.post * (0.85 + h * 0.25);
+
+      const gateHeightAdj = 1 + (h - 1) * 0.45;
+      const gatesCost = (data.smallGate * m.gateSmall + data.largeGate * m.gateLarge) * gateHeightAdj;
+
+      const installBase = data.service === "installation" ? (data.length * m.installPerFt + sections * 24) : 0;
+      const terrainMulti = PRICING.factors.terrain[data.terrain];
+      const regionMulti = PRICING.factors.region[data.region];
+      const labourCost = installBase * terrainMulti * regionMulti;
+
+      const removeOldCost = data.removeOld ? (data.length * 13 + 180) : 0;
+      const commercialCost = data.commercial ? (data.length * 4.2 + 260) : 0;
+      const extrasCost = removeOldCost + commercialCost;
+
+      const urgencyMulti = PRICING.factors.urgency[data.urgency];
+      const seasonMulti = PRICING.factors.season[data.season];
+
+      const gross = (materialCost + postsCost + gatesCost + labourCost + extrasCost) * urgencyMulti * seasonMulti;
+      const floor = m.minBase * (data.service === "installation" ? 1 : 0.7);
+      const grossFloored = Math.max(gross, floor);
+
+      const discountRate = volumeDiscount(data.length);
+      const discount = grossFloored * discountRate;
+      const total = grossFloored - discount;
+
+      const low = total * Number(PRICING.rangeLow || 0.93);
+      const high = total * Number(PRICING.rangeHigh || 1.09);
+
+      const deposit = total * Number(PRICING.depositRate || 0.35);
+      const monthly = monthlyPayment(total, 12, Number(PRICING.annualRate || 0.079));
+
+      return {
+        ...data,
+        materialCost,
+        postsCost,
+        gatesCost,
+        labourCost,
+        extrasCost,
+        gross: grossFloored,
+        discount,
+        total,
+        low,
+        high,
+        deposit,
+        monthly,
+        postsCount,
+        sections,
+        discountRate,
+        multipliers: {
+          terrain: terrainMulti,
+          region: regionMulti,
+          urgency: urgencyMulti,
+          season: seasonMulti,
+          height: h
+        }
+      };
+    }
+
+    function setText(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+
+    function render() {
+      const r = compute();
+
+      setText("price-main", fmt.format(round10(r.total)));
+      setText("price-range", "Plage: " + fmt.format(round10(r.low)) + " a " + fmt.format(round10(r.high)));
+
+      setText("line-material", fmt.format(round10(r.materialCost)));
+      setText("line-posts", fmt.format(round10(r.postsCost)));
+      setText("line-gates", fmt.format(round10(r.gatesCost)));
+      setText("line-labour", fmt.format(round10(r.labourCost)));
+      setText("line-extras", fmt.format(round10(r.extrasCost)));
+      setText("line-discount", "-" + fmt.format(round10(r.discount)));
+      setText("line-total", fmt.format(round10(r.total)));
+
+      const chips = document.getElementById("chips");
+      if (chips) {
+        chips.innerHTML = "";
+        [
+          "" + r.length + " pi",
+          r.material.name,
+          "H " + (Number(r.height) / 12) + " pi",
+          r.service === "installation" ? "Avec installation" : "Materiaux seulement",
+          "" + (r.sections + 1) + " sections"
+        ].forEach((label) => {
+          const c = document.createElement("span");
+          c.className = "chip";
+          c.textContent = label;
+          chips.appendChild(c);
+        });
+      }
+
+      const notice = document.getElementById("notice");
+      if (notice) {
+        const pct = Math.round(r.discountRate * 100);
+        notice.textContent =
+          "Acompte suggere: " + fmt.format(round10(r.deposit)) +
+          " | Financement indicatif 12 mois: " + fmt.format(round10(r.monthly)) +
+          " / mois" +
+          (pct > 0 ? " | Remise volume appliquee: " + pct + "%" : "");
+      }
+
+      const summaryLines = [
+        "Scenario estimation ClotureImpress",
+        "- Longueur: " + r.length + " pi",
+        "- Materiau: " + r.material.name,
+        "- Hauteur: " + (Number(r.height) / 12) + " pi",
+        "- Service: " + (r.service === "installation" ? "Fourniture + installation" : "Materiaux seulement"),
+        "- Terrain: " + r.terrain,
+        "- Region: " + r.region,
+        "- Delai: " + r.urgency,
+        "- Total estime: " + fmt.format(round10(r.total)),
+        "- Plage budget: " + fmt.format(round10(r.low)) + " a " + fmt.format(round10(r.high))
+      ].join("%0D%0A");
+
+      const mailBtn = document.getElementById("mailto-btn");
+      if (mailBtn) {
+        mailBtn.href = "mailto:info@clotureimpress.com?subject=Scenario%20estimateur%20cloture&body=" + summaryLines;
+      }
+    }
+
+    function readContactData() {
+      return {
+        firstName: (document.getElementById("firstName")?.value || "").trim(),
+        lastName: (document.getElementById("lastName")?.value || "").trim(),
+        phone: (document.getElementById("phone")?.value || "").trim(),
+        email: (document.getElementById("email")?.value || "").trim(),
+        city: (document.getElementById("city")?.value || "").trim(),
+        notes: (document.getElementById("notes")?.value || "").trim()
+      };
+    }
+
+    function setStatus(text, isError) {
+      const status = document.getElementById("crm-status");
+      if (!status) return;
+      status.textContent = text;
+      status.style.color = isError ? "#b42318" : "#176f61";
+    }
+
+    async function sendScenarioToCrm() {
+      const c = readContactData();
+      if (!c.firstName || !c.lastName || !c.phone || !c.city) {
+        setStatus("Completer prenom, nom, telephone et ville avant envoi.", true);
+        return;
+      }
+
+      const r = compute();
+      const payload = {
+        prenom: c.firstName,
+        nom: c.lastName,
+        telephone: c.phone,
+        email: c.email,
+        ville: c.city,
+        service: "Estimateur instantane - " + r.material.name,
+        fenceType: r.material.name,
+        scenario: {
+          lengthFt: r.length,
+          heightFt: Number(r.height) / 12,
+          material: r.material.name,
+          service: r.service === "installation" ? "Fourniture + installation" : "Materiaux seulement",
+          terrain: r.terrain,
+          region: r.region,
+          urgency: r.urgency,
+          season: r.season,
+          totalCad: fmt.format(round10(r.total)),
+          rangeCad: fmt.format(round10(r.low)) + " a " + fmt.format(round10(r.high)),
+        },
+        message: [
+          "Source: estimateur.html",
+          "Longueur: " + r.length + " pi",
+          "Hauteur: " + (Number(r.height) / 12) + " pi",
+          "Materiau: " + r.material.name,
+          "Service: " + (r.service === "installation" ? "Fourniture + installation" : "Materiaux seulement"),
+          "Terrain: " + r.terrain,
+          "Region: " + r.region,
+          "Delai: " + r.urgency,
+          "Saison: " + r.season,
+          "Portes standard: " + r.smallGate,
+          "Portes larges: " + r.largeGate,
+          "Retrait ancienne cloture: " + (r.removeOld ? "oui" : "non"),
+          "Commercial: " + (r.commercial ? "oui" : "non"),
+          "Total estime: " + fmt.format(round10(r.total)),
+          "Plage: " + fmt.format(round10(r.low)) + " a " + fmt.format(round10(r.high)),
+          c.notes ? "Notes client: " + c.notes : ""
+        ].filter(Boolean).join("\n"),
+        website: ""
+      };
+
+      const submitBtn = document.getElementById("crm-submit-btn");
+      if (submitBtn) submitBtn.disabled = true;
+      setStatus("Envoi en cours...", false);
+
+      try {
+        const response = await fetch(PRICING.endpoint, {
+          method: "POST",
+          mode: "cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error((body && body.error) || "Erreur d'envoi");
+
+        setStatus("Scenario envoye au CRM avec succes.", false);
+      } catch (error) {
+        setStatus("Echec de l'envoi au CRM. Utilisez le bouton courriel en secours.", true);
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    }
+
+    function mergePricingConfig(external) {
+      const merged = JSON.parse(JSON.stringify(DEFAULT_PRICING));
+      if (!external || typeof external !== "object") return merged;
+
+      merged.endpoint = external.endpoint || merged.endpoint;
+      merged.annualRate = Number(external.annualRate ?? merged.annualRate);
+      merged.depositRate = Number(external.depositRate ?? merged.depositRate);
+      merged.rangeLow = Number(external.rangeLow ?? merged.rangeLow);
+      merged.rangeHigh = Number(external.rangeHigh ?? merged.rangeHigh);
+      merged.discountTiers = Array.isArray(external.discountTiers) && external.discountTiers.length
+        ? external.discountTiers.slice().sort((a, b) => Number(b.minLength || 0) - Number(a.minLength || 0))
+        : merged.discountTiers;
+
+      if (external.materials && typeof external.materials === "object") {
+        Object.keys(merged.materials).forEach((k) => {
+          merged.materials[k] = { ...merged.materials[k], ...(external.materials[k] || {}) };
+        });
+      }
+
+      if (external.factors && typeof external.factors === "object") {
+        Object.keys(merged.factors).forEach((k) => {
+          merged.factors[k] = { ...merged.factors[k], ...(external.factors[k] || {}) };
+        });
+      }
+
+      return merged;
+    }
+
+    async function loadPricingConfig() {
+      try {
+        const response = await fetch("pricing-config.json", { cache: "no-store" });
+        if (!response.ok) return;
+        const external = await response.json();
+        PRICING = mergePricingConfig(external);
+      } catch {
+        PRICING = mergePricingConfig(null);
+      }
+    }
+
+    ids.forEach((id) => {
+      const el = state[id];
+      if (!el) return;
+      el.addEventListener("input", render);
+      el.addEventListener("change", render);
+    });
+
+    document.getElementById("crm-submit-btn")?.addEventListener("click", sendScenarioToCrm);
+
+    loadPricingConfig().finally(render);
+  </script>
+</body>
+</html>

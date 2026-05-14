@@ -1,0 +1,26 @@
+{
+  "endpoint": "https://cloture-crm.onrender.com/api/public/estimate",
+  "annualRate": 0.079,
+  "depositRate": 0.35,
+  "rangeLow": 0.93,
+  "rangeHigh": 1.09,
+  "discountTiers": [
+    { "minLength": 180, "rate": 0.09 },
+    { "minLength": 120, "rate": 0.06 },
+    { "minLength": 75, "rate": 0.035 }
+  ],
+  "materials": {
+    "ornementale": { "materialPerFt": 54, "installPerFt": 39, "post": 88, "gateSmall": 750, "gateLarge": 1320, "minBase": 2800 },
+    "maille": { "materialPerFt": 24, "installPerFt": 20, "post": 54, "gateSmall": 390, "gateLarge": 730, "minBase": 1450 },
+    "intimite": { "materialPerFt": 46, "installPerFt": 35, "post": 81, "gateSmall": 860, "gateLarge": 1490, "minBase": 2400 },
+    "bois": { "materialPerFt": 34, "installPerFt": 29, "post": 66, "gateSmall": 560, "gateLarge": 990, "minBase": 1900 },
+    "pvc": { "materialPerFt": 42, "installPerFt": 33, "post": 74, "gateSmall": 640, "gateLarge": 1160, "minBase": 2150 }
+  },
+  "factors": {
+    "height": { "48": 0.9, "60": 1.0, "72": 1.16, "84": 1.34 },
+    "terrain": { "easy": 0.95, "standard": 1.0, "hard": 1.12, "rocky": 1.25 },
+    "region": { "montreal": 1.0, "laval": 1.03, "rive-nord": 1.05, "rive-sud": 1.04, "quebec": 1.07, "autre": 1.12 },
+    "urgency": { "normal": 1.0, "priority": 1.08, "express": 1.16 },
+    "season": { "spring": 1.03, "summer": 1.06, "autumn": 1.0, "winter": 1.08 }
+  }
+}
