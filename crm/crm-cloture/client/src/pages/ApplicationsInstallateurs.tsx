@@ -204,9 +204,13 @@ export function ApplicationsInstallateurs() {
       <PageHeader
         title={isFr ? "Applications installateurs" : "Installer Applications"}
         subtitle={isFr ? "Candidatures reçues depuis le site web" : "Applications received from the website"}
-        action={
+        leadingAction={
           <Button
             variant={showArchived ? "default" : "outline"}
+            size="sm"
+            className={showArchived
+              ? "h-9 border-amber-700 bg-amber-600 text-white shadow-md shadow-amber-200 hover:bg-amber-700 hover:text-white"
+              : "h-9 border-amber-500 bg-amber-50 text-amber-800 shadow-sm hover:bg-amber-100 hover:text-amber-900"}
             onClick={() => setShowArchived((v) => !v)}
           >
             {showArchived

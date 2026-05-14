@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 interface PageHeaderProps {
   title: string;
   description?: string;
+  leadingAction?: ReactNode;
   action?: ReactNode;
 }
 
-export function PageHeader({ title, description, action }: PageHeaderProps) {
+export function PageHeader({ title, description, leadingAction, action }: PageHeaderProps) {
   const { currentUser, role } = useRole();
   const { language } = useLanguage();
   const isEn = language === "en";
@@ -25,19 +26,22 @@ export function PageHeader({ title, description, action }: PageHeaderProps) {
 
   return (
     <div className="border-b border-border bg-card/50 backdrop-blur">
-      <div className="px-6 lg:px-8 py-5 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+      <div className="px-6 lg:px-8 py-5 flex flex-col gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="outline" className="text-[10px] uppercase tracking-[0.14em] font-semibold">
               {currentUser?.name || (isEn ? "Guest" : "Invité")} · {isEn ? (roleLabelsEn[role] || ROLES[role]) : ROLES[role]}
             </Badge>
+            {leadingAction && <div className="shrink-0">{leadingAction}</div>}
           </div>
-          <h1 data-testid="text-page-title" className="text-xl font-bold tracking-tight">{title}</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 data-testid="text-page-title" className="text-xl font-bold tracking-tight">{title}</h1>
+            {action && <div className="flex items-center gap-2 shrink-0">{action}</div>}
+          </div>
           {description && (
             <p className="text-[13px] text-muted-foreground mt-0.5 max-w-3xl">{description}</p>
           )}
         </div>
-        {action && <div className="flex items-center gap-2 shrink-0">{action}</div>}
       </div>
     </div>
   );
