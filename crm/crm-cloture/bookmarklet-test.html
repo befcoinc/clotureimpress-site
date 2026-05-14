@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bookmarklet Test - Simule Intimura</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { border-collapse: collapse; margin-top: 20px; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    .console { background: #1e1e1e; color: #0ff; padding: 10px; margin-top: 20px; font-family: monospace; max-height: 300px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>Test Bookmarklet Intimura</h1>
+  <p>Ceci simule une page Intimura avec des données de test.</p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Titre</th>
+        <th>Statut</th>
+        <th>Assigné</th>
+        <th>Montant</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a href="/app/quotes/12345abc-def0">12345abc-def0</a></td>
+        <td>Projet Fence - Montreal</td>
+        <td>En cours</td>
+        <td>John Doe</td>
+        <td>$2,500.00</td>
+        <td>2025-05-10</td>
+      </tr>
+      <tr>
+        <td><a href="/app/quotes/67890xyz-uvw9">67890xyz-uvw9</a></td>
+        <td>Réparation Clôture - Quebec</td>
+        <td>Signée</td>
+        <td>Jane Smith</td>
+        <td>$1,800.50</td>
+        <td>2025-05-08</td>
+      </tr>
+      <tr>
+        <td><a href="/app/quotes/11111aaa-bbb2">11111aaa-bbb2</a></td>
+        <td>Installation Complète - Ottawa</td>
+        <td>Devis</td>
+        <td>Bob Wilson</td>
+        <td>$5,200.00</td>
+        <td>2025-05-12</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <button onclick="testBookmarklet()">Exécuter le Bookmarklet</button>
+  <button onclick="clearConsole()">Effacer Console</button>
+  
+  <div class="console" id="console"></div>
+
+  <script>
+    // Redirect console.log to our div
+    const consoleDiv = document.getElementById('console');
+    const originalLog = console.log;
+    const originalError = console.error;
+    
+    console.log = function(...args) {
+      originalLog(...args);
+      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+      consoleDiv.innerHTML += msg + '\n';
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    };
+    
+    console.error = function(...args) {
+      originalError(...args);
+      const msg = '❌ ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+      consoleDiv.innerHTML += msg + '\n';
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    };
+
+    function testBookmarklet() {
+      console.log('[test] Starting bookmarklet simulation...');
+      
+      // Imitating the bookmarklet code
+      try {
+        console.log('[bookmarklet] Starting');
+        var t = document.querySelector('table');
+        console.log('[bookmarklet] table found:', !!t);
+        
+        if (!t) {
+          alert('Aucun tableau trouve sur cette page. Va sur la liste des quotes Intimura.');
+          return;
+        }
+        
+        var heads = [].slice.call(t.querySelectorAll('thead th, thead td')).map(function(h) {
+          return (h.textContent || '').trim().toLowerCase();
+        });
+        console.log('[bookmarklet] headers:', heads.length, heads);
+        
+        var trs = t.querySelectorAll('tbody tr');
+        var rows = [];
+        trs.forEach(function(tr) {
+          var tds = tr.querySelectorAll('td');
+          if (!tds.length) return;
+          var o = {};
+          tds.forEach(function(td, j) {
+            var key = heads[j] || ('col' + j);
+            o[key] = (td.textContent || '').trim();
+          });
+          var link = tr.querySelector('a[href]');
+          if (link) {
+            var href = link.getAttribute('href') || '';
+            o._href = href;
+            var m = href.match(/([0-9a-fA-F-]{8,})/);
+            if (m) {
+              o._id = m[1];
+            } else {
+              var n = href.match(/(\d{2,})/);
+              if (n) o._id = n[1];
+            }
+          }
+          rows.push(o);
+        });
+        
+        console.log('[bookmarklet] rows collected:', rows.length);
+        console.log('[bookmarklet] first row:', rows[0]);
+        
+        if (!rows.length) {
+          alert('Le tableau est vide ou les lignes n ont pas pu etre lues.');
+          return;
+        }
+        
+        var payload = JSON.stringify(rows);
+        console.log('[bookmarklet] payload size:', payload.length);
+        
+        if (payload.length - 1900000 === Math.abs(payload.length - 1900000) && payload.length !== 1900000) {
+          alert('Trop de donnees pour un seul transfert. Filtre la liste sur Intimura.');
+          return;
+        }
+        
+        console.log('[bookmarklet] setting localStorage...');
+        localStorage.setItem('intimura_token', 'TEST_TOKEN_12345');
+        localStorage.setItem('intimura_payload', payload);
+        
+        console.log('[bookmarklet] localStorage set:');
+        console.log('  - token:', localStorage.getItem('intimura_token'));
+        console.log('  - payload length:', localStorage.getItem('intimura_payload').length);
+        console.log('  - payload preview:', localStorage.getItem('intimura_payload').substring(0, 100) + '...');
+        
+        console.log('[bookmarklet] SUCCESS! Données prêtes pour transmission.');
+        console.log('Onglet CRM devrait récupérer les données de localStorage maintenant.');
+        
+      } catch (e) {
+        console.error('[bookmarklet] Error:', e.message, e.stack);
+        alert('Erreur bookmarklet: ' + (e && e.message ? e.message : e));
+      }
+    }
+
+    function clearConsole() {
+      consoleDiv.innerHTML = '';
+    }
+
+    // Log localStorage contents on load
+    window.addEventListener('load', function() {
+      console.log('[test] Page loaded');
+      console.log('[test] localStorage contents:', Object.keys(localStorage));
+    });
+  </script>
+</body>
+</html>

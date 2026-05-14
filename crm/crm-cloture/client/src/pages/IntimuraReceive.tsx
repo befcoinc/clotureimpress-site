@@ -23,28 +23,83 @@ export function IntimuraReceive() {
   useEffect(() => {
     (async () => {
       try {
-        // Retrieve token and payload from localStorage set by the bookmarklet
-        const token = localStorage.getItem("intimura_token") || "";
-        const dataRaw = localStorage.getItem("intimura_payload") || "";
-        // Clean up immediately so refresh doesn't reprocess
+        // Extract data from URL hash instead of localStorage
+        // Format: #/intimura-receive?data=BASE64_ENCODED_JSON&token=TOKEN
+        const hash = window.location.hash;
+        const dataMatch = hash.match(/[?&]data=([^&]+)/);
+        const tokenMatch = hash.match(/[?&]token=([^&]+)/);
+        
+        console.log("[IntimuraReceive] hash:", hash.substring(0, 200));
+        
+        let token = "";
+        let dataRaw = "";
+        
+        if (dataMatch && tokenMatch) {
+          // URL hash method (preferred)
+          console.log("[IntimuraReceive] Reading from URL hash");
+          dataRaw = atob(decodeURIComponent(dataMatch[1]));
+          token = decodeURIComponent(tokenMatch[1]);
+        } else {
+          // Fallback to localStorage (legacy)
+          console.log("[IntimuraReceive] Trying localStorage (legacy)");
+          token = localStorage.getItem("intimura_token") || "";
+          dataRaw = localStorage.getItem("intimura_payload") || "";
+        }
+        
+        console.log("[IntimuraReceive] token:", token ? token.slice(0, 16) + "..." : "MISSING");
+        console.log("[IntimuraReceive] dataRaw length:", dataRaw.length, "bytes");
+        
+        // Clean up localStorage if it was used
         localStorage.removeItem("intimura_token");
         localStorage.removeItem("intimura_payload");
 
-        if (!token || !dataRaw) {
+        if (!token || !dataRaw || token === "MISSING" || dataRaw === "MISSING") {
           setStatus("error");
-          setResult({ message: "Donnees manquantes. Le bookmarklet n'a pas transmis les informations correctement." });
+          setResult({ message: "Donnees manquantes. Le bookmarklet n'a pas transmis les informations correctement. Hash: " + window.location.hash.substring(0, 100) });
           return;
         }
         let payload: any;
         try {
           payload = JSON.parse(dataRaw);
-        } catch {
+                // Extract data from URL hash instead of localStorage
+                // Format: #/intimura-receive?data=BASE64_ENCODED_JSON&token=TOKEN
+                const hash = window.location.hash;
+                const match = hash.match(/[?&]data=([^&]+)/) && hash.match(/[?&]token=([^&]+)/);
+                if (!match) {
+                  // Try old localStorage method for backwards compatibility
+                  const token = localStorage.getItem("intimura_token") || "MISSING";
+                  const dataRaw = localStorage.getItem("intimura_payload") || "MISSING";
+                  localStorage.removeItem("intimura_token");
+                  localStorage.removeItem("intimura_payload");
+                  console.log("[IntimuraReceive] Using localStorage (legacy)");
+                }
+      
+                const dataMatch = hash.match(/[?&]data=([^&]+)/);
+                const tokenMatch = hash.match(/[?&]token=([^&]+)/);
+      
+                if (!dataMatch || !tokenMatch) {
+                  setStatus("error");
+                  setResult({ message: "Donnees manquantes dans l'URL. Hash: " + hash.substring(0, 100) });
+                  return;
+                }
+      
+                try {
+                  // Decode base64
+                  const dataRaw = atob(decodeURIComponent(dataMatch[1]));
+                  const token = decodeURIComponent(tokenMatch[1]);
+                  console.log("[IntimuraReceive] Reading from URL hash");
+                  console.log("[IntimuraReceive] token:", token ? token.slice(0, 16) + "..." : "MISSING");
+                  console.log("[IntimuraReceive] dataRaw length:", dataRaw.length, "bytes");
+          console.log("[IntimuraReceive] Parsed payload, rows:", Array.isArray(payload) ? payload.length : "not-array");
+        } catch (e) {
+          console.error("[IntimuraReceive] JSON parse error:", e);
           setStatus("error");
           setResult({ message: "Données illisibles (JSON invalide)." });
           return;
         }
         setRowCount(Array.isArray(payload) ? payload.length : 0);
 
+        console.log("[IntimuraReceive] Posting to /api/intimura/ingest...");
         const r = await fetch(
           `/api/intimura/ingest?token=${encodeURIComponent(token)}`,
           {
@@ -54,6 +109,7 @@ export function IntimuraReceive() {
           }
         );
         const j = await r.json().catch(() => ({}));
+        console.log("[IntimuraReceive] Response:", r.status, j);
         if (r.ok) {
           setStatus("ok");
           setResult(j);
@@ -62,6 +118,7 @@ export function IntimuraReceive() {
           setResult(j);
         }
       } catch (e: any) {
+        console.error("[IntimuraReceive] Error:", e);
         setStatus("error");
         setResult({ message: e?.message || "Erreur inconnue" });
       }
