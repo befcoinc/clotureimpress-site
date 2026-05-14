@@ -262,12 +262,9 @@ export function ApplicationsInstallateurs() {
                     </Button>
                   </div>
                   {showFicheData && selected.ficheData && (
-                    <pre className="mt-3 max-h-72 overflow-auto rounded bg-white p-2 text-xs whitespace-pre-wrap break-all">
-                      {(() => {
-                        try { return JSON.stringify(JSON.parse(selected.ficheData), null, 2); }
-                        catch { return selected.ficheData; }
-                      })()}
-                    </pre>
+                    <div className="mt-3 max-h-[60vh] overflow-auto rounded bg-white p-3 text-sm">
+                      <FicheRenderer raw={selected.ficheData} isFr={isFr} />
+                    </div>
                   )}
                 </div>
               )}
@@ -357,6 +354,234 @@ export function ApplicationsInstallateurs() {
           </DialogContent>
         )}
       </Dialog>
+    </div>
+  );
+}
+
+// ---------- Fiche renderer (structured view of submitted form data) ----------
+
+const PRICING_LABELS = [
+  "Maille de chaîne",
+  "Ornementale",
+  "Bois",
+  "Vinyle",
+  "Commerciale",
+  "Industrielle",
+  "Portails",
+  "Composite fibre/aluminium",
+  "Clôture de verre",
+  "Autres",
+];
+
+function yesNo(d: any, yesKey: string, noKey: string, isFr: boolean): string {
+  if (d?.[yesKey]) return isFr ? "Oui" : "Yes";
+  if (d?.[noKey]) return isFr ? "Non" : "No";
+  return "—";
+}
+
+function val(v: any): string {
+  if (v == null) return "—";
+  const s = String(v).trim();
+  return s ? s : "—";
+}
+
+function FicheSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="border rounded-md mb-3 overflow-hidden">
+      <div className="bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-700 border-b">
+        {title}
+      </div>
+      <div className="p-3">{children}</div>
+    </div>
+  );
+}
+
+function FicheGrid({ rows }: { rows: { label: string; value: string }[] }) {
+  return (
+    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+      {rows.map((r) => (
+        <div key={r.label} className="min-w-0">
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{r.label}</p>
+          <p className="font-medium text-sm break-words">{r.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FicheRenderer({ raw, isFr }: { raw: string; isFr: boolean }) {
+  let d: any;
+  try {
+    d = JSON.parse(raw);
+  } catch {
+    return <pre className="text-xs whitespace-pre-wrap break-all">{raw}</pre>;
+  }
+
+  const provinces: string[] = [];
+  if (d.province_qc) provinces.push("QC");
+  if (d.province_on) provinces.push("ON");
+  if (d.province_ab) provinces.push("AB");
+  if (d.province_bc) provinces.push("BC");
+  if (d.province_autres) provinces.push(isFr ? "Autres" : "Other");
+
+  const equipements: string[] = [];
+  const eqMap: Record<string, string> = {
+    eq_tariere: "Tarière",
+    eq_excavatrice: "Mini-excavatrice",
+    eq_betonniere: "Bétonnière",
+    eq_coupe: "Outils de coupe",
+    eq_soudeuse: "Soudeuse",
+    eq_laser: "Niveau laser",
+    eq_securite: "Équipement de sécurité",
+    eq_autres: "Autres",
+  };
+  for (const k of Object.keys(eqMap)) if (d[k]) equipements.push(eqMap[k]);
+
+  const pricingRows = PRICING_LABELS.map((label, i) => ({
+    label,
+    offered: !!d[`pricing${i}_offered`],
+    rate: val(d[`pricing${i}_rate`]),
+    notes: val(d[`pricing${i}_notes`]),
+  }));
+
+  const refs = [1, 2, 3].map((n) => ({
+    company: val(d[`ref${n}_company`]),
+    contact: val(d[`ref${n}_contact`]),
+    phone: val(d[`ref${n}_phone`]),
+    project: val(d[`ref${n}_project`]),
+  })).filter((r) => r.company !== "—" || r.contact !== "—" || r.phone !== "—");
+
+  return (
+    <div>
+      <FicheSection title={isFr ? "1. Identification de l'entreprise" : "1. Company"}>
+        <FicheGrid rows={[
+          { label: isFr ? "Raison sociale" : "Legal name", value: val(d.companyLegalName) },
+          { label: isFr ? "Nom commercial" : "Trade name", value: val(d.companyTradeName) },
+          { label: isFr ? "Responsable" : "Contact", value: val(d.contactName) },
+          { label: "Email", value: val(d.email) },
+          { label: isFr ? "Téléphone principal" : "Phone", value: val(d.phonePrimary) },
+          { label: isFr ? "Téléphone secondaire" : "Phone 2", value: val(d.phoneSecondary) },
+          { label: isFr ? "Adresse" : "Address", value: val(d.address) },
+          { label: isFr ? "Ville" : "City", value: val(d.city) },
+          { label: "Province", value: val(d.province) },
+          { label: isFr ? "Code postal" : "Postal", value: val(d.postalCode) },
+          { label: "NEQ", value: val(d.neq) },
+          { label: isFr ? "Site web" : "Website", value: val(d.website) },
+        ]} />
+      </FicheSection>
+
+      <FicheSection title={isFr ? "2. Territoire et heatmap" : "2. Territory & heatmap"}>
+        <FicheGrid rows={[
+          { label: isFr ? "Régions desservies" : "Regions", value: val(d.regions) },
+          { label: isFr ? "Rayon (km)" : "Radius (km)", value: val(d.radiusKm) },
+          { label: isFr ? "Code postal heatmap" : "Heatmap postal code", value: val(d.postalCodeHeatmap) },
+          { label: isFr ? "Hors région" : "Outside region", value: yesNo(d, "hors_region_oui", "hors_region_non", isFr) },
+          { label: isFr ? "Provinces acceptées" : "Provinces", value: provinces.length ? provinces.join(", ") : "—" },
+        ]} />
+      </FicheSection>
+
+      <FicheSection title={isFr ? "3. Expérience et tarification" : "3. Experience & pricing"}>
+        <FicheGrid rows={[
+          { label: isFr ? "Années d'expérience" : "Years of experience", value: val(d.yearsExperience) },
+          { label: isFr ? "Nb installateurs" : "Installers", value: val(d.installersCount) },
+          { label: isFr ? "Nb équipes" : "Teams", value: val(d.teamsCount) },
+          { label: isFr ? "Capacité / semaine" : "Weekly capacity", value: val(d.capacityWeek) },
+          { label: isFr ? "Spécialités" : "Specialties", value: val(d.specialties) },
+        ]} />
+        <div className="mt-3">
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
+            {isFr ? "Tarification (au pied linéaire)" : "Pricing (per linear foot)"}
+          </p>
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-100 text-left">
+                <th className="px-2 py-1 border">{isFr ? "Type" : "Type"}</th>
+                <th className="px-2 py-1 border">{isFr ? "Offert" : "Offered"}</th>
+                <th className="px-2 py-1 border">{isFr ? "Tarif" : "Rate"}</th>
+                <th className="px-2 py-1 border">{isFr ? "Notes" : "Notes"}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pricingRows.map((r) => (
+                <tr key={r.label} className={r.offered ? "" : "text-muted-foreground"}>
+                  <td className="px-2 py-1 border">{r.label}</td>
+                  <td className="px-2 py-1 border">{r.offered ? (isFr ? "Oui" : "Yes") : "—"}</td>
+                  <td className="px-2 py-1 border">{r.rate}</td>
+                  <td className="px-2 py-1 border">{r.notes}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </FicheSection>
+
+      <FicheSection title={isFr ? "4. Équipement et véhicules" : "4. Equipment & vehicles"}>
+        <FicheGrid rows={[
+          { label: isFr ? "Camions / remorques" : "Vehicles", value: val(d.vehicles) },
+          { label: isFr ? "Équipements" : "Equipment", value: equipements.length ? equipements.join(", ") : "—" },
+          { label: isFr ? "Transport matériaux" : "Material transport", value: yesNo(d, "transport_oui", "transport_non", isFr) },
+        ]} />
+      </FicheSection>
+
+      <FicheSection title={isFr ? "5. Conformité et assurances" : "5. Compliance & insurance"}>
+        <FicheGrid rows={[
+          { label: isFr ? "Assurance RC" : "Liability insurance", value: yesNo(d, "assur_oui", "assur_non", isFr) },
+          { label: isFr ? "Assureur" : "Insurer", value: val(d.insurerName) },
+          { label: isFr ? "Police" : "Policy #", value: val(d.insurerPolicy) },
+          { label: isFr ? "Couverture" : "Coverage", value: val(d.insurerCoverage) },
+          { label: isFr ? "Expiration" : "Expiry", value: val(d.insurerExpiry) },
+          { label: "CNESST / WCB", value: yesNo(d, "cnesst_oui", "cnesst_non", isFr) },
+          { label: isFr ? "Dossier CNESST" : "CNESST file", value: val(d.cnesstFile) },
+          { label: "RBQ", value: val(d.rbq) },
+          { label: "TPS", value: val(d.tps) },
+          { label: "TVQ / TVH", value: val(d.tvq) },
+        ]} />
+      </FicheSection>
+
+      <FicheSection title={isFr ? "6. Disponibilité" : "6. Availability"}>
+        <FicheGrid rows={[
+          { label: isFr ? "Dispo immédiate" : "Available now", value: yesNo(d, "dispo_oui", "dispo_non", isFr) },
+          { label: isFr ? "Date de disponibilité" : "Available from", value: val(d.dispoDate) },
+          { label: isFr ? "Préavis requis" : "Notice required", value: val(d.dispoNotice) },
+          { label: isFr ? "Commentaires" : "Comments", value: val(d.dispoComments) },
+        ]} />
+      </FicheSection>
+
+      {refs.length > 0 && (
+        <FicheSection title={isFr ? "7. Références" : "7. References"}>
+          <div className="space-y-2">
+            {refs.map((r, i) => (
+              <div key={i} className="border rounded p-2">
+                <p className="text-xs font-semibold mb-1">{(isFr ? "Référence " : "Reference ") + (i + 1)}</p>
+                <FicheGrid rows={[
+                  { label: isFr ? "Entreprise" : "Company", value: r.company },
+                  { label: isFr ? "Contact" : "Contact", value: r.contact },
+                  { label: isFr ? "Téléphone" : "Phone", value: r.phone },
+                  { label: isFr ? "Projet" : "Project", value: r.project },
+                ]} />
+              </div>
+            ))}
+          </div>
+        </FicheSection>
+      )}
+
+      <FicheSection title={isFr ? "8. Engagement" : "8. Commitments"}>
+        <FicheGrid rows={[
+          { label: isFr ? "Standards qualité / délais / sécurité" : "Quality / deadlines / safety", value: yesNo(d, "eng_qual_oui", "eng_qual_non", isFr) },
+          { label: isFr ? "Photos avant / après" : "Before/after photos", value: yesNo(d, "eng_photo_oui", "eng_photo_non", isFr) },
+          { label: isFr ? "Outil de suivi de chantier" : "Job tracking tool", value: yesNo(d, "eng_suivi_oui", "eng_suivi_non", isFr) },
+          { label: isFr ? "Commentaires" : "Comments", value: val(d.comments) },
+        ]} />
+      </FicheSection>
+
+      <FicheSection title={isFr ? "9. Signature" : "9. Signature"}>
+        <FicheGrid rows={[
+          { label: isFr ? "Nom du signataire" : "Signer name", value: val(d.sigName) },
+          { label: isFr ? "Fonction" : "Role", value: val(d.sigRole) },
+          { label: "Date", value: val(d.sigDate) },
+          { label: isFr ? "Signature (texte)" : "Signature (text)", value: val(d.sigText) },
+        ]} />
+      </FicheSection>
     </div>
   );
 }

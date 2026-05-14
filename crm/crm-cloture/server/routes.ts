@@ -1252,16 +1252,34 @@ export async function registerRoutes(
         return res.status(409).json({ error: "Un compte existe déjà pour ce courriel." });
       }
 
+      // Pre-fill from the submitted fiche when available so the heatmap and
+      // territory fields of the installer record are populated automatically.
+      let ficheParsed: any = null;
+      if (app.ficheData) {
+        try { ficheParsed = JSON.parse(app.ficheData); } catch { ficheParsed = null; }
+      }
+      const heatmapPostal = String(ficheParsed?.postalCodeHeatmap || "").trim();
+      const ficheRegions = String(ficheParsed?.regions || "").trim();
+      const region = heatmapPostal || ficheRegions || app.regions || null;
+      // Build a cities JSON array from the regions string ("Montréal, Laval, Longueuil")
+      const citiesArr = ficheRegions
+        ? ficheRegions.split(/[,;|\/]+/).map((s) => s.trim()).filter(Boolean)
+        : [];
+      const cities = citiesArr.length ? JSON.stringify(citiesArr) : null;
+
       // Create installer user
       const newUser = await storage.createUser({
         name: app.contactName,
         email: app.email,
         role: "installer",
         phone: app.phone,
-        region: app.regions || null,
+        region,
+        cities,
         active: true,
       });
-      await storage.setInstallerProfileCompleted(newUser.id, false);
+      // Mark profile as already completed when fiche has been submitted —
+      // they don't need to fill the in-app profile form again.
+      await storage.setInstallerProfileCompleted(newUser.id, !!app.ficheCompletedAt);
 
       // Send invite
       const token = randomBytes(32).toString("hex");
