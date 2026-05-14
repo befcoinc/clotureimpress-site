@@ -44,16 +44,19 @@ export function Secteurs() {
   }, [activeLeads, quotes]);
 
   const bySector = useMemo(() => {
-    const map = new Map<string, { count: number; value: number; quotes: number; province: string }>();
+    const map = new Map<string, { label: string; count: number; value: number; quotes: number; province: string }>();
+    const fallback = isEn ? "Unclassified" : "Non classé";
     for (const l of activeLeads) {
-      const key = l.sector || (isEn ? "Unclassified" : "Non classé");
-      const cur = map.get(key) || { count: 0, value: 0, quotes: 0, province: l.province || "?" };
+      const label = l.sector || fallback;
+      const key = normalizeForSearch(label) || fallback.toLowerCase();
+      const cur = map.get(key) || { label, count: 0, value: 0, quotes: 0, province: l.province || "?" };
       cur.count += 1; cur.value += l.estimatedValue || 0;
       map.set(key, cur);
     }
     for (const q of quotes) {
-      const key = q.sector || (isEn ? "Unclassified" : "Non classé");
-      const cur = map.get(key) || { count: 0, value: 0, quotes: 0, province: q.province || "?" };
+      const label = q.sector || fallback;
+      const key = normalizeForSearch(label) || fallback.toLowerCase();
+      const cur = map.get(key) || { label, count: 0, value: 0, quotes: 0, province: q.province || "?" };
       cur.quotes += 1;
       map.set(key, cur);
     }
@@ -217,7 +220,7 @@ export function Secteurs() {
                 {bySector.map(([sector, info]) => (
                   <li key={sector} className="flex items-center justify-between gap-3 rounded-md border border-card-border bg-card p-2.5 hover-elevate">
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium text-[12px] truncate">{sector}</div>
+                      <div className="font-medium text-[12px] truncate">{info.label}</div>
                       <div className="text-[10px] text-muted-foreground">{info.count} lead(s) · {info.quotes} {isEn ? "quote(s)" : "soumission(s)"}</div>
                     </div>
                     <div className="text-right">
