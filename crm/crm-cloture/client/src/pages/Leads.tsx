@@ -116,6 +116,8 @@ export function Leads() {
     },
   });
 
+  const isAdmin = currentUser?.role === "admin";
+
   // Handler pour aller à la page de setup du bookmarklet
   const handleGoToBookmarkletSetup = () => {
     if (typeof window !== "undefined") {
