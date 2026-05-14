@@ -220,8 +220,8 @@
   <div class="shell">
     <header class="head">
       <div>
-        <h1 data-i18n="title">Fiche representant</h1>
-        <p data-i18n="subtitle">Completez ce formulaire pour finaliser votre candidature.</p>
+        <h1 data-i18n="title">Fiche représentant</h1>
+        <p data-i18n="subtitle">Complétez ce formulaire pour finaliser votre candidature.</p>
       </div>
       <button type="button" class="lang-toggle" id="lang-toggle">EN</button>
     </header>
@@ -232,72 +232,72 @@
       <form id="rep-form">
         <section class="section">
           <h2 data-i18n="sec.personal">Informations personnelles</h2>
-          <p class="help" data-i18n="sec.personal.help">Equivalent au formulaire d informations personnelles de la trousse embauche.</p>
+          <p class="help" data-i18n="sec.personal.help">Équivalent au formulaire d'informations personnelles de la trousse d'embauche.</p>
           <div class="grid">
-            <div><label data-i18n="f.companyLegalName">Nom legal complet / Raison sociale</label><input name="companyLegalName" /></div>
-            <div><label data-i18n="f.contactName">Nom du representant</label><input name="contactName" /></div>
-            <div><label data-i18n="f.address">Adresse complete</label><input name="address" /></div>
+            <div><label data-i18n="f.companyLegalName">Nom légal complet / raison sociale</label><input name="companyLegalName" /></div>
+            <div><label data-i18n="f.contactName">Nom du représentant</label><input name="contactName" /></div>
+            <div><label data-i18n="f.address">Adresse complète</label><input name="address" /></div>
             <div><label data-i18n="f.cityProvince">Ville / Province</label><input name="cityProvince" /></div>
             <div><label data-i18n="f.postalCode">Code postal</label><input name="postalCode" /></div>
-            <div><label data-i18n="f.phonePrimary">Telephone cellulaire</label><input name="phonePrimary" /></div>
+            <div><label data-i18n="f.phonePrimary">Téléphone cellulaire</label><input name="phonePrimary" /></div>
             <div><label data-i18n="f.email">Courriel</label><input name="email" type="email" /></div>
             <div><label data-i18n="f.dateOfBirth">Date de naissance</label><input name="dateOfBirth" type="date" /></div>
-            <div><label data-i18n="f.sin">Numero assurance sociale (si requis)</label><input name="sin" /></div>
-            <div><label data-i18n="f.emergencyContactName">Nom contact urgence</label><input name="emergencyContactName" /></div>
-            <div><label data-i18n="f.emergencyContactRelationship">Relation contact urgence</label><input name="emergencyContactRelationship" /></div>
-            <div><label data-i18n="f.emergencyContactPhone">Telephone contact urgence</label><input name="emergencyContactPhone" /></div>
-            <div><label data-i18n="f.vehicle">Marque / Modele / Annee vehicule</label><input name="vehicle" /></div>
-            <div><label data-i18n="f.vehiclePlate">Plaque vehicule</label><input name="vehiclePlate" /></div>
+            <div><label data-i18n="f.sin">Numéro d'assurance sociale (si requis)</label><input name="sin" /></div>
+            <div><label data-i18n="f.emergencyContactName">Nom du contact d'urgence</label><input name="emergencyContactName" /></div>
+            <div><label data-i18n="f.emergencyContactRelationship">Lien avec le contact d'urgence</label><input name="emergencyContactRelationship" /></div>
+            <div><label data-i18n="f.emergencyContactPhone">Téléphone du contact d'urgence</label><input name="emergencyContactPhone" /></div>
+            <div><label data-i18n="f.vehicle">Marque / modèle / année du véhicule</label><input name="vehicle" /></div>
+            <div><label data-i18n="f.vehiclePlate">Plaque du véhicule</label><input name="vehiclePlate" /></div>
             <div><label data-i18n="f.bank">Institution bancaire</label><input name="bankInstitution" /></div>
             <div>
-              <label data-i18n="f.voidCheque">Specimen de cheque joint</label>
+              <label data-i18n="f.voidCheque">Spécimen de chèque fourni</label>
               <select name="voidChequeAttached">
                 <option value="">-</option>
                 <option value="yes" data-i18n="yes">Oui</option>
                 <option value="no" data-i18n="no">Non</option>
               </select>
             </div>
-            <div><label data-i18n="f.regions">Regions desservies</label><input name="regions" /></div>
-            <div><label data-i18n="f.yearsExperience">Annees d experience</label><input name="yearsExperience" /></div>
-            <div class="full"><label data-i18n="f.salesExperience">Experience vente (B2B/B2C)</label><input name="salesExperience" /></div>
-            <div class="full"><label data-i18n="f.specialties">Specialites / type de clientele</label><textarea name="specialties"></textarea></div>
+            <div><label data-i18n="f.regions">Régions desservies</label><input name="regions" /></div>
+            <div><label data-i18n="f.yearsExperience">Années d'expérience</label><input name="yearsExperience" /></div>
+            <div class="full"><label data-i18n="f.salesExperience">Expérience en vente (B2B/B2C)</label><input name="salesExperience" /></div>
+            <div class="full"><label data-i18n="f.specialties">Spécialités / type de clientèle</label><textarea name="specialties"></textarea></div>
           </div>
         </section>
 
         <section class="section">
-          <h2 data-i18n="sec.commission">Acceptation commission et engagement</h2>
-          <p class="help" data-i18n="sec.commission.help">Reprise des clauses du formulaire PDF.</p>
+          <h2 data-i18n="sec.commission">Acceptation de la commission et engagement</h2>
+          <p class="help" data-i18n="sec.commission.help">Cette section reprend les clauses du formulaire PDF.</p>
           <div class="policy" id="policy-text"></div>
           <div class="grid" style="margin-top:12px;">
-            <div><label data-i18n="f.repName">Nom representant</label><input name="repName" /></div>
-            <div><label data-i18n="f.repSignature">Signature representant</label><input name="repSignature" placeholder="Nom complet" /></div>
+            <div><label data-i18n="f.repName">Nom du représentant</label><input name="repName" /></div>
+            <div><label data-i18n="f.repSignature">Signature du représentant</label><input name="repSignature" placeholder="Nom complet" /></div>
             <div><label data-i18n="f.managementSignature">Signature direction (optionnel)</label><input name="managementSignature" /></div>
             <div><label data-i18n="f.signatureDate">Date</label><input name="signatureDate" type="date" /></div>
             <div class="full">
-              <label data-i18n="f.commitmentAccepted">Engagement confirme</label>
+              <label data-i18n="f.commitmentAccepted">Engagement confirmé</label>
               <div class="chips">
-                <label><input type="checkbox" name="commitmentAccepted" value="yes" /> <span data-i18n="f.commitmentLabel">Je reconnais avoir recu, lu et compris la trousse et les procedures.</span></label>
+                <label><input type="checkbox" name="commitmentAccepted" value="yes" /> <span data-i18n="f.commitmentLabel">Je reconnais avoir reçu, lu et compris la trousse et les procédures.</span></label>
               </div>
             </div>
           </div>
         </section>
 
         <section class="section">
-          <h2 data-i18n="sec.checklist">Checklist administrative</h2>
-          <p class="help" data-i18n="sec.checklist.help">Validation rapide avant activation complete.</p>
+          <h2 data-i18n="sec.checklist">Liste de vérification administrative</h2>
+          <p class="help" data-i18n="sec.checklist.help">Validation rapide avant activation complète.</p>
           <div class="checklist">
-            <label><input type="checkbox" name="cl_personalForm" /> <span data-i18n="cl.personalForm">Formulaire personnel complete</span></label>
-            <label><input type="checkbox" name="cl_sinSecure" /> <span data-i18n="cl.sinSecure">NAS recueilli seulement si requis et conserve de facon securisee</span></label>
-            <label><input type="checkbox" name="cl_voidCheque" /> <span data-i18n="cl.voidCheque">Specimen de cheque recu</span></label>
-            <label><input type="checkbox" name="cl_emergencyContact" /> <span data-i18n="cl.emergencyContact">Contact d urgence complet</span></label>
-            <label><input type="checkbox" name="cl_vehiclePlate" /> <span data-i18n="cl.vehiclePlate">Plaque du vehicule inscrite</span></label>
-            <label><input type="checkbox" name="cl_driverLicense" /> <span data-i18n="cl.driverLicense">Permis de conduire valide verifie</span></label>
-            <label><input type="checkbox" name="cl_vehicleInsurance" /> <span data-i18n="cl.vehicleInsurance">Assurance vehicule verifiee si requis</span></label>
-            <label><input type="checkbox" name="cl_commissionPolicy" /> <span data-i18n="cl.commissionPolicy">Politique de commission signee</span></label>
-            <label><input type="checkbox" name="cl_ackSigned" /> <span data-i18n="cl.ackSigned">Accuse de reception signe</span></label>
-            <label><input type="checkbox" name="cl_productTraining" /> <span data-i18n="cl.productTraining">Formation produit completee</span></label>
-            <label><input type="checkbox" name="cl_scriptTraining" /> <span data-i18n="cl.scriptTraining">Formation script completee</span></label>
-            <label><input type="checkbox" name="cl_crmAccess" /> <span data-i18n="cl.crmAccess">Acces CRM attribue</span></label>
+            <label><input type="checkbox" name="cl_personalForm" /> <span data-i18n="cl.personalForm">Formulaire personnel complété</span></label>
+            <label><input type="checkbox" name="cl_sinSecure" /> <span data-i18n="cl.sinSecure">NAS recueilli seulement si requis et conservé de façon sécurisée</span></label>
+            <label><input type="checkbox" name="cl_voidCheque" /> <span data-i18n="cl.voidCheque">Spécimen de chèque reçu</span></label>
+            <label><input type="checkbox" name="cl_emergencyContact" /> <span data-i18n="cl.emergencyContact">Contact d'urgence complet</span></label>
+            <label><input type="checkbox" name="cl_vehiclePlate" /> <span data-i18n="cl.vehiclePlate">Plaque du véhicule inscrite</span></label>
+            <label><input type="checkbox" name="cl_driverLicense" /> <span data-i18n="cl.driverLicense">Permis de conduire valide vérifié</span></label>
+            <label><input type="checkbox" name="cl_vehicleInsurance" /> <span data-i18n="cl.vehicleInsurance">Assurance véhicule vérifiée si requis</span></label>
+            <label><input type="checkbox" name="cl_commissionPolicy" /> <span data-i18n="cl.commissionPolicy">Politique de commission signée</span></label>
+            <label><input type="checkbox" name="cl_ackSigned" /> <span data-i18n="cl.ackSigned">Accusé de réception signé</span></label>
+            <label><input type="checkbox" name="cl_productTraining" /> <span data-i18n="cl.productTraining">Formation produit complétée</span></label>
+            <label><input type="checkbox" name="cl_scriptTraining" /> <span data-i18n="cl.scriptTraining">Formation script complétée</span></label>
+            <label><input type="checkbox" name="cl_crmAccess" /> <span data-i18n="cl.crmAccess">Accès CRM attribué</span></label>
           </div>
           <div class="grid" style="margin-top:12px;">
             <div class="full"><label data-i18n="f.comments">Commentaires</label><textarea name="comments"></textarea></div>
@@ -327,63 +327,63 @@
 
       const I18N = {
         fr: {
-          title: "Fiche representant",
-          subtitle: "Completez ce formulaire pour finaliser votre candidature.",
+          title: "Fiche représentant",
+          subtitle: "Complétez ce formulaire pour finaliser votre candidature.",
           "sec.personal": "Informations personnelles",
-          "sec.personal.help": "Equivalent au formulaire d informations personnelles de la trousse embauche.",
-          "sec.commission": "Acceptation commission et engagement",
-          "sec.commission.help": "Reprise des clauses du formulaire PDF.",
-          "sec.checklist": "Checklist administrative",
-          "sec.checklist.help": "Validation rapide avant activation complete.",
+          "sec.personal.help": "Équivalent au formulaire d'informations personnelles de la trousse d'embauche.",
+          "sec.commission": "Acceptation de la commission et engagement",
+          "sec.commission.help": "Cette section reprend les clauses du formulaire PDF.",
+          "sec.checklist": "Liste de vérification administrative",
+          "sec.checklist.help": "Validation rapide avant activation complète.",
           yes: "Oui",
           no: "Non",
           "btn.save": "Sauvegarder",
           "btn.submit": "Soumettre la fiche",
-          "f.companyLegalName": "Nom legal complet / Raison sociale",
-          "f.contactName": "Nom du representant",
-          "f.address": "Adresse complete",
+          "f.companyLegalName": "Nom légal complet / raison sociale",
+          "f.contactName": "Nom du représentant",
+          "f.address": "Adresse complète",
           "f.cityProvince": "Ville / Province",
           "f.postalCode": "Code postal",
-          "f.phonePrimary": "Telephone cellulaire",
+          "f.phonePrimary": "Téléphone cellulaire",
           "f.email": "Courriel",
           "f.dateOfBirth": "Date de naissance",
-          "f.sin": "Numero assurance sociale (si requis)",
-          "f.emergencyContactName": "Nom contact urgence",
-          "f.emergencyContactRelationship": "Relation contact urgence",
-          "f.emergencyContactPhone": "Telephone contact urgence",
-          "f.vehicle": "Marque / Modele / Annee vehicule",
-          "f.vehiclePlate": "Plaque vehicule",
+          "f.sin": "Numéro d'assurance sociale (si requis)",
+          "f.emergencyContactName": "Nom du contact d'urgence",
+          "f.emergencyContactRelationship": "Lien avec le contact d'urgence",
+          "f.emergencyContactPhone": "Téléphone du contact d'urgence",
+          "f.vehicle": "Marque / modèle / année du véhicule",
+          "f.vehiclePlate": "Plaque du véhicule",
           "f.bank": "Institution bancaire",
-          "f.voidCheque": "Specimen de cheque joint",
-          "f.regions": "Regions desservies",
-          "f.yearsExperience": "Annees d experience",
-          "f.salesExperience": "Experience vente (B2B/B2C)",
-          "f.specialties": "Specialites / type de clientele",
-          "f.repName": "Nom representant",
-          "f.repSignature": "Signature representant",
+          "f.voidCheque": "Spécimen de chèque fourni",
+          "f.regions": "Régions desservies",
+          "f.yearsExperience": "Années d'expérience",
+          "f.salesExperience": "Expérience en vente (B2B/B2C)",
+          "f.specialties": "Spécialités / type de clientèle",
+          "f.repName": "Nom du représentant",
+          "f.repSignature": "Signature du représentant",
           "f.managementSignature": "Signature direction (optionnel)",
           "f.signatureDate": "Date",
-          "f.commitmentAccepted": "Engagement confirme",
-          "f.commitmentLabel": "Je reconnais avoir recu, lu et compris la trousse et les procedures.",
-          "cl.personalForm": "Formulaire personnel complete",
-          "cl.sinSecure": "NAS recueilli seulement si requis et conserve de facon securisee",
-          "cl.voidCheque": "Specimen de cheque recu",
-          "cl.emergencyContact": "Contact d urgence complet",
-          "cl.vehiclePlate": "Plaque du vehicule inscrite",
-          "cl.driverLicense": "Permis de conduire valide verifie",
-          "cl.vehicleInsurance": "Assurance vehicule verifiee si requis",
-          "cl.commissionPolicy": "Politique de commission signee",
-          "cl.ackSigned": "Accuse de reception signe",
-          "cl.productTraining": "Formation produit completee",
-          "cl.scriptTraining": "Formation script completee",
-          "cl.crmAccess": "Acces CRM attribue",
+          "f.commitmentAccepted": "Engagement confirmé",
+          "f.commitmentLabel": "Je reconnais avoir reçu, lu et compris la trousse et les procédures.",
+          "cl.personalForm": "Formulaire personnel complété",
+          "cl.sinSecure": "NAS recueilli seulement si requis et conservé de façon sécurisée",
+          "cl.voidCheque": "Spécimen de chèque reçu",
+          "cl.emergencyContact": "Contact d'urgence complet",
+          "cl.vehiclePlate": "Plaque du véhicule inscrite",
+          "cl.driverLicense": "Permis de conduire valide vérifié",
+          "cl.vehicleInsurance": "Assurance véhicule vérifiée si requis",
+          "cl.commissionPolicy": "Politique de commission signée",
+          "cl.ackSigned": "Accusé de réception signé",
+          "cl.productTraining": "Formation produit complétée",
+          "cl.scriptTraining": "Formation script complétée",
+          "cl.crmAccess": "Accès CRM attribué",
           "f.comments": "Commentaires",
           msgInvalidToken: "Lien invalide: token manquant.",
-          msgLoadError: "Impossible de charger la fiche. Verifiez le lien.",
-          msgAlreadyDone: "Fiche deja soumise. Vous pouvez la mettre a jour puis soumettre de nouveau.",
-          msgSaved: "Fiche sauvegardee.",
-          msgSubmitted: "Fiche soumise avec succes.",
-          msgSendError: "Une erreur est survenue. Veuillez reessayer.",
+          msgLoadError: "Impossible de charger la fiche. Vérifiez le lien.",
+          msgAlreadyDone: "Fiche déjà soumise. Vous pouvez la mettre à jour, puis la soumettre de nouveau.",
+          msgSaved: "Fiche sauvegardée.",
+          msgSubmitted: "Fiche soumise avec succès.",
+          msgSendError: "Une erreur est survenue. Veuillez réessayer.",
           policy: [
             "- Commission de 4 % sur chaque vente admissible fermee.",
             "- Payable apres installation, validation interne et paiement final complet.",
@@ -501,6 +501,14 @@
 
       function fillData(data) {
         if (!data || typeof data !== "object") return;
+
+        if (!data.companyLegalName && data.companyName) {
+          data.companyLegalName = data.companyName;
+        }
+        if (!data.phonePrimary && data.phone) {
+          data.phonePrimary = data.phone;
+        }
+
         Object.keys(data).forEach((k) => {
           const el = form.elements.namedItem(k);
           if (!el) return;
