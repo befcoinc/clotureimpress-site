@@ -22,7 +22,7 @@ export function IntimuraBookmarklet() {
   const apiBase = typeof window !== "undefined" ? window.location.origin : "";
   const token = credsStatus?.bookmarkletToken || "";
   const bookmarkletJs = token
-    ? `javascript:(async()=>{try{const base=location.origin;const path=location.pathname.replace(/\/$/,'');const dataUrl=base+path+'/__data.json?x-sveltekit-invalidated=001';const r=await fetch(dataUrl,{credentials:'include',headers:{Accept:'application/json'}});if(!r.ok){alert('Intimura HTTP '+r.status+'\n'+dataUrl);return;}const p=await r.json();const s=await fetch('${apiBase}/api/intimura/ingest?token=${token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:p})});const j=await s.json();alert(s.ok?'✅ '+j.createdLeads+' lead(s)\\n'+j.skipped+' doublon(s)':'❌ '+(j.message||j.error||'Erreur'));}catch(e){alert('Erreur: '+(e&&e.message?e.message:e));}})();`
+    ? `javascript:(async()=>{try{const collectRows=()=>Array.from(document.querySelectorAll('table tbody tr')).map((tr)=>{const cells=Array.from(tr.querySelectorAll('td')).map((td)=>td.textContent.trim());return {id:cells[0]||'',title:cells[1]||'',status:cells[2]||'',assigned_user_name:cells[3]||'',subtotal:cells[4]||'',date:cells[5]||''};}).filter((row)=>row.id||row.title);let payload=collectRows();if(!payload.length){const base=location.origin;const path=location.pathname.replace(/\/$/,'');const dataUrl=base+path+'/__data.json?x-sveltekit-invalidated=001';const r=await fetch(dataUrl,{credentials:'include',headers:{Accept:'application/json'}});if(!r.ok){alert('Intimura HTTP '+r.status+'\n'+dataUrl);return;}const p=await r.json();payload=p.nodes? p : p;}const s=await fetch('${apiBase}/api/intimura/ingest?token=${token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload})});const j=await s.json();alert(s.ok?'✅ '+j.createdLeads+' lead(s)\\n'+j.skipped+' doublon(s)':'❌ '+(j.message||j.error||'Erreur'));}catch(e){alert('Erreur: '+(e&&e.message?e.message:e));}})();`
     : "";
 
   return (
@@ -31,8 +31,8 @@ export function IntimuraBookmarklet() {
         title={isEn ? "Intimura Bookmarklet Setup" : "Setup Bookmarklet Intimura"}
         description={
           isEn
-            ? "One-click sync from your browser. Drag the bookmarklet below to your bookmarks bar."
-            : "Synchronisation en 1 clic depuis ton navigateur. Glisse le bookmarklet ci-dessous dans ta barre de favoris."
+            ? "One-click sync from the visible quotes table in your browser. Drag the bookmarklet below to your bookmarks bar."
+            : "Synchronisation en 1 clic depuis le tableau visible dans ton navigateur. Glisse le bookmarklet ci-dessous dans ta barre de favoris."
         }
       />
 
@@ -66,8 +66,8 @@ export function IntimuraBookmarklet() {
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
                   {isEn
-                    ? "Right-click (or drag) the green button below directly to your bookmarks bar. That's it."
-                    : "Clic droit (ou glisse) le bouton vert ci-dessous directement dans ta barre de favoris. C'est tout."}
+                    ? "Right-click (or drag) the green button below directly to your bookmarks bar. It reads the visible table first."
+                    : "Clic droit (ou glisse) le bouton vert ci-dessous directement dans ta barre de favoris. Il lit d'abord le tableau visible."}
                 </p>
                 <div className="flex gap-2 items-start">
                   <a
@@ -125,7 +125,7 @@ export function IntimuraBookmarklet() {
                     <Badge variant="secondary">
                       {isEn ? "Sync Cloture Impress" : "Sync Clôture Impress"}
                     </Badge>
-                    {isEn ? " bookmark in your bar." : " dans ta barre de favoris."}
+                    {isEn ? " bookmark in your bar. It syncs the rows you can see." : " dans ta barre de favoris. Il synchronise les lignes visibles."}
                   </li>
                   <li>
                     {isEn
