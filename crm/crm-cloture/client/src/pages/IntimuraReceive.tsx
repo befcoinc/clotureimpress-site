@@ -23,12 +23,12 @@ export function IntimuraReceive() {
   useEffect(() => {
     (async () => {
       try {
-        // Retrieve token and payload from sessionStorage set by the bookmarklet
-        const token = sessionStorage.getItem("intimura_token") || "";
-        const dataRaw = sessionStorage.getItem("intimura_payload") || "";
+        // Retrieve token and payload from localStorage set by the bookmarklet
+        const token = localStorage.getItem("intimura_token") || "";
+        const dataRaw = localStorage.getItem("intimura_payload") || "";
         // Clean up immediately so refresh doesn't reprocess
-        sessionStorage.removeItem("intimura_token");
-        sessionStorage.removeItem("intimura_payload");
+        localStorage.removeItem("intimura_token");
+        localStorage.removeItem("intimura_payload");
 
         if (!token || !dataRaw) {
           setStatus("error");
