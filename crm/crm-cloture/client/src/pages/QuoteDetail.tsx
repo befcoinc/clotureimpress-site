@@ -100,6 +100,20 @@ export function QuoteDetail() {
     },
   });
 
+  const leadUpdateMut = useMutation({
+    mutationFn: async (data: any) => {
+      if (!quote?.leadId) throw new Error("no lead");
+      return apiRequest("PATCH", `/api/leads/${quote.leadId}`, {
+        ...data, _userId: currentUser?.id, _userName: currentUser?.name, _userRole: currentUser?.role,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leads", quote?.leadId] });
+      toast({ title: isEn ? "Lead updated" : "Lead mis à jour" });
+    },
+  });
+
   if (!quote) {
     return <div className="p-8 text-muted-foreground">{isEn ? "Loading..." : "Chargement…"}</div>;
   }
@@ -107,6 +121,7 @@ export function QuoteDetail() {
   const timeline: Array<{ step: string; date?: string; note?: string }> = quote.timeline ? JSON.parse(quote.timeline) : [];
   const canEditSales = can("edit_sales") && (role !== "sales_rep" || quote.assignedSalesId === currentUser?.id);
   const canEditInstall = can("edit_install") && (role !== "installer" || quote.assignedInstallerId === currentUser?.id);
+  const canEditClient = can("edit_sales") || can("edit_lead");
   const canMarkStep = (team: string) => canEditSales || (team === "install" && canEditInstall);
   const stepKey = (label: string) => label.replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
   const markStep = (step: typeof TIMELINE_STEPS[number]) => updateMut.mutate({
@@ -141,12 +156,74 @@ export function QuoteDetail() {
           <Card>
             <CardHeader className="pb-3"><CardTitle className="text-base">{isEn ? "Client & address" : "Client & adresse"}</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-              <Info icon={<UserIcon className="h-3.5 w-3.5" />} label={isEn ? "Client" : "Client"} value={intimuraCustomer?.name || quote.clientName} />
-              <Info icon={<MapPin className="h-3.5 w-3.5" />} label={isEn ? "Address" : "Adresse"} value={`${intimuraCustomer?.address || quote.address || ""}${intimuraCustomer?.city || quote.city ? `, ${intimuraCustomer?.city || quote.city}` : ""}${intimuraCustomer?.postal_code ? ` ${intimuraCustomer.postal_code}` : ""}`} />
-              <Info icon={<Phone className="h-3.5 w-3.5" />} label={isEn ? "Phone" : "Téléphone"} value={intimuraCustomer?.phone || lead?.phone || "—"} />
-              <Info icon={<Mail className="h-3.5 w-3.5" />} label={isEn ? "Email" : "Courriel"} value={intimuraCustomer?.email || lead?.email || "—"} />
-              <Info icon={<Ruler className="h-3.5 w-3.5" />} label={isEn ? "Estimated length" : "Longueur estimée"} value={quote.estimatedLength ? `${quote.estimatedLength} ${isEn ? "ft" : "pi"}` : "—"} />
-              <Info icon={<DollarSign className="h-3.5 w-3.5" />} label={isEn ? "Estimated price" : "Prix estimé"} value={quote.estimatedPrice ? moneyFmt.format(quote.estimatedPrice) : "—"} />
+              <EditableInfo
+                icon={<UserIcon className="h-3.5 w-3.5" />}
+                label={isEn ? "Client" : "Client"}
+                value={quote.clientName || ""}
+                editable={canEditClient}
+                onSave={(v) => updateMut.mutate({ clientName: v })}
+                placeholder="—"
+              />
+              <EditableInfo
+                icon={<MapPin className="h-3.5 w-3.5" />}
+                label={isEn ? "Address" : "Adresse"}
+                value={quote.address || ""}
+                editable={canEditClient}
+                onSave={(v) => updateMut.mutate({ address: v })}
+                placeholder="—"
+              />
+              <EditableInfo
+                icon={<MapPin className="h-3.5 w-3.5" />}
+                label={isEn ? "City" : "Ville"}
+                value={quote.city || ""}
+                editable={canEditClient}
+                onSave={(v) => updateMut.mutate({ city: v })}
+                placeholder="—"
+              />
+              <EditableInfo
+                icon={<MapPin className="h-3.5 w-3.5" />}
+                label={isEn ? "Province" : "Province"}
+                value={quote.province || ""}
+                editable={canEditClient}
+                onSave={(v) => updateMut.mutate({ province: v })}
+                placeholder="—"
+              />
+              <EditableInfo
+                icon={<Phone className="h-3.5 w-3.5" />}
+                label={isEn ? "Phone" : "Téléphone"}
+                value={lead?.phone || ""}
+                editable={canEditClient && !!quote.leadId}
+                onSave={(v) => leadUpdateMut.mutate({ phone: v })}
+                placeholder="—"
+              />
+              <EditableInfo
+                icon={<Mail className="h-3.5 w-3.5" />}
+                label={isEn ? "Email" : "Courriel"}
+                value={lead?.email || ""}
+                editable={canEditClient && !!quote.leadId}
+                onSave={(v) => leadUpdateMut.mutate({ email: v })}
+                placeholder="—"
+              />
+              <EditableInfo
+                icon={<Ruler className="h-3.5 w-3.5" />}
+                label={isEn ? "Estimated length" : "Longueur estimée"}
+                value={quote.estimatedLength != null ? String(quote.estimatedLength) : ""}
+                editable={canEditClient}
+                type="number"
+                suffix={isEn ? " ft" : " pi"}
+                onSave={(v) => updateMut.mutate({ estimatedLength: v === "" ? null : parseFloat(v) })}
+                placeholder="—"
+              />
+              <EditableInfo
+                icon={<DollarSign className="h-3.5 w-3.5" />}
+                label={isEn ? "Estimated price" : "Prix estimé"}
+                value={quote.estimatedPrice != null ? String(quote.estimatedPrice) : ""}
+                editable={canEditClient}
+                type="number"
+                display={quote.estimatedPrice ? moneyFmt.format(quote.estimatedPrice) : "—"}
+                onSave={(v) => updateMut.mutate({ estimatedPrice: v === "" ? null : parseFloat(v) })}
+                placeholder="—"
+              />
               <Info icon={<UserIcon className="h-3.5 w-3.5" />} label={isEn ? "Sales rep" : "Vendeur"} value={rep?.name || (isEn ? "Unassigned" : "Non assigné")} />
               <Info icon={<UserIcon className="h-3.5 w-3.5" />} label={isEn ? "Installer" : "Installateur"} value={installer?.name || (isEn ? "Unassigned" : "Non assigné")} />
             </CardContent>
@@ -469,6 +546,71 @@ function Info({ icon, label, value }: { icon: React.ReactNode; label: string; va
     <div className="space-y-0.5">
       <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">{icon} {label}</div>
       <div className="text-[13px]">{value}</div>
+    </div>
+  );
+}
+
+function EditableInfo({
+  icon,
+  label,
+  value,
+  editable,
+  onSave,
+  type = "text",
+  placeholder = "—",
+  display,
+  suffix,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  editable: boolean;
+  onSave: (next: string) => void;
+  type?: string;
+  placeholder?: string;
+  display?: string;
+  suffix?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const commit = () => {
+    setEditing(false);
+    if (draft !== value) onSave(draft);
+  };
+  if (!editable) {
+    return (
+      <div className="space-y-0.5">
+        <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">{icon} {label}</div>
+        <div className="text-[13px]">{display ?? (value ? value + (suffix || "") : placeholder)}</div>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-0.5">
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">{icon} {label}</div>
+      {editing ? (
+        <Input
+          autoFocus
+          type={type}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); commit(); }
+            if (e.key === "Escape") { setDraft(value); setEditing(false); }
+          }}
+          className="h-7 text-[13px]"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => { setDraft(value); setEditing(true); }}
+          className="text-[13px] text-left w-full hover:bg-muted/40 rounded px-1 -mx-1 py-0.5 cursor-text"
+          title="Cliquer pour modifier"
+        >
+          {display ?? (value ? value + (suffix || "") : <span className="text-muted-foreground italic">{placeholder}</span>)}
+        </button>
+      )}
     </div>
   );
 }
