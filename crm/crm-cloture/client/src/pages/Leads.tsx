@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Mail, Phone, MapPin, Filter, Globe, Database, Clock, Trash2, FlaskConical, RefreshCw, KeyRound, ExternalLink } from "lucide-react";
+import { Plus, Mail, Phone, MapPin, Filter, Globe, Database, Clock, Trash2, FlaskConical, RefreshCw, KeyRound, ExternalLink, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,6 +33,7 @@ export function Leads() {
   const isEn = language === "en";
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>(() => {
     if (typeof window === "undefined") return "all";
     return new URLSearchParams(window.location.search).get("status") || "all";
@@ -122,6 +123,50 @@ export function Leads() {
       toast({ title: isEn ? "Delete failed" : "Suppression échouée", description: err?.message || "", variant: "destructive" });
     },
   });
+
+  // -------- Edit lead (admins + sales reps with edit_lead) --------
+  const editForm = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      clientName: "", phone: "", email: "", address: "", city: "", province: "QC",
+      postalCode: "", neighborhood: "", fenceType: "Bois traité", message: "", source: "manuel",
+    },
+  });
+  const updateLeadMut = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) =>
+      apiRequest("PATCH", `/api/leads/${id}`, {
+        ...data,
+        _userId: currentUser?.id,
+        _userName: currentUser?.name,
+        _userRole: currentUser?.role,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      toast({ title: isEn ? "Lead updated" : "Lead mis à jour" });
+      setEditingLead(null);
+    },
+    onError: (err: any) => {
+      toast({ title: isEn ? "Update failed" : "Échec mise à jour", description: err?.message || "", variant: "destructive" });
+    },
+  });
+  const openEdit = (lead: Lead) => {
+    editForm.reset({
+      clientName: lead.clientName || "",
+      phone: lead.phone || "",
+      email: lead.email || "",
+      address: lead.address || "",
+      city: lead.city || "",
+      province: lead.province || "QC",
+      postalCode: lead.postalCode || "",
+      neighborhood: lead.neighborhood || "",
+      fenceType: lead.fenceType || "Bois traité",
+      message: lead.message || "",
+      source: (lead.source as any) || "manuel",
+    });
+    setEditingLead(lead);
+  };
 
   const isAdmin = currentUser?.role === "admin";
 
@@ -403,19 +448,31 @@ export function Leads() {
                     </div>
                   )}
 
-                  {can("edit_lead") && lead.status !== "test" && (
-                    <div className="flex justify-end pt-1">
+                  {can("edit_lead") && (
+                    <div className="flex justify-end gap-2 pt-1">
                       <Button
                         size="sm"
-                        variant="secondary"
-                        className="h-7 text-[11px] gap-1 ml-auto"
-                        onClick={() => handleMarkAsTest(lead.id)}
-                        disabled={updateStatus.isPending}
-                        data-testid={`button-mark-test-${lead.id}`}
+                        variant="outline"
+                        className="h-7 text-[11px] gap-1"
+                        onClick={() => openEdit(lead)}
+                        data-testid={`button-edit-lead-${lead.id}`}
                       >
-                        <FlaskConical className="h-3 w-3" />
-                        {isEn ? "Mark for testing" : "Marquer pour test"}
+                        <Pencil className="h-3 w-3" />
+                        {isEn ? "Edit" : "Modifier"}
                       </Button>
+                      {lead.status !== "test" && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="h-7 text-[11px] gap-1"
+                          onClick={() => handleMarkAsTest(lead.id)}
+                          disabled={updateStatus.isPending}
+                          data-testid={`button-mark-test-${lead.id}`}
+                        >
+                          <FlaskConical className="h-3 w-3" />
+                          {isEn ? "Mark for testing" : "Marquer pour test"}
+                        </Button>
+                      )}
                     </div>
                   )}
 
@@ -443,6 +500,74 @@ export function Leads() {
           )}
         </div>
       </div>
+
+      {/* Edit lead dialog */}
+      <Dialog open={!!editingLead} onOpenChange={(o) => { if (!o) setEditingLead(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{isEn ? "Edit lead" : "Modifier le lead"}</DialogTitle>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form
+              onSubmit={editForm.handleSubmit((data) => {
+                if (editingLead) updateLeadMut.mutate({ id: editingLead.id, data });
+              })}
+              className="space-y-3"
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <FormField control={editForm.control} name="clientName" render={({ field }) => (
+                  <FormItem><FormLabel>{isEn ? "Client name *" : "Nom du client *"}</FormLabel><FormControl><Input data-testid="edit-input-clientName" {...field} /></FormControl><FormMessage /></FormItem>
+                )}/>
+                <FormField control={editForm.control} name="phone" render={({ field }) => (
+                  <FormItem><FormLabel>{isEn ? "Phone" : "Téléphone"}</FormLabel><FormControl><Input data-testid="edit-input-phone" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+                )}/>
+                <FormField control={editForm.control} name="email" render={({ field }) => (
+                  <FormItem><FormLabel>{isEn ? "Email" : "Courriel"}</FormLabel><FormControl><Input data-testid="edit-input-email" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+                )}/>
+                <FormField control={editForm.control} name="address" render={({ field }) => (
+                  <FormItem><FormLabel>{isEn ? "Address" : "Adresse"}</FormLabel><FormControl><Input data-testid="edit-input-address" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+                )}/>
+                <FormField control={editForm.control} name="city" render={({ field }) => (
+                  <FormItem><FormLabel>{isEn ? "City" : "Ville"}</FormLabel><FormControl><Input data-testid="edit-input-city" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+                )}/>
+                <FormField control={editForm.control} name="province" render={({ field }) => (
+                  <FormItem><FormLabel>{isEn ? "Province *" : "Province *"}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? "QC"}>
+                      <FormControl><SelectTrigger data-testid="edit-select-province"><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>{PROVINCES.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                    </Select><FormMessage />
+                  </FormItem>
+                )}/>
+                <FormField control={editForm.control} name="postalCode" render={({ field }) => (
+                  <FormItem><FormLabel>{isEn ? "Postal code" : "Code postal"}</FormLabel><FormControl><Input data-testid="edit-input-postal" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+                )}/>
+                <FormField control={editForm.control} name="neighborhood" render={({ field }) => (
+                  <FormItem><FormLabel>{isEn ? "Neighborhood" : "Quartier"}</FormLabel><FormControl><Input data-testid="edit-input-neighborhood" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+                )}/>
+                <FormField control={editForm.control} name="fenceType" render={({ field }) => (
+                  <FormItem className="col-span-2"><FormLabel>{isEn ? "Fence type" : "Type de clôture"}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? "Bois traité"}>
+                      <FormControl><SelectTrigger data-testid="edit-select-fenceType"><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>{FENCE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </FormItem>
+                )}/>
+              </div>
+              <FormField control={editForm.control} name="message" render={({ field }) => (
+                <FormItem><FormLabel>{isEn ? "Message / notes" : "Message / notes"}</FormLabel><FormControl><Textarea rows={3} data-testid="edit-input-message" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+              )}/>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditingLead(null)}>
+                  {isEn ? "Cancel" : "Annuler"}
+                </Button>
+                <Button type="submit" disabled={updateLeadMut.isPending} data-testid="button-save-edit-lead">
+                  {updateLeadMut.isPending ? (isEn ? "Saving..." : "Enregistrement...") : (isEn ? "Save" : "Enregistrer")}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
