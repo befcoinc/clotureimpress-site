@@ -487,6 +487,27 @@ export async function registerRoutes(
     }
   });
 
+  // Force-set password — only allowed when the user is flagged mustChangePassword.
+  // Used by the post-login "Create your password" screen so the user does not need
+  // to know their (admin-reset / temporary) current password.
+  app.post("/api/auth/force-set-password", requireAuth, async (req, res, next) => {
+    try {
+      const { newPassword } = req.body;
+      if (typeof newPassword !== "string" || newPassword.length < 6)
+        return res.status(400).json({ error: "Le nouveau mot de passe doit contenir au moins 6 caractères" });
+      const userId = (req.user as any).id;
+      const fresh = await storage.getUser(userId);
+      if (!fresh) return res.status(404).json({ error: "Utilisateur introuvable" });
+      if (fresh.mustChangePassword !== true) {
+        return res.status(403).json({ error: "Action non autorisée — utilisez change-password" });
+      }
+      await storage.setUserPassword(userId, hashPassword(newPassword));
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // ── Protect all other /api routes ──────────────────────────────────
   app.use("/api", (req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/auth/")) return next();

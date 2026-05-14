@@ -27,11 +27,11 @@ export function ForceChangePassword() {
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/change-password", {
+      const res = await fetch("/api/auth/force-set-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ currentPassword: "Cloture2025!", newPassword }),
+        body: JSON.stringify({ newPassword }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
