@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,6 +42,12 @@ export function Leads() {
 
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
+  const { data: quotes = [] } = useQuery<any[]>({ queryKey: ["/api/quotes"] });
+  const quoteByLeadId = useMemo(() => {
+    const m = new Map<number, any>();
+    for (const q of quotes) if (q?.leadId) m.set(q.leadId, q);
+    return m;
+  }, [quotes]);
   const salesReps = users.filter(u => u.role === "sales_rep");
 
   const filtered = useMemo(() => {
@@ -291,12 +298,23 @@ export function Leads() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {filtered.map((lead) => {
             const rep = salesReps.find(r => r.id === lead.assignedSalesId);
+            const linkedQuote = quoteByLeadId.get(lead.id);
             return (
               <Card key={lead.id} className="hover-elevate" data-testid={`card-lead-${lead.id}`}>
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="font-semibold text-[14px] truncate">{lead.clientName}</div>
+                      {linkedQuote ? (
+                        <Link
+                          href={`/soumissions/${linkedQuote.id}`}
+                          className="font-semibold text-[14px] truncate block hover:underline text-primary"
+                          data-testid={`link-lead-quote-${lead.id}`}
+                        >
+                          {lead.clientName}
+                        </Link>
+                      ) : (
+                        <div className="font-semibold text-[14px] truncate">{lead.clientName}</div>
+                      )}
                       <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground flex-wrap">
                         <Badge variant="outline" className="text-[10px]">{lead.province}</Badge>
                         <span>{lead.sector}</span>
