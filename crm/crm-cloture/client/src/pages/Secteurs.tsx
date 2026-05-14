@@ -1,10 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin } from "lucide-react";
+import { MapPin, ChevronDown, ChevronRight } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 import type { Lead, Quote } from "@shared/schema";
 import { PROVINCES } from "@shared/schema";
@@ -25,6 +25,7 @@ export function Secteurs() {
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
   const activeLeads = leads.filter(l => l.status !== "test");
+  const [expandedCity, setExpandedCity] = useState<string | null>(null);
 
   const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
 
@@ -115,37 +116,96 @@ export function Secteurs() {
             <CardHeader className="pb-3"><CardTitle className="text-base">{isEn ? "Top cities" : "Top villes"}</CardTitle></CardHeader>
             <CardContent>
               <ul className="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
-                {byCity.map(([cityKey, info]) => (
-                  <li key={cityKey}>
-                    {info.city !== "?" ? (
-                      <Link
-                        href={`/soumissions?city=${encodeURIComponent(info.city)}&province=${encodeURIComponent(info.province)}`}
-                        className="flex items-center justify-between gap-3 rounded-md border border-card-border bg-card p-2.5 hover-elevate"
-                        data-testid={`link-city-${normalizeForSearch(info.city) || "unknown"}`}
+                {byCity.map(([cityKey, info]) => {
+                  const isOpen = expandedCity === cityKey;
+                  const cityNorm = normalizeForSearch(info.city);
+                  const provNorm = normalizeForSearch(info.province);
+                  const cityLeads = activeLeads.filter(l =>
+                    normalizeForSearch(l.city || "") === cityNorm &&
+                    normalizeForSearch(l.province || "") === provNorm,
+                  );
+                  const cityQuotes = quotes.filter(q =>
+                    normalizeForSearch(q.city || "") === cityNorm &&
+                    normalizeForSearch(q.province || "") === provNorm,
+                  );
+                  return (
+                    <li key={cityKey} className="rounded-md border border-card-border bg-card overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedCity(isOpen ? null : cityKey)}
+                        className="w-full flex items-center justify-between gap-3 p-2.5 hover-elevate text-left"
+                        data-testid={`btn-city-${cityNorm || "unknown"}`}
                       >
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium text-[13px] truncate">{info.city}</div>
-                          <div className="text-[10px] text-muted-foreground"><Badge variant="outline" className="text-[10px] mr-1">{info.province}</Badge> {info.quotes} {isEn ? "quote(s)" : "soumission(s)"}</div>
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          {isOpen ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-[13px] truncate">{info.city}</div>
+                            <div className="text-[10px] text-muted-foreground"><Badge variant="outline" className="text-[10px] mr-1">{info.province}</Badge> {info.quotes} {isEn ? "quote(s)" : "soumission(s)"}</div>
+                          </div>
                         </div>
                         <div className="text-right">
                           <div className="font-bold text-[14px] tabular">{info.leads}</div>
                           <div className="text-[10px] text-muted-foreground tabular">{moneyFmt.format(info.value)}</div>
                         </div>
-                      </Link>
-                    ) : (
-                      <div className="flex items-center justify-between gap-3 rounded-md border border-card-border bg-card p-2.5 hover-elevate">
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium text-[13px] truncate">{info.city}</div>
-                          <div className="text-[10px] text-muted-foreground"><Badge variant="outline" className="text-[10px] mr-1">{info.province}</Badge> {info.quotes} {isEn ? "quote(s)" : "soumission(s)"}</div>
+                      </button>
+                      {isOpen && (
+                        <div className="border-t border-card-border bg-muted/30 p-2.5 space-y-2">
+                          {cityQuotes.length > 0 && (
+                            <div>
+                              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                                {isEn ? "Quotes" : "Soumissions"} ({cityQuotes.length})
+                              </div>
+                              <ul className="space-y-1">
+                                {cityQuotes.map(q => (
+                                  <li key={q.id}>
+                                    <Link
+                                      href={`/soumissions/${q.id}`}
+                                      className="flex items-center justify-between gap-2 rounded border border-card-border bg-card p-2 text-[12px] hover-elevate"
+                                      data-testid={`link-quote-${q.id}`}
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <div className="font-medium truncate">{q.clientName || q.id}</div>
+                                        <div className="text-[10px] text-muted-foreground truncate">{q.address || ""}</div>
+                                      </div>
+                                      <div className="text-right shrink-0">
+                                        <div className="text-[10px] tabular">{moneyFmt.format(q.estimatedPrice || 0)}</div>
+                                        {q.salesStatus && <Badge variant="outline" className="text-[9px] mt-0.5">{q.salesStatus}</Badge>}
+                                      </div>
+                                    </Link>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {cityLeads.length > 0 && (
+                            <div>
+                              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                                Leads ({cityLeads.length})
+                              </div>
+                              <ul className="space-y-1">
+                                {cityLeads.map(l => (
+                                  <li key={l.id} className="flex items-center justify-between gap-2 rounded border border-card-border bg-card p-2 text-[12px]">
+                                    <div className="min-w-0 flex-1">
+                                      <div className="font-medium truncate">{l.clientName || l.id}</div>
+                                      <div className="text-[10px] text-muted-foreground truncate">{l.address || l.email || ""}</div>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                      <div className="text-[10px] tabular">{moneyFmt.format(l.estimatedValue || 0)}</div>
+                                      {l.status && <Badge variant="outline" className="text-[9px] mt-0.5">{l.status}</Badge>}
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {cityLeads.length === 0 && cityQuotes.length === 0 && (
+                            <div className="text-[11px] text-muted-foreground italic">{isEn ? "No items" : "Aucun élément"}</div>
+                          )}
                         </div>
-                        <div className="text-right">
-                          <div className="font-bold text-[14px] tabular">{info.leads}</div>
-                          <div className="text-[10px] text-muted-foreground tabular">{moneyFmt.format(info.value)}</div>
-                        </div>
-                      </div>
-                    )}
-                  </li>
-                ))}
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </CardContent>
           </Card>
