@@ -231,7 +231,9 @@ export function ApplicationsInstallateurs() {
           {applications.map((app) => (
             <Card
               key={app.id}
-              className="cursor-pointer hover:border-primary/50 transition-colors"
+              className={showArchived
+                ? "cursor-pointer border-amber-200 bg-amber-50/40 hover:border-amber-400 transition-colors"
+                : "cursor-pointer hover:border-primary/50 transition-colors"}
               onClick={() => openDetail(app)}
             >
               <CardContent className="py-4 px-5">
@@ -239,6 +241,11 @@ export function ApplicationsInstallateurs() {
                   <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-base">{app.companyName}</span>
+                      {showArchived && (
+                        <Badge variant="destructive" className="bg-amber-600 hover:bg-amber-700 text-white">
+                          Retirée
+                        </Badge>
+                      )}
                       <Badge variant={STATUS_COLORS[app.status] ?? "outline"}>
                         {statusLabels[app.status] ?? app.status}
                       </Badge>
@@ -261,7 +268,15 @@ export function ApplicationsInstallateurs() {
                       </span>
                       <span className="flex items-center gap-1">
                         <Phone size={13} />
-                        {app.phone}
+                    <div className="space-y-3">
+                      {showArchived && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                          {isFr
+                            ? "Ces fiches sont retirées de la liste active. Elles restent conservées et peuvent être remises dans la liste au besoin."
+                            : "These applications are removed from the active list. They are kept in the database and can be restored anytime."}
+                        </div>
+                      )}
+                      <div className="grid gap-3">
                       </span>
                       <span className="flex items-center gap-1">
                         <Mail size={13} />
@@ -296,7 +311,14 @@ export function ApplicationsInstallateurs() {
         {selected && (
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{selected.companyName}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2 flex-wrap">
+                <span>{selected.companyName}</span>
+                {showArchived && (
+                  <Badge variant="destructive" className="bg-amber-600 hover:bg-amber-700 text-white">
+                    Fiche retirée
+                  </Badge>
+                )}
+              </DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4 text-sm">
