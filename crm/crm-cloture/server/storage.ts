@@ -350,7 +350,7 @@ export interface IStorage {
   getActivities(filter?: { quoteId?: number; leadId?: number }): Promise<Activity[]>;
   createActivity(data: InsertActivity): Promise<Activity>;
   // Installer applications
-  getInstallerApplications(): Promise<InstallerApplication[]>;
+  getInstallerApplications(options?: { includeArchived?: boolean }): Promise<InstallerApplication[]>;
   getInstallerApplication(id: number): Promise<InstallerApplication | undefined>;
   createInstallerApplication(data: InsertInstallerApplication): Promise<InstallerApplication>;
   updateInstallerApplication(id: number, data: Partial<InsertInstallerApplication>): Promise<InstallerApplication | undefined>;
@@ -506,8 +506,12 @@ export class DatabaseStorage implements IStorage {
     return (await db.insert(activities).values(data).returning())[0];
   }
 
-  async getInstallerApplications(): Promise<InstallerApplication[]> {
-    return db.select().from(installerApplications).where(sql`${installerApplications.archivedAt} IS NULL`).orderBy(desc(installerApplications.id));
+  async getInstallerApplications(options?: { includeArchived?: boolean }): Promise<InstallerApplication[]> {
+    const includeArchived = !!options?.includeArchived;
+    const query = db.select().from(installerApplications);
+    return includeArchived
+      ? query.orderBy(desc(installerApplications.id))
+      : query.where(sql`${installerApplications.archivedAt} IS NULL`).orderBy(desc(installerApplications.id));
   }
   async getInstallerApplication(id: number): Promise<InstallerApplication | undefined> {
     return (await db.select().from(installerApplications).where(eq(installerApplications.id, id)))[0];

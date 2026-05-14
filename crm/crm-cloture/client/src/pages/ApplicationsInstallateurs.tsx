@@ -51,9 +51,15 @@ export function ApplicationsInstallateurs() {
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [showFicheData, setShowFicheData] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const { data: applications = [], isLoading } = useQuery<InstallerApplication[]>({
-    queryKey: ["/api/installer-applications"],
+    queryKey: ["/api/installer-applications", showArchived ? "archived" : "active"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/installer-applications${showArchived ? "?archived=1" : ""}`, undefined);
+      if (!res.ok) throw new Error("Failed to load installer applications");
+      return res.json();
+    },
   });
 
   const patchMutation = useMutation({
@@ -163,6 +169,16 @@ export function ApplicationsInstallateurs() {
       <PageHeader
         title={isFr ? "Applications installateurs" : "Installer Applications"}
         subtitle={isFr ? "Candidatures reçues depuis le site web" : "Applications received from the website"}
+        action={
+          <Button
+            variant={showArchived ? "default" : "outline"}
+            onClick={() => setShowArchived((v) => !v)}
+          >
+            {showArchived
+              ? (isFr ? "Voir les fiches actives" : "View active applications")
+              : (isFr ? "Fiches retirées" : "Removed applications")}
+          </Button>
+        }
       />
 
       {isLoading ? (
@@ -170,7 +186,9 @@ export function ApplicationsInstallateurs() {
       ) : applications.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            {isFr ? "Aucune candidature reçue pour le moment." : "No applications received yet."}
+            {showArchived
+              ? (isFr ? "Aucune fiche retirée pour le moment." : "No removed applications yet.")
+              : (isFr ? "Aucune candidature reçue pour le moment." : "No applications received yet.")}
           </CardContent>
         </Card>
       ) : (

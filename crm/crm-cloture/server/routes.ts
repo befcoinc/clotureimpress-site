@@ -1208,7 +1208,10 @@ export async function registerRoutes(
 
   app.get("/api/installer-applications", requireAuth, async (req, res) => {
     try {
-      const applications = await storage.getInstallerApplications();
+      const includeArchived = String(req.query.archived || "").toLowerCase();
+      const applications = await storage.getInstallerApplications({
+        includeArchived: includeArchived === "1" || includeArchived === "true" || includeArchived === "yes",
+      });
       res.json(applications);
     } catch (err) {
       console.error("[installer-applications] error", err);
