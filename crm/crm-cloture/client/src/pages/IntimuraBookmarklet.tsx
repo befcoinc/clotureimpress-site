@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Copy, ExternalLink, AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -21,13 +22,23 @@ export function IntimuraBookmarklet() {
 
   const apiBase = typeof window !== "undefined" ? window.location.origin : "";
   const token = credsStatus?.bookmarkletToken || "";
+  const dragRef = useRef<HTMLAnchorElement | null>(null);
   // Bookmarklet strategy: scrape the visible quotes table on intimura.com,
   // then open a NEW TAB on the CRM origin with the payload in the URL hash.
   // The CRM tab does the POST to /api/intimura/ingest itself (same-origin),
   // which avoids cross-origin CORS/CSP issues entirely.
+  // NOTE: avoid using `<` or `>` in this string — when rendered into an <a href>,
+  // React/HTML serialization can encode them as &lt;/&gt; or %3C/%3E and break the JS.
   const bookmarkletJs = token
-    ? `javascript:(()=>{try{var t=document.querySelector('table');if(!t){alert('Aucun tableau trouve sur cette page. Va sur la liste des quotes Intimura.');return;}var heads=Array.prototype.slice.call(t.querySelectorAll('thead th, thead td')).map(function(h){return (h.textContent||'').trim().toLowerCase();});var trs=t.querySelectorAll('tbody tr');var rows=[];for(var i=0;i<trs.length;i++){var tr=trs[i];var tds=tr.querySelectorAll('td');if(!tds.length)continue;var o={};for(var j=0;j<tds.length;j++){var key=heads[j]||('col'+j);o[key]=(tds[j].textContent||'').trim();}var link=tr.querySelector('a[href]');if(link){var href=link.getAttribute('href')||'';o._href=href;var m=href.match(/([0-9a-fA-F-]{8,})/);if(m)o._id=m[1];else{var n=href.match(/(\\d{2,})/);if(n)o._id=n[1];}}rows.push(o);}if(!rows.length){alert('Le tableau est vide ou les lignes nont pas pu etre lues.');return;}var data=encodeURIComponent(JSON.stringify(rows));var url='${apiBase}/#/intimura-receive?token=${token}&data='+data;if(url.length>1900000){alert('Trop de donnees pour un seul transfert. Filtre la liste sur Intimura.');return;}window.open(url,'_blank');}catch(e){alert('Erreur bookmarklet: '+(e&&e.message?e.message:e));}})();`
+    ? `javascript:(function(){try{var t=document.querySelector('table');if(!t){alert('Aucun tableau trouve sur cette page. Va sur la liste des quotes Intimura.');return;}var heads=[].slice.call(t.querySelectorAll('thead th, thead td')).map(function(h){return (h.textContent||'').trim().toLowerCase();});var trs=t.querySelectorAll('tbody tr');var rows=[];trs.forEach(function(tr){var tds=tr.querySelectorAll('td');if(!tds.length)return;var o={};tds.forEach(function(td,j){var key=heads[j]||('col'+j);o[key]=(td.textContent||'').trim();});var link=tr.querySelector('a[href]');if(link){var href=link.getAttribute('href')||'';o._href=href;var m=href.match(/([0-9a-fA-F-]{8,})/);if(m){o._id=m[1];}else{var n=href.match(/(\\d{2,})/);if(n)o._id=n[1];}}rows.push(o);});if(!rows.length){alert('Le tableau est vide ou les lignes n ont pas pu etre lues.');return;}var data=encodeURIComponent(JSON.stringify(rows));var url='${apiBase}/#/intimura-receive?token=${token}&data='+data;if(url.length-1900000===Math.abs(url.length-1900000)&&url.length!==1900000){alert('Trop de donnees pour un seul transfert. Filtre la liste sur Intimura.');return;}window.open(url,'_blank');}catch(e){alert('Erreur bookmarklet: '+(e&&e.message?e.message:e));}})();`
     : "";
+
+  // Set href via DOM to avoid any React/HTML attribute escaping of special chars.
+  useEffect(() => {
+    if (dragRef.current && bookmarkletJs) {
+      dragRef.current.setAttribute("href", bookmarkletJs);
+    }
+  }, [bookmarkletJs]);
 
   return (
     <>
@@ -75,7 +86,8 @@ export function IntimuraBookmarklet() {
                 </p>
                 <div className="flex gap-2 items-start">
                   <a
-                    href={bookmarkletJs}
+                    ref={dragRef}
+                    href="#"
                     draggable
                     onClick={(e) => e.preventDefault()}
                     onContextMenu={(e) => {
