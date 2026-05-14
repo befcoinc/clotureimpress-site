@@ -77,7 +77,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const { logout } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"], enabled: can("view_sales") || can("assign_sales") });
-  const unassignedLeadsCount = useMemo(() => leads.filter((lead) => !lead.assignedSalesId).length, [leads]);
+  const unassignedLeadsCount = useMemo(() => leads.filter((lead) => lead.status !== "test" && !lead.assignedSalesId).length, [leads]);
   const { data: installerApps = [] } = useQuery<InstallerApplication[]>({ queryKey: ["/api/installer-applications"], enabled: can("view_admin") });
   const pendingAppsCount = useMemo(() => installerApps.filter((a) => a.status === "en_attente").length, [installerApps]);
 

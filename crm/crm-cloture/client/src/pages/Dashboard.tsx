@@ -26,6 +26,7 @@ export function Dashboard() {
 
   const isEn = language === "en";
   const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
+  const activeLeads = leads.filter(l => l.status !== "test");
 
   // Pipeline groups
   const pipelineGroups: Array<{ key: string; label: string; items: Quote[] }> = [
@@ -38,7 +39,7 @@ export function Dashboard() {
 
   // Sector groupings
   const sectorMap = new Map<string, { count: number; value: number; province: string }>();
-  for (const l of leads) {
+  for (const l of activeLeads) {
     const key = l.sector || (isEn ? "Uncategorized" : "Non classé");
     const p = l.province || "??";
     const cur = sectorMap.get(key) || { count: 0, value: 0, province: p };
@@ -51,7 +52,7 @@ export function Dashboard() {
 
   // Urgent actions
   const urgent: Array<{ label: string; href: string; tone: "danger" | "warning" | "info" }> = [];
-  const unassignedLeads = leads.filter(l => !l.assignedSalesId && (l.status === "nouveau" || l.status === "a_qualifier"));
+  const unassignedLeads = activeLeads.filter(l => !l.assignedSalesId && (l.status === "nouveau" || l.status === "a_qualifier"));
   if (unassignedLeads.length > 0) urgent.push({ label: isEn ? `${unassignedLeads.length} lead(s) without assigned rep` : `${unassignedLeads.length} lead(s) sans vendeur assigné`, href: "/dispatch-vendeur", tone: "danger" });
   const noInstaller = quotes.filter(q => q.salesStatus === "signee" && !q.assignedInstallerId);
   if (noInstaller.length > 0) urgent.push({ label: isEn ? `${noInstaller.length} signed contract(s) without installer` : `${noInstaller.length} contrat(s) signé(s) sans installateur`, href: "/dispatch-installation", tone: "warning" });

@@ -22,6 +22,7 @@ export function DispatchVendeur() {
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
   const salesReps = users.filter(u => u.role === "sales_rep");
+  const activeLeads = leads.filter(l => l.status !== "test");
 
   const assignMut = useMutation({
     mutationFn: async ({ id, salesId }: { id: number; salesId: number }) =>
@@ -40,15 +41,15 @@ export function DispatchVendeur() {
   // Charge by sales rep
   const charge = useMemo(() => {
     return salesReps.map(rep => {
-      const repLeads = leads.filter(l => l.assignedSalesId === rep.id);
+      const repLeads = activeLeads.filter(l => l.assignedSalesId === rep.id);
       const active = repLeads.filter(l => !["gagne", "perdu"].includes(l.status));
       const repQuotes = quotes.filter(q => q.assignedSalesId === rep.id && q.salesStatus !== "perdue" && q.salesStatus !== "signee");
       const pipelineValue = repQuotes.reduce((s, q) => s + (q.estimatedPrice || 0), 0);
       return { rep, leads: repLeads, active, quotes: repQuotes, pipelineValue };
     });
-  }, [salesReps, leads, quotes]);
+  }, [salesReps, activeLeads, quotes]);
 
-  const unassigned = leads.filter(l => !l.assignedSalesId);
+  const unassigned = activeLeads.filter(l => !l.assignedSalesId);
   const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
 
   return (

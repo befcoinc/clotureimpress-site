@@ -41,7 +41,7 @@ export const leads = pgTable("leads", {
   source: text("source").notNull().default("email"), // email, web, téléphone, référence
   intimuraId: text("intimura_id"), // external quote/lead id from Intimura
   sector: text("sector"), // computed sector tag e.g. "QC-Montreal-Plateau"
-  status: text("status").notNull().default("nouveau"), // nouveau, a_qualifier, assigne, en_cours, gagne, perdu
+  status: text("status").notNull().default("nouveau"), // nouveau, a_qualifier, assigne, en_cours, gagne, perdu, test
   assignedSalesId: integer("assigned_sales_id"),
   estimatedValue: real("estimated_value"),
   estimatedLength: real("estimated_length"),
@@ -169,6 +169,7 @@ export const LEAD_STATUSES = {
   en_cours: "Soumission en cours",
   gagne: "Gagné",
   perdu: "Perdu",
+  test: "Test",
 } as const;
 
 export const SALES_STATUSES = {

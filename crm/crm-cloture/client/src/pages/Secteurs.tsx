@@ -13,12 +13,13 @@ export function Secteurs() {
   const isEn = language === "en";
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
+  const activeLeads = leads.filter(l => l.status !== "test");
 
   const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
 
   const byProvince = useMemo(() => {
     return PROVINCES.map(p => {
-      const pLeads = leads.filter(l => l.province === p);
+      const pLeads = activeLeads.filter(l => l.province === p);
       const pQuotes = quotes.filter(q => q.province === p);
       return {
         province: p,
@@ -28,11 +29,11 @@ export function Secteurs() {
         value: pQuotes.reduce((s, q) => s + (q.estimatedPrice || 0), 0),
       };
     }).filter(x => x.leads > 0 || x.quotes > 0);
-  }, [leads, quotes]);
+  }, [activeLeads, quotes]);
 
   const bySector = useMemo(() => {
     const map = new Map<string, { count: number; value: number; quotes: number; province: string }>();
-    for (const l of leads) {
+    for (const l of activeLeads) {
       const key = l.sector || (isEn ? "Unclassified" : "Non classé");
       const cur = map.get(key) || { count: 0, value: 0, quotes: 0, province: l.province || "?" };
       cur.count += 1; cur.value += l.estimatedValue || 0;
@@ -45,12 +46,12 @@ export function Secteurs() {
       map.set(key, cur);
     }
     return Array.from(map.entries()).sort((a, b) => b[1].count + b[1].quotes - a[1].count - a[1].quotes);
-  }, [leads, quotes, isEn]);
+  }, [activeLeads, quotes, isEn]);
 
   // Group by city
   const byCity = useMemo(() => {
     const map = new Map<string, { province: string; leads: number; value: number; quotes: number }>();
-    for (const l of leads) {
+    for (const l of activeLeads) {
       const key = `${l.city || "?"}`;
       const cur = map.get(key) || { province: l.province || "?", leads: 0, value: 0, quotes: 0 };
       cur.leads += 1; cur.value += l.estimatedValue || 0;
@@ -63,7 +64,7 @@ export function Secteurs() {
       map.set(key, cur);
     }
     return Array.from(map.entries()).sort((a, b) => b[1].leads - a[1].leads);
-  }, [leads, quotes]);
+  }, [activeLeads, quotes]);
 
   return (
     <>

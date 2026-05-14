@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Mail, Phone, MapPin, Filter, Globe, Database, Clock, Trash2 } from "lucide-react";
+import { Plus, Mail, Phone, MapPin, Filter, Globe, Database, Clock, Trash2, FlaskConical } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -82,6 +82,7 @@ export function Leads() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
     },
   });
 
@@ -312,13 +313,29 @@ export function Leads() {
 
                   {can("edit_lead") && (
                     <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                      {Object.entries(LEAD_STATUSES).filter(([k]) => k !== lead.status).map(([k, v]) => (
+                      {Object.entries(LEAD_STATUSES).filter(([k]) => k !== lead.status && (lead.status === "test" || k !== "test")).map(([k, v]) => (
                         <Button key={k} size="sm" variant="outline" className="h-7 text-[11px]"
                           onClick={() => updateStatus.mutate({ id: lead.id, status: k })}
                           data-testid={`button-status-${lead.id}-${k}`}>
                           → {v}
                         </Button>
                       ))}
+                    </div>
+                  )}
+
+                  {can("edit_lead") && lead.status !== "test" && (
+                    <div className="flex justify-end pt-1">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-7 text-[11px] gap-1 ml-auto"
+                        onClick={() => updateStatus.mutate({ id: lead.id, status: "test" })}
+                        disabled={updateStatus.isPending}
+                        data-testid={`button-mark-test-${lead.id}`}
+                      >
+                        <FlaskConical className="h-3 w-3" />
+                        {isEn ? "Mark as test" : "Classer test"}
+                      </Button>
                     </div>
                   )}
 

@@ -928,6 +928,9 @@ export async function registerRoutes(
     if (!before) return res.status(404).json({ error: "Not found" });
 
     const { _userId, _userName, _userRole, ...payload } = req.body;
+    if (payload.status === "test") {
+      payload.assignedSalesId = null;
+    }
     const updated = await storage.updateLead(leadId, payload);
     if (!updated) return res.status(404).json({ error: "Not found" });
 
@@ -956,7 +959,9 @@ export async function registerRoutes(
       userName: _userName || "Système",
       userRole: _userRole || "system",
       action: "update",
-      note: assignedRepName
+      note: payload.status === "test"
+        ? "Classé en test"
+        : assignedRepName
         ? `Assignation vendeur → ${assignedRepName} (notification envoyée)`
         : payload.status
           ? `Statut → ${payload.status}`
@@ -1573,7 +1578,8 @@ export async function registerRoutes(
     const [allLeads, allQuotes, allUsers, allCrews] = await Promise.all([
       storage.getLeads(), storage.getQuotes(), storage.getUsers(), storage.getCrews(),
     ]);
-    const nouveau = allLeads.filter(l => l.status === "nouveau").length;
+    const activeLeads = allLeads.filter(l => l.status !== "test");
+    const nouveau = activeLeads.filter(l => l.status === "nouveau").length;
     const enCours = allQuotes.filter(q => ["envoyee", "suivi", "rendez_vous", "rdv_mesure", "nouveau", "contacte"].includes(q.salesStatus)).length;
     const gagne = allQuotes.filter(q => q.salesStatus === "signee").length;
     const installPlanned = allQuotes.filter(q => q.installStatus === "planifiee").length;
@@ -1586,7 +1592,7 @@ export async function registerRoutes(
       .reduce((s, q) => s + (q.estimatedPrice || 0), 0);
 
     const stats = {
-      leadsCount: allLeads.length,
+      leadsCount: activeLeads.length,
       newLeads: nouveau,
       quotesInProgress: enCours,
       quotesWon: gagne,

@@ -265,6 +265,7 @@ export function Heatmap() {
   const isEn = language === "en";
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
+  const activeLeads = leads.filter(l => l.status !== "test");
   const installerProfilesQuery = useQuery<InstallerProfile[]>({ queryKey: ["/api/installer-profiles"] });
   const installerProfiles = installerProfilesQuery.data ?? [];
   const [province, setProvince] = useState("all");
@@ -284,7 +285,7 @@ export function Heatmap() {
 
   const mapQuotes = useMemo(() => {
     let fallbackIndex = 0;
-    const leadAsQuotes: Quote[] = leads.map((l) => ({
+    const leadAsQuotes: Quote[] = activeLeads.map((l) => ({
       id: -1000000 - l.id,
       intimuraId: `lead-${l.id}`,
       clientName: l.clientName,
@@ -339,7 +340,7 @@ export function Heatmap() {
         const isVente = ["signed", "install", "problem"].includes(q.stageTone);
         return (layers.has("estimations") && isEstimation) || (layers.has("ventes") && isVente);
       });
-  }, [quotes, leads, province, stage, layers]);
+  }, [quotes, activeLeads, province, stage, layers]);
 
   const hotspots = useMemo(() => {
     const map = new Map<string, Hotspot>();
