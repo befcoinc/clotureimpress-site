@@ -1665,7 +1665,22 @@ export async function registerRoutes(
   async function applyIntimuraDetails(intimuraId: string, decoded: any) {
     const details = pickIntimuraDetails(decoded);
     if (!details || !intimuraId) return { ok: false, reason: "EMPTY" };
-    const quote = await storage.getQuoteByIntimuraId(intimuraId);
+    let quote = await storage.getQuoteByIntimuraId(intimuraId);
+    // Legacy data may have stored only the first UUID segment (8 chars); fall back
+    // to prefix lookup and upgrade the stored intimura_id to the full UUID.
+    if (!quote && intimuraId.length >= 8) {
+      const prefix = intimuraId.split("-")[0];
+      quote = await storage.getQuoteByIntimuraId(prefix);
+      if (quote) {
+        await storage.updateQuote(quote.id, { intimuraId } as any);
+        if (quote.leadId) {
+          const lead = await storage.getLead(quote.leadId);
+          if (lead && lead.intimuraId === prefix) {
+            await storage.updateLead(lead.id, { intimuraId } as any);
+          }
+        }
+      }
+    }
     if (!quote) return { ok: false, reason: "QUOTE_NOT_FOUND" };
     const subtotal = (details.items || []).reduce(
       (sum: number, it: any) => sum + Number(it?.qty || 0) * Number(it?.unit_price || 0),
