@@ -1871,13 +1871,22 @@ export async function registerRoutes(
     if (cached) {
       return res.json(cached);
     }
-    const quotes = await storage.getQuotes();
+    const actor = req.user as any;
+    let quotes = await storage.getQuotes();
+    // Sales reps only see their own quotes.
+    if (actor?.role === "sales_rep") {
+      quotes = quotes.filter((q: any) => q.assignedSalesId === actor.id);
+    }
     setCachedApiResponse(req, quotes);
     res.json(quotes);
   });
   app.get("/api/quotes/:id", async (req, res) => {
     const q = await storage.getQuote(Number(req.params.id));
     if (!q) return res.status(404).json({ error: "Not found" });
+    const actor = req.user as any;
+    if (actor?.role === "sales_rep" && q.assignedSalesId !== actor.id) {
+      return res.status(403).json({ error: "Acces refuse" });
+    }
     res.json(q);
   });
   app.post("/api/quotes", async (req, res) => {

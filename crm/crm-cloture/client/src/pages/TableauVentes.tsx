@@ -5,6 +5,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/lib/language-context";
+import { useRole } from "@/lib/role-context";
+import { useAuth } from "@/lib/auth-context";
 import type { Quote, User, Lead } from "@shared/schema";
 import { SALES_STATUSES } from "@shared/schema";
 import { FileText, CheckCircle2, TrendingUp, Users } from "lucide-react";
@@ -12,10 +14,17 @@ import { FileText, CheckCircle2, TrendingUp, Users } from "lucide-react";
 export function TableauVentes() {
   const { language } = useLanguage();
   const isEn = language === "en";
+  const { role } = useRole();
+  const { user: currentUser } = useAuth();
+  const isSalesRep = role === "sales_rep";
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
-  const reps = users.filter(u => u.role === "sales_rep");
+  // For sales_rep: quotes are already filtered server-side to their own.
+  // For others: show all reps.
+  const reps = isSalesRep
+    ? users.filter(u => u.id === currentUser?.id)
+    : users.filter(u => u.role === "sales_rep");
   const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
 
   const totalPipeline = quotes.filter(q => !["perdue", "signee"].includes(q.salesStatus)).reduce((s, q) => s + (q.estimatedPrice || 0), 0);
@@ -49,11 +58,11 @@ export function TableauVentes() {
           <KpiCard label={isEn ? "Active pipeline" : "Pipeline actif"} value={moneyFmt.format(totalPipeline)} icon={<TrendingUp className="h-4 w-4" />} accent="info" />
           <KpiCard label={isEn ? "Signed sales" : "Ventes signées"} value={moneyFmt.format(signedValue)} icon={<CheckCircle2 className="h-4 w-4" />} accent="success" />
           <KpiCard label={isEn ? "Conversion rate" : "Taux de conversion"} value={`${conversion}%`} icon={<FileText className="h-4 w-4" />} />
-          <KpiCard label={isEn ? "Active reps" : "Vendeurs actifs"} value={reps.filter(r => r.active).length} icon={<Users className="h-4 w-4" />} />
+          {!isSalesRep && <KpiCard label={isEn ? "Active reps" : "Vendeurs actifs"} value={reps.filter(r => r.active).length} icon={<Users className="h-4 w-4" />} />}
         </div>
 
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base">{isEn ? "Performance by sales rep" : "Performance par vendeur"}</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-base">{isSalesRep ? (isEn ? "My performance" : "Ma performance") : (isEn ? "Performance by sales rep" : "Performance par vendeur")}</CardTitle></CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
