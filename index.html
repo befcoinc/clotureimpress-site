@@ -1405,9 +1405,38 @@
     var msgEl = document.getElementById('form-install-msg');
     var submitBtn = document.getElementById('form-install-submit');
 
+    function shouldOpenFromUrl() {
+      var params = new URLSearchParams(window.location.search || '');
+      var popup = (params.get('popup') || params.get('modal') || '').toLowerCase();
+      var hash = (window.location.hash || '').toLowerCase();
+      if (popup === 'installateur' || popup === 'installer') return true;
+      if (hash === '#devenir-installateur' || hash === '#installateur' || hash === '#installer') return true;
+      return false;
+    }
+
+    function syncUrlWithModalOpen() {
+      var url = new URL(window.location.href);
+      url.searchParams.set('popup', 'installateur');
+      if (!url.hash) url.hash = 'devenir-installateur';
+      window.history.replaceState({}, '', url.toString());
+    }
+
+    function clearModalParamsFromUrl() {
+      var url = new URL(window.location.href);
+      var popup = (url.searchParams.get('popup') || '').toLowerCase();
+      var modalParam = (url.searchParams.get('modal') || '').toLowerCase();
+      if (popup === 'installateur' || popup === 'installer') url.searchParams.delete('popup');
+      if (modalParam === 'installateur' || modalParam === 'installer') url.searchParams.delete('modal');
+      if (['#devenir-installateur', '#installateur', '#installer'].indexOf((url.hash || '').toLowerCase()) !== -1) {
+        url.hash = '';
+      }
+      window.history.replaceState({}, '', url.toString());
+    }
+
     function openModal() {
       modal.hidden = false;
       document.body.style.overflow = 'hidden';
+      syncUrlWithModalOpen();
       modal.querySelector('input[name="companyName"]').focus();
       // Close mobile menu if open
       if (!mobileMenu.hidden) {
@@ -1419,6 +1448,7 @@
     function closeModal() {
       modal.hidden = true;
       document.body.style.overflow = '';
+      clearModalParamsFromUrl();
     }
     openBtns.forEach(function(btn) { if (btn) btn.addEventListener('click', openModal); });
     closeBtn.addEventListener('click', closeModal);
@@ -1477,6 +1507,11 @@
         submitBtn.textContent = 'Envoyer ma candidature';
       });
     });
+
+    // Deep-link support for ad campaigns.
+    if (shouldOpenFromUrl()) {
+      window.requestAnimationFrame(openModal);
+    }
   })();
 </script>
 </html>
