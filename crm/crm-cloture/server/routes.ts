@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer } from "node:http";
 import type { Server } from "node:http";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 import passport from "passport";
@@ -1339,21 +1339,87 @@ export async function registerRoutes(
     res.json({ sector: detectSector(req.body || {}) });
   });
 
+  // -------- Intimura credentials (persisted on disk) --------
+  // Two ways to authenticate against Cloudflare Access in front of Intimura:
+  //  1) Paste a browser session cookie (typically `CF_Authorization=...`) - lasts ~24h.
+  //  2) Configure a Cloudflare Access Service Token (Client-Id + Client-Secret) - never expires, no OTP.
+  const intimuraCredsDir = path.join(process.cwd(), ".intimura");
+  const intimuraCredsPath = path.join(intimuraCredsDir, "credentials.json");
+  type IntimuraCreds = { cookie?: string; cfClientId?: string; cfClientSecret?: string; updatedAt?: string };
+  function readIntimuraCreds(): IntimuraCreds {
+    try {
+      if (existsSync(intimuraCredsPath)) return JSON.parse(readFileSync(intimuraCredsPath, "utf8")) as IntimuraCreds;
+    } catch { /* ignore */ }
+    return {};
+  }
+  function writeIntimuraCreds(creds: IntimuraCreds) {
+    try { mkdirSync(intimuraCredsDir, { recursive: true }); } catch { /* ignore */ }
+    writeFileSync(intimuraCredsPath, JSON.stringify({ ...creds, updatedAt: new Date().toISOString() }, null, 2), "utf8");
+  }
+  function buildIntimuraHeaders(): Record<string, string> | null {
+    const creds = readIntimuraCreds();
+    const cookie = process.env.INTIMURA_COOKIE || creds.cookie || "";
+    const cfClientId = process.env.CF_ACCESS_CLIENT_ID || creds.cfClientId || "";
+    const cfClientSecret = process.env.CF_ACCESS_CLIENT_SECRET || creds.cfClientSecret || "";
+    if (!cookie && !(cfClientId && cfClientSecret)) return null;
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (cookie) headers["Cookie"] = cookie;
+    if (cfClientId && cfClientSecret) {
+      headers["CF-Access-Client-Id"] = cfClientId;
+      headers["CF-Access-Client-Secret"] = cfClientSecret;
+    }
+    return headers;
+  }
+
+  app.get("/api/intimura/credentials", requireAuth, async (req, res) => {
+    const actor = req.user as any;
+    if (actor?.role !== "admin") return res.status(403).json({ error: "Acces admin requis" });
+    const creds = readIntimuraCreds();
+    res.json({
+      hasCookie: !!(process.env.INTIMURA_COOKIE || creds.cookie),
+      hasCfServiceToken: !!((process.env.CF_ACCESS_CLIENT_ID || creds.cfClientId) && (process.env.CF_ACCESS_CLIENT_SECRET || creds.cfClientSecret)),
+      updatedAt: creds.updatedAt || null,
+    });
+  });
+
+  app.post("/api/intimura/credentials", requireAuth, async (req, res) => {
+    const actor = req.user as any;
+    if (actor?.role !== "admin") return res.status(403).json({ error: "Acces admin requis" });
+    const { cookie, cfClientId, cfClientSecret, clear } = req.body || {};
+    if (clear) {
+      writeIntimuraCreds({});
+      return res.json({ ok: true, cleared: true });
+    }
+    const current = readIntimuraCreds();
+    writeIntimuraCreds({
+      cookie: typeof cookie === "string" && cookie.trim() ? cookie.trim() : current.cookie,
+      cfClientId: typeof cfClientId === "string" && cfClientId.trim() ? cfClientId.trim() : current.cfClientId,
+      cfClientSecret: typeof cfClientSecret === "string" && cfClientSecret.trim() ? cfClientSecret.trim() : current.cfClientSecret,
+    });
+    res.json({ ok: true });
+  });
+
   // -------- Intimura sync --------
   app.post("/api/intimura/sync", async (_req, res) => {
-    const cookieFile = "/home/user/workspace/intimura-cookie-header.txt";
-    const cookie = process.env.INTIMURA_COOKIE || (existsSync(cookieFile) ? readFileSync(cookieFile, "utf8").trim() : "");
-    if (!cookie) {
+    const headers = buildIntimuraHeaders();
+    if (!headers) {
       return res.status(400).json({
-        error: "INTIMURA_COOKIE manquant",
-        message: "Connecte Intimura ou configure une session/Service Token Cloudflare pour activer la synchronisation.",
+        error: "INTIMURA_CREDENTIALS_MISSING",
+        message: "Configure d'abord un cookie Intimura ou un Cloudflare Access Service Token.",
       });
     }
 
-    const response = await fetch("https://crm.intimura.com/app/board/__data.json?x-sveltekit-invalidated=001", {
-      headers: { Cookie: cookie, Accept: "application/json" },
-    });
-    if (!response.ok) return res.status(response.status).json({ error: `Intimura HTTP ${response.status}` });
+    const response = await fetch("https://crm.intimura.com/app/board/__data.json?x-sveltekit-invalidated=001", { headers });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      const looksLikeCfLogin = body.includes("Cloudflare Access") || body.includes("cf-access") || response.status === 302;
+      return res.status(response.status).json({
+        error: looksLikeCfLogin ? "INTIMURA_AUTH_EXPIRED" : `INTIMURA_HTTP_${response.status}`,
+        message: looksLikeCfLogin
+          ? "La session Cloudflare Access a expire. Reconnecte-toi a intimura.com et recolle un nouveau cookie, ou configure un Service Token."
+          : `Intimura HTTP ${response.status}`,
+      });
+    }
 
     const payload = await response.json() as any;
     const node = payload.nodes?.find((n: any) => n.type === "data");

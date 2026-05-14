@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Mail, Phone, MapPin, Filter, Globe, Database, Clock, Trash2, FlaskConical } from "lucide-react";
+import { Plus, Mail, Phone, MapPin, Filter, Globe, Database, Clock, Trash2, FlaskConical, RefreshCw, KeyRound, ExternalLink } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -133,22 +133,107 @@ export function Leads() {
     }
   };
 
+  // -------- Intimura sync + credentials --------
+  const [credsOpen, setCredsOpen] = useState(false);
+  const [credsCookie, setCredsCookie] = useState("");
+  const [credsCfId, setCredsCfId] = useState("");
+  const [credsCfSecret, setCredsCfSecret] = useState("");
+
+  const { data: credsStatus } = useQuery<{ hasCookie: boolean; hasCfServiceToken: boolean; updatedAt: string | null }>({
+    queryKey: ["/api/intimura/credentials"],
+    enabled: isAdmin,
+  });
+
+  const saveCredsMut = useMutation({
+    mutationFn: async () => apiRequest("POST", "/api/intimura/credentials", {
+      cookie: credsCookie || undefined,
+      cfClientId: credsCfId || undefined,
+      cfClientSecret: credsCfSecret || undefined,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/intimura/credentials"] });
+      toast({ title: isEn ? "Intimura credentials saved" : "Identifiants Intimura sauvegardés" });
+      setCredsCookie("");
+      setCredsCfId("");
+      setCredsCfSecret("");
+      setCredsOpen(false);
+    },
+    onError: (err: any) => {
+      toast({ title: isEn ? "Save failed" : "Échec sauvegarde", description: err?.message || "", variant: "destructive" });
+    },
+  });
+
+  const syncMut = useMutation({
+    mutationFn: async () => apiRequest("POST", "/api/intimura/sync", {}),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      const created = data?.createdLeads ?? 0;
+      const skipped = data?.skipped ?? 0;
+      toast({
+        title: isEn ? "Intimura sync complete" : "Synchronisation Intimura terminée",
+        description: isEn
+          ? `${created} new lead(s), ${skipped} duplicate(s) skipped.`
+          : `${created} nouveau(x) lead(s), ${skipped} doublon(s) ignoré(s).`,
+      });
+    },
+    onError: (err: any) => {
+      const msg = String(err?.message || "");
+      const needsCreds = msg.includes("INTIMURA_CREDENTIALS_MISSING") || msg.includes("INTIMURA_AUTH_EXPIRED");
+      if (needsCreds && isAdmin) {
+        setCredsOpen(true);
+      }
+      toast({
+        title: isEn ? "Sync failed" : "Synchronisation échouée",
+        description: needsCreds
+          ? (isEn ? "Intimura credentials missing or expired. Configure a cookie or a Cloudflare Access Service Token." : "Identifiants Intimura manquants ou expirés. Configure un cookie ou un Service Token Cloudflare Access.")
+          : msg,
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <>
       <PageHeader
         title={isEn ? "Incoming leads - Intimura" : "Leads entrants — Intimura"}
         description={isEn ? "Centralized leads from crm.intimura.com. Automatic classification by province, city, neighborhood and postal code." : "Centralisation des leads provenant de crm.intimura.com. Classification automatique par province, ville, quartier et code postal."}
         action={can("edit_lead") ? (
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-new-lead" className="gap-2">
-                <Plus className="h-4 w-4" /> {isEn ? "Add Intimura lead" : "Ajouter un lead Intimura"}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              data-testid="button-sync-intimura"
+              className="gap-2"
+              disabled={syncMut.isPending}
+              onClick={() => syncMut.mutate()}
+            >
+              <RefreshCw className={`h-4 w-4 ${syncMut.isPending ? "animate-spin" : ""}`} />
+              {syncMut.isPending
+                ? (isEn ? "Syncing..." : "Synchronisation...")
+                : (isEn ? "Sync Intimura leads" : "Synchroniser Intimura")}
+            </Button>
+            {isAdmin ? (
+              <Button
+                data-testid="button-intimura-credentials"
+                variant="outline"
+                size="icon"
+                title={isEn ? "Configure Intimura access" : "Configurer l'accès Intimura"}
+                onClick={() => setCredsOpen(true)}
+              >
+                <KeyRound className="h-4 w-4" />
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>{isEn ? "New Intimura lead" : "Nouveau lead Intimura"}</DialogTitle>
-              </DialogHeader>
+            ) : null}
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-new-lead" variant="outline" className="gap-2">
+                  <Plus className="h-4 w-4" /> {isEn ? "Manual lead" : "Lead manuel"}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>{isEn ? "New Intimura lead" : "Nouveau lead Intimura"}</DialogTitle>
+                </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit((data) => createMut.mutate(data))} className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
@@ -202,6 +287,7 @@ export function Leads() {
               </Form>
             </DialogContent>
           </Dialog>
+          </div>
         ) : undefined}
       />
 
@@ -370,6 +456,119 @@ export function Leads() {
           )}
         </div>
       </div>
+
+      {/* Intimura credentials dialog (admin only) */}
+      <Dialog open={credsOpen} onOpenChange={setCredsOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{isEn ? "Configure Intimura access" : "Configurer l'accès Intimura"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <div className="rounded-md border bg-muted/40 p-3 text-xs leading-relaxed">
+              <p className="font-medium mb-1">
+                {isEn
+                  ? "Cloudflare Access protects crm.intimura.com with a 6-digit email code. Two ways to skip the code from the server:"
+                  : "Cloudflare Access protège crm.intimura.com avec un code à 6 chiffres par courriel. Deux façons de contourner le code côté serveur :"}
+              </p>
+              <ol className="list-decimal pl-5 space-y-1">
+                <li>
+                  {isEn ? "Recommended: create a Cloudflare Access " : "Recommandé : créer un "}
+                  <strong>{isEn ? "Service Token" : "Service Token Cloudflare Access"}</strong>
+                  {isEn
+                    ? " (Zero Trust → Access → Service Auth → Create token), then add it to the application policy as 'Service Auth'. The token never expires and bypasses the OTP."
+                    : " (Zero Trust → Access → Service Auth → Create token), puis l'ajouter à la politique de l'application comme « Service Auth ». Le token n'expire pas et évite le code OTP à vie."}
+                </li>
+                <li>
+                  {isEn
+                    ? "Quick fix: log in to intimura.com in your browser, copy the cookie header (especially "
+                    : "Solution rapide : connecte-toi à intimura.com dans ton navigateur, copie l'en-tête Cookie (surtout "}
+                  <code>CF_Authorization</code>
+                  {isEn ? ") and paste it below. Lasts ~24h." : ") et colle-le ci-dessous. Durée ~24h."}
+                </li>
+              </ol>
+              <p className="mt-2">
+                <a
+                  href="https://crm.intimura.com/app/quotes"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-primary underline"
+                >
+                  <ExternalLink className="h-3 w-3" /> {isEn ? "Open Intimura to log in" : "Ouvrir Intimura pour se connecter"}
+                </a>
+              </p>
+            </div>
+
+            {credsStatus ? (
+              <div className="text-xs text-muted-foreground">
+                {isEn ? "Current status:" : "Statut actuel :"}{" "}
+                <Badge variant={credsStatus.hasCfServiceToken ? "default" : "outline"}>
+                  {isEn ? "Service Token" : "Service Token"}: {credsStatus.hasCfServiceToken ? (isEn ? "configured" : "configuré") : (isEn ? "missing" : "manquant")}
+                </Badge>{" "}
+                <Badge variant={credsStatus.hasCookie ? "default" : "outline"}>
+                  {isEn ? "Cookie" : "Cookie"}: {credsStatus.hasCookie ? (isEn ? "configured" : "configuré") : (isEn ? "missing" : "manquant")}
+                </Badge>
+                {credsStatus.updatedAt ? (
+                  <span className="ml-2">
+                    ({isEn ? "updated" : "mis à jour"} {new Date(credsStatus.updatedAt).toLocaleString()})
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium">
+                {isEn ? "Cloudflare Access Service Token — Client ID" : "Cloudflare Access Service Token — Client ID"}
+              </label>
+              <Input
+                placeholder="xxxxxxxxxxxxxxxx.access"
+                value={credsCfId}
+                onChange={(e) => setCredsCfId(e.target.value)}
+                data-testid="input-cf-client-id"
+              />
+              <label className="text-xs font-medium">
+                {isEn ? "Cloudflare Access Service Token — Client Secret" : "Cloudflare Access Service Token — Client Secret"}
+              </label>
+              <Input
+                type="password"
+                placeholder="••••••••••••••••"
+                value={credsCfSecret}
+                onChange={(e) => setCredsCfSecret(e.target.value)}
+                data-testid="input-cf-client-secret"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium">
+                {isEn ? "Or — Intimura session cookie (full Cookie header)" : "Ou — Cookie de session Intimura (en-tête Cookie complet)"}
+              </label>
+              <Textarea
+                rows={4}
+                placeholder="CF_Authorization=...; other=..."
+                value={credsCookie}
+                onChange={(e) => setCredsCookie(e.target.value)}
+                data-testid="input-intimura-cookie"
+                className="font-mono text-xs"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setCredsOpen(false)}
+              data-testid="button-cancel-creds"
+            >
+              {isEn ? "Cancel" : "Annuler"}
+            </Button>
+            <Button
+              onClick={() => saveCredsMut.mutate()}
+              disabled={saveCredsMut.isPending || (!credsCookie && !(credsCfId && credsCfSecret))}
+              data-testid="button-save-creds"
+            >
+              {saveCredsMut.isPending ? (isEn ? "Saving..." : "Sauvegarde...") : (isEn ? "Save & retry sync" : "Sauvegarder")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
