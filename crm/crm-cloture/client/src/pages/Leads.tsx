@@ -117,6 +117,13 @@ export function Leads() {
   });
 
   const isAdmin = currentUser?.role === "admin";
+  const handleMarkAsTest = (leadId: number) => {
+    if (filterStatus !== "all" && filterStatus !== "test") {
+      setFilterStatus("all");
+    }
+    updateStatus.mutate({ id: leadId, status: "test" });
+  };
+
   const handleDeleteLead = (lead: Lead) => {
     const msg = isEn
       ? `Permanently delete the lead "${lead.clientName}"? This action cannot be undone.`
@@ -329,12 +336,12 @@ export function Leads() {
                         size="sm"
                         variant="secondary"
                         className="h-7 text-[11px] gap-1 ml-auto"
-                        onClick={() => updateStatus.mutate({ id: lead.id, status: "test" })}
+                        onClick={() => handleMarkAsTest(lead.id)}
                         disabled={updateStatus.isPending}
                         data-testid={`button-mark-test-${lead.id}`}
                       >
                         <FlaskConical className="h-3 w-3" />
-                        {isEn ? "Mark as test" : "Classer test"}
+                        {isEn ? "Mark for testing" : "Marquer pour test"}
                       </Button>
                     </div>
                   )}

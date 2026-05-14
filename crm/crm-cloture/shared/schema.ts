@@ -169,7 +169,7 @@ export const LEAD_STATUSES = {
   en_cours: "Soumission en cours",
   gagne: "Gagné",
   perdu: "Perdu",
-  test: "Test",
+  test: "Pour test",
 } as const;
 
 export const SALES_STATUSES = {
