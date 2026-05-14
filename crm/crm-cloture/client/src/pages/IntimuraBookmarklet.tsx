@@ -1,23 +1,34 @@
 import { useEffect, useRef } from "react";
-import { Copy, ExternalLink } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Copy, ExternalLink, AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
+import { useRole } from "@/lib/role-context";
 
 export function IntimuraBookmarklet() {
   const { language } = useLanguage();
+  const { currentUser } = useRole();
   const { toast } = useToast();
   const isEn = language === "en";
 
+  const { data: credsStatus } = useQuery<{ bookmarkletToken: string }>({
+    queryKey: ["/api/intimura/credentials"],
+    enabled: !!currentUser,
+  });
+
   const apiBase = typeof window !== "undefined" ? window.location.origin : "";
+  const token = credsStatus?.bookmarkletToken || "";
   const dragRef = useRef<HTMLAnchorElement | null>(null);
   // Bookmarklet strategy: scrape the visible quotes table on intimura.com,
-  // then open a NEW TAB on the CRM origin and pass payload via window.name.
-  // This avoids URL length limits and hash/query truncation on large datasets.
-  const bookmarkletJs = `javascript:(function(){try{var t=document.querySelector('table');if(!t){alert('Aucun tableau trouve sur cette page. Va sur la liste des quotes Intimura.');return;}var heads=[].slice.call(t.querySelectorAll('thead th, thead td')).map(function(h){return (h.textContent||'').trim().toLowerCase();});var trs=t.querySelectorAll('tbody tr');var rows=[];trs.forEach(function(tr){var tds=tr.querySelectorAll('td');if(!tds.length)return;var o={};tds.forEach(function(td,j){var key=heads[j]||('col'+j);o[key]=(td.textContent||'').trim();});var link=tr.querySelector('a[href]');if(link){var href=link.getAttribute('href')||'';o._href=href;var m=href.match(/([0-9a-fA-F-]{8,})/);if(m){o._id=m[1];}else{var n=href.match(/(\\d{2,})/);if(n)o._id=n[1];}}rows.push(o);});if(!rows.length){alert('Le tableau est vide ou les lignes n ont pas pu etre lues.');return;}var payload=JSON.stringify(rows);if(payload.length>8000000){alert('Trop de donnees pour un seul transfert. Filtre la liste sur Intimura.');return;}var url='${apiBase}/#/intimura-receive';console.log('[bookmarklet] Opening receiver tab with '+payload.length+' bytes');var w=window.open(url,'_blank');if(!w){alert('Popup bloque. Autorise les popups pour crm.clotureimpress.com.');return;}try{w.name='CI_INTIMURA::'+JSON.stringify({payload:rows});}catch(e){console.warn('[bookmarklet] window.name transfer failed',e);} }catch(e){alert('Erreur bookmarklet: '+(e&&e.message?e.message:e));}})();`;
+  // then POST directly to the CRM ingest endpoint. This avoids payload handoff
+  // races/truncation between browser tabs.
+  const bookmarkletJs = token
+    ? `javascript:(function(){try{var t=document.querySelector('table');if(!t){alert('Aucun tableau trouve sur cette page. Va sur la liste des quotes Intimura.');return;}var heads=[].slice.call(t.querySelectorAll('thead th, thead td')).map(function(h){return (h.textContent||'').trim().toLowerCase();});var trs=t.querySelectorAll('tbody tr');var rows=[];trs.forEach(function(tr){var tds=tr.querySelectorAll('td');if(!tds.length)return;var o={};tds.forEach(function(td,j){var key=heads[j]||('col'+j);o[key]=(td.textContent||'').trim();});var link=tr.querySelector('a[href]');if(link){var href=link.getAttribute('href')||'';o._href=href;var m=href.match(/([0-9a-fA-F-]{8,})/);if(m){o._id=m[1];}else{var n=href.match(/(\\d{2,})/);if(n)o._id=n[1];}}rows.push(o);});if(!rows.length){alert('Le tableau est vide ou les lignes n ont pas pu etre lues.');return;}var payload=JSON.stringify(rows);if(payload.length>8000000){alert('Trop de donnees pour un seul transfert. Filtre la liste sur Intimura.');return;}var url='${apiBase}/api/intimura/ingest?token=${token}';fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:rows})}).then(function(r){return r.json().catch(function(){return {};}).then(function(j){if(!r.ok){throw new Error(j.message||j.error||('HTTP '+r.status));}return j;});}).then(function(j){alert('Import reussi: '+(j.createdLeads||0)+' lead(s) cree(s), '+(j.skipped||0)+' doublon(s).');window.open('${apiBase}/#/leads','_blank');}).catch(function(e){alert('Echec import: '+(e&&e.message?e.message:e));});}catch(e){alert('Erreur bookmarklet: '+(e&&e.message?e.message:e));}})();`
+    : "";
 
   // Set href via DOM to avoid any React/HTML attribute escaping of special chars.
   useEffect(() => {
@@ -38,7 +49,26 @@ export function IntimuraBookmarklet() {
       />
 
       <div className="p-6 lg:p-8 space-y-6">
-        <>
+        {!token ? (
+          <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/40">
+            <CardContent className="pt-6">
+              <div className="flex gap-3">
+                <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-900">
+                    {isEn ? "Credentials loading..." : "Chargement des identifiants..."}
+                  </p>
+                  <p className="text-amber-800 text-xs mt-1">
+                    {isEn
+                      ? "Refresh the page if this takes more than a few seconds."
+                      : "Recharge la page si ça prend plus de quelques secondes."}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">
@@ -153,7 +183,8 @@ export function IntimuraBookmarklet() {
                 </details>
               </CardContent>
             </Card>
-        </>
+          </>
+        )}
       </div>
     </>
   );
