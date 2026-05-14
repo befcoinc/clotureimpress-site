@@ -1688,10 +1688,13 @@ export async function registerRoutes(
   app.post("/api/intimura/ingest", async (req, res) => {
     ingestCors(req, res);
     try {
-      const provided = String(req.query.token || req.headers["x-bookmarklet-token"] || req.body?.token || "");
-      const expected = ensureBookmarkletToken();
-      if (!provided || provided !== expected) {
-        return res.status(401).json({ error: "INVALID_TOKEN", message: "Bookmarklet token invalide ou manquant." });
+      const sessionAuthed = typeof req.isAuthenticated === "function" && req.isAuthenticated();
+      if (!sessionAuthed) {
+        const provided = String(req.query.token || req.headers["x-bookmarklet-token"] || req.body?.token || "");
+        const expected = ensureBookmarkletToken();
+        if (!provided || provided !== expected) {
+          return res.status(401).json({ error: "INVALID_TOKEN", message: "Bookmarklet token invalide ou manquant." });
+        }
       }
       const intimuraQuotes = extractIntimuraQuotes(req.body?.payload ?? req.body);
       if (!intimuraQuotes.length) {
@@ -1799,10 +1802,13 @@ export async function registerRoutes(
   app.post("/api/intimura/ingest-details", async (req, res) => {
     ingestCors(req, res);
     try {
-      const provided = String(req.query.token || req.headers["x-bookmarklet-token"] || req.body?.token || "");
-      const expected = ensureBookmarkletToken();
-      if (!provided || provided !== expected) {
-        return res.status(401).json({ error: "INVALID_TOKEN" });
+      const sessionAuthed = typeof req.isAuthenticated === "function" && req.isAuthenticated();
+      if (!sessionAuthed) {
+        const provided = String(req.query.token || req.headers["x-bookmarklet-token"] || req.body?.token || "");
+        const expected = ensureBookmarkletToken();
+        if (!provided || provided !== expected) {
+          return res.status(401).json({ error: "INVALID_TOKEN" });
+        }
       }
       // Accepts either: { items: [{ intimuraId, decoded }] } OR { intimuraId, decoded }
       const items = Array.isArray(req.body?.items) ? req.body.items : [{ intimuraId: req.body?.intimuraId, decoded: req.body?.decoded }];

@@ -94,9 +94,12 @@ export function IntimuraReceive() {
         
         setRowCount(Array.isArray(payload) ? payload.length : 0);
 
-        console.log("[IntimuraReceive] Posting to /api/intimura/ingest...");
+        const ingestUrl = token
+          ? `/api/intimura/ingest?token=${encodeURIComponent(token)}`
+          : "/api/intimura/ingest";
+        console.log("[IntimuraReceive] Posting to", ingestUrl, "...");
         const r = await fetch(
-          `/api/intimura/ingest?token=${encodeURIComponent(token)}`,
+          ingestUrl,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
