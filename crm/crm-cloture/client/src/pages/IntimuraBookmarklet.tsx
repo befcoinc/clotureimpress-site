@@ -22,7 +22,7 @@ export function IntimuraBookmarklet() {
   const apiBase = typeof window !== "undefined" ? window.location.origin : "";
   const token = credsStatus?.bookmarkletToken || "";
   const bookmarkletJs = token
-    ? `javascript:(async()=>{try{const r=await fetch('https://crm.intimura.com/app/board/__data.json?x-sveltekit-invalidated=001',{credentials:'include',headers:{Accept:'application/json'}});if(!r.ok){alert('Intimura HTTP '+r.status);return;}const p=await r.json();const s=await fetch('${apiBase}/api/intimura/ingest',{method:'POST',headers:{'Content-Type':'application/json','X-Bookmarklet-Token':'${token}'},body:JSON.stringify({payload:p})});const j=await s.json();alert(s.ok?'✅ '+j.createdLeads+' lead(s)\\n'+j.skipped+' doublon(s)':'❌ '+j.message);}catch(e){alert('Erreur: '+e.message);}})();`
+    ? `javascript:(async()=>{try{const base=location.origin;const path=location.pathname.replace(/\/$/,'');const dataUrl=base+path+'/__data.json?x-sveltekit-invalidated=001';const r=await fetch(dataUrl,{credentials:'include',headers:{Accept:'application/json'}});if(!r.ok){alert('Intimura HTTP '+r.status+'\n'+dataUrl);return;}const p=await r.json();const s=await fetch('${apiBase}/api/intimura/ingest?token=${token}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:p})});const j=await s.json();alert(s.ok?'✅ '+j.createdLeads+' lead(s)\\n'+j.skipped+' doublon(s)':'❌ '+(j.message||j.error||'Erreur'));}catch(e){alert('Erreur: '+(e&&e.message?e.message:e));}})();`
     : "";
 
   return (

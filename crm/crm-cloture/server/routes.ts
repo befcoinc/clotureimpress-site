@@ -1548,7 +1548,7 @@ export async function registerRoutes(
   app.post("/api/intimura/ingest", async (req, res) => {
     ingestCors(req, res);
     try {
-      const provided = String(req.headers["x-bookmarklet-token"] || req.body?.token || "");
+      const provided = String(req.query.token || req.headers["x-bookmarklet-token"] || req.body?.token || "");
       const expected = ensureBookmarkletToken();
       if (!provided || provided !== expected) {
         return res.status(401).json({ error: "INVALID_TOKEN", message: "Bookmarklet token invalide ou manquant." });
