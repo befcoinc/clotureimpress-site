@@ -1409,7 +1409,13 @@
       var params = new URLSearchParams(window.location.search || '');
       var popup = (params.get('popup') || params.get('modal') || '').toLowerCase();
       var hash = (window.location.hash || '').toLowerCase();
-      if (popup === 'installateur' || popup === 'installer') return true;
+      if (
+        popup === 'installateur' ||
+        popup === 'installer' ||
+        popup === 'devenir-installateur' ||
+        popup === 'devenir_installateur' ||
+        popup === 'form-installateur'
+      ) return true;
       if (hash === '#devenir-installateur' || hash === '#installateur' || hash === '#installer') return true;
       return false;
     }

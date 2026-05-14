@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr-CA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Redirection | Devenir installateur</title>
+  <meta name="robots" content="noindex,nofollow">
+  <script>
+    (function() {
+      var current = new URL(window.location.href);
+      var target = new URL("/", current.origin);
+      target.searchParams.set("popup", "installateur");
+      // Keep ad tracking params (utm_*, gclid, fbclid, msclkid, etc.)
+      current.searchParams.forEach(function(value, key) {
+        if (key === "popup" || key === "modal") return;
+        target.searchParams.set(key, value);
+      });
+      target.hash = "devenir-installateur";
+      window.location.replace(target.toString());
+    })();
+  </script>
+</head>
+<body>
+  <p>Redirection vers le formulaire installateur...</p>
+  <p><a href="/?popup=installateur#devenir-installateur">Cliquer ici si la redirection ne fonctionne pas</a></p>
+</body>
+</html>
