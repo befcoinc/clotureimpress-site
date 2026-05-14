@@ -221,7 +221,6 @@ export function Secteurs() {
                 {bySector.map(([sector, info]) => {
                   const isOpen = expandedSector === sector;
                   const sectorNorm = sector;
-                  const sectorLeads = activeLeads.filter(l => (normalizeForSearch(l.sector || (isEn ? "Unclassified" : "Non classé")) || (isEn ? "unclassified" : "non classe")) === sectorNorm);
                   const sectorQuotes = quotes.filter(q => (normalizeForSearch(q.sector || (isEn ? "Unclassified" : "Non classé")) || (isEn ? "unclassified" : "non classe")) === sectorNorm);
                   return (
                     <li key={sector} className="rounded-md border border-card-border bg-card overflow-hidden">
@@ -245,7 +244,7 @@ export function Secteurs() {
                       </button>
                       {isOpen && (
                         <div className="border-t border-card-border bg-muted/30 p-2.5 space-y-2">
-                          {sectorQuotes.length > 0 && (
+                          {sectorQuotes.length > 0 ? (
                             <div>
                               <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
                                 {isEn ? "Quotes" : "Soumissions"} ({sectorQuotes.length})
@@ -271,30 +270,8 @@ export function Secteurs() {
                                 ))}
                               </ul>
                             </div>
-                          )}
-                          {sectorLeads.length > 0 && (
-                            <div>
-                              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                                Leads ({sectorLeads.length})
-                              </div>
-                              <ul className="space-y-1">
-                                {sectorLeads.map(l => (
-                                  <li key={l.id} className="flex items-center justify-between gap-2 rounded border border-card-border bg-card p-2 text-[12px]">
-                                    <div className="min-w-0 flex-1">
-                                      <div className="font-medium truncate">{l.clientName || l.id}</div>
-                                      <div className="text-[10px] text-muted-foreground truncate">{l.address || l.email || ""}</div>
-                                    </div>
-                                    <div className="text-right shrink-0">
-                                      <div className="text-[10px] tabular">{moneyFmt.format(l.estimatedValue || 0)}</div>
-                                      {l.status && <Badge variant="outline" className="text-[9px] mt-0.5">{l.status}</Badge>}
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {sectorLeads.length === 0 && sectorQuotes.length === 0 && (
-                            <div className="text-[11px] text-muted-foreground italic">{isEn ? "No items" : "Aucun élément"}</div>
+                          ) : (
+                            <div className="text-[11px] text-muted-foreground italic">{isEn ? "No quotes" : "Aucune soumission"}</div>
                           )}
                         </div>
                       )}
