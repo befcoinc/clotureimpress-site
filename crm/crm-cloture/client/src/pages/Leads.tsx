@@ -116,7 +116,12 @@ export function Leads() {
     },
   });
 
-  const isAdmin = currentUser?.role === "admin";
+  // Handler pour aller à la page de setup du bookmarklet
+  const handleGoToBookmarkletSetup = () => {
+    if (typeof window !== "undefined") {
+      window.location.hash = "#/intimura-bookmarklet";
+    }
+  };
   const handleMarkAsTest = (leadId: number) => {
     if (filterStatus !== "all" && filterStatus !== "test") {
       setFilterStatus("all");
@@ -133,51 +138,7 @@ export function Leads() {
     }
   };
 
-  // -------- Intimura sync + credentials --------
-  const [credsOpen, setCredsOpen] = useState(false);
-  const [credsCookie, setCredsCookie] = useState("");
-  const [credsCfId, setCredsCfId] = useState("");
-  const [credsCfSecret, setCredsCfSecret] = useState("");
-
-  const { data: credsStatus } = useQuery<{ hasCookie: boolean; hasCfServiceToken: boolean; bookmarkletToken: string; updatedAt: string | null }>({
-    queryKey: ["/api/intimura/credentials"],
-    enabled: isAdmin,
-  });
-
-  // The bookmarklet runs on intimura.com, fetches the user's authenticated board
-  // data, and POSTs it back to our CRM. The token authorizes that POST.
-  const apiBase = (typeof window !== "undefined") ? window.location.origin : "";
-  const bookmarkletToken = credsStatus?.bookmarkletToken || "";
-  const bookmarkletJs = bookmarkletToken
-    ? `javascript:(async()=>{try{const r=await fetch('https://crm.intimura.com/app/board/__data.json?x-sveltekit-invalidated=001',{credentials:'include',headers:{Accept:'application/json'}});if(!r.ok){alert('Intimura HTTP '+r.status+' — recharge la page apres login.');return;}const p=await r.json();const s=await fetch('${apiBase}/api/intimura/ingest',{method:'POST',headers:{'Content-Type':'application/json','X-Bookmarklet-Token':'${bookmarkletToken}'},body:JSON.stringify({payload:p})});const j=await s.json();if(!s.ok){alert('CRM: '+(j.message||j.error||s.status));return;}alert('Sync Intimura OK\\n'+j.createdLeads+' nouveau(x) lead(s)\\n'+j.skipped+' doublon(s) ignore(s)');}catch(e){alert('Erreur: '+e.message);}})();`
-    : "";
-
-  const handleOpenIntimuraSync = () => {
-    // Open Intimura in a new tab so the user can log in (CF Access OTP if needed),
-    // then guide them to click the bookmarklet which will POST data back here.
-    if (typeof window !== "undefined") window.open("https://crm.intimura.com/app/quotes", "_blank", "noopener");
-    setCredsOpen(true);
-  };
-
-  const saveCredsMut = useMutation({
-    mutationFn: async () => apiRequest("POST", "/api/intimura/credentials", {
-      cookie: credsCookie || undefined,
-      cfClientId: credsCfId || undefined,
-      cfClientSecret: credsCfSecret || undefined,
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/intimura/credentials"] });
-      toast({ title: isEn ? "Intimura credentials saved" : "Identifiants Intimura sauvegardés" });
-      setCredsCookie("");
-      setCredsCfId("");
-      setCredsCfSecret("");
-      setCredsOpen(false);
-    },
-    onError: (err: any) => {
-      toast({ title: isEn ? "Save failed" : "Échec sauvegarde", description: err?.message || "", variant: "destructive" });
-    },
-  });
-
+  // -------- Intimura sync (server-side, admin only) --------
   const syncMut = useMutation({
     mutationFn: async () => apiRequest("POST", "/api/intimura/sync", {}),
     onSuccess: (data: any) => {
@@ -188,23 +149,16 @@ export function Leads() {
       const created = data?.createdLeads ?? 0;
       const skipped = data?.skipped ?? 0;
       toast({
-        title: isEn ? "Intimura sync complete" : "Synchronisation Intimura terminée",
+        title: isEn ? "Sync complete" : "Synchronisation terminée",
         description: isEn
           ? `${created} new lead(s), ${skipped} duplicate(s) skipped.`
           : `${created} nouveau(x) lead(s), ${skipped} doublon(s) ignoré(s).`,
       });
     },
     onError: (err: any) => {
-      const msg = String(err?.message || "");
-      const needsCreds = msg.includes("INTIMURA_CREDENTIALS_MISSING") || msg.includes("INTIMURA_AUTH_EXPIRED");
-      if (needsCreds && isAdmin) {
-        setCredsOpen(true);
-      }
       toast({
         title: isEn ? "Sync failed" : "Synchronisation échouée",
-        description: needsCreds
-          ? (isEn ? "Intimura credentials missing or expired. Configure a cookie or a Cloudflare Access Service Token." : "Identifiants Intimura manquants ou expirés. Configure un cookie ou un Service Token Cloudflare Access.")
-          : msg,
+        description: String(err?.message || ""),
         variant: "destructive",
       });
     },
@@ -220,7 +174,7 @@ export function Leads() {
             <Button
               data-testid="button-sync-intimura"
               className="gap-2"
-              onClick={handleOpenIntimuraSync}
+              onClick={handleGoToBookmarkletSetup}
             >
               <RefreshCw className="h-4 w-4" />
               {isEn ? "Sync from Intimura" : "Synchroniser depuis Intimura"}
@@ -469,123 +423,6 @@ export function Leads() {
           )}
         </div>
       </div>
-
-      {/* Intimura sync dialog (shows bookmarklet + advanced options) */}
-      <Dialog open={credsOpen} onOpenChange={setCredsOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{isEn ? "Sync from Intimura" : "Synchroniser depuis Intimura"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 text-sm">
-            <ol className="list-decimal pl-5 space-y-2">
-              <li>
-                {isEn ? "An Intimura tab just opened. " : "Un onglet Intimura vient de s'ouvrir. "}
-                <strong>{isEn ? "Log in there" : "Connecte-toi là-bas"}</strong>
-                {isEn ? " (enter the 6-digit code Cloudflare emails to mike@clotureimpress.com)." : " (entre le code à 6 chiffres que Cloudflare envoie à mike@clotureimpress.com)."}{" "}
-                <a
-                  href="https://crm.intimura.com/app/quotes"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-primary underline"
-                >
-                  <ExternalLink className="h-3 w-3" /> {isEn ? "Reopen Intimura" : "Rouvrir Intimura"}
-                </a>
-              </li>
-              <li>
-                {isEn ? "Once logged in on intimura.com, click the bookmarklet below " : "Une fois connecté sur intimura.com, clique sur le bookmarklet ci-dessous "}
-                <em>{isEn ? "from that tab" : "depuis cet onglet"}</em>
-                {isEn ? " (or drag it to your bookmarks bar once, then click it from any Intimura page)." : " (ou glisse-le une fois dans ta barre de favoris, puis clique-le depuis n'importe quelle page Intimura)."}
-              </li>
-              <li>{isEn ? "An alert will confirm how many new leads were imported." : "Une alerte confirmera combien de leads ont été importés."}</li>
-            </ol>
-
-            {isAdmin && bookmarkletJs ? (
-              <div className="rounded-md border bg-muted/40 p-4 space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    {isEn ? "Drag this to your bookmarks bar:" : "Glisse ceci dans ta barre de favoris :"}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      navigator.clipboard.writeText(bookmarkletJs);
-                      toast({ title: isEn ? "Bookmarklet copied" : "Bookmarklet copié" });
-                    }}
-                    data-testid="button-copy-bookmarklet"
-                  >
-                    {isEn ? "Copy code" : "Copier le code"}
-                  </Button>
-                </div>
-                <a
-                  href={bookmarkletJs}
-                  draggable
-                  onClick={(e) => e.preventDefault()}
-                  className="inline-block px-4 py-2 rounded-md bg-emerald-600 text-white font-medium shadow hover:bg-emerald-700 cursor-grab"
-                  data-testid="bookmarklet-link"
-                >
-                  ⇩ {isEn ? "Sync Cloture Impress" : "Sync Clôture Impress"}
-                </a>
-                <p className="text-xs text-muted-foreground">
-                  {isEn
-                    ? "Tip: in Chrome/Edge, right-click your bookmarks bar → Add page → paste the copied code in the URL field."
-                    : "Astuce : dans Chrome/Edge, clic droit sur la barre de favoris → Ajouter une page → colle le code copié dans le champ URL."}
-                </p>
-              </div>
-            ) : !isAdmin ? (
-              <div className="rounded-md border bg-amber-50 dark:bg-amber-950/40 p-3 text-xs">
-                {isEn
-                  ? "Only an admin can generate the bookmarklet. Ask an admin to install it on your bookmarks bar once."
-                  : "Seul un administrateur peut générer le bookmarklet. Demande à un admin de l'installer dans la barre de favoris."}
-              </div>
-            ) : null}
-
-            {isAdmin ? (
-              <details className="rounded-md border p-3">
-                <summary className="text-xs font-medium cursor-pointer">
-                  {isEn ? "Advanced — server-side credentials (optional)" : "Avancé — identifiants serveur (optionnel)"}
-                </summary>
-                <div className="mt-3 space-y-3 text-xs">
-                  <p className="text-muted-foreground">
-                    {isEn
-                      ? "Configure these to enable automatic background sync without needing the bookmarklet."
-                      : "Configure ces options pour activer la synchronisation automatique en arrière-plan sans bookmarklet."}
-                  </p>
-                  {credsStatus ? (
-                    <div className="text-muted-foreground">
-                      <Badge variant={credsStatus.hasCfServiceToken ? "default" : "outline"}>
-                        Service Token: {credsStatus.hasCfServiceToken ? (isEn ? "configured" : "configuré") : (isEn ? "missing" : "manquant")}
-                      </Badge>{" "}
-                      <Badge variant={credsStatus.hasCookie ? "default" : "outline"}>
-                        Cookie: {credsStatus.hasCookie ? (isEn ? "configured" : "configuré") : (isEn ? "missing" : "manquant")}
-                      </Badge>
-                    </div>
-                  ) : null}
-                  <label className="block font-medium">CF Access Service Token — Client ID</label>
-                  <Input placeholder="xxxxxxxxxxxxxxxx.access" value={credsCfId} onChange={(e) => setCredsCfId(e.target.value)} data-testid="input-cf-client-id" />
-                  <label className="block font-medium">CF Access Service Token — Client Secret</label>
-                  <Input type="password" placeholder="••••••••••••••••" value={credsCfSecret} onChange={(e) => setCredsCfSecret(e.target.value)} data-testid="input-cf-client-secret" />
-                  <label className="block font-medium">{isEn ? "Or — full Intimura Cookie header" : "Ou — en-tête Cookie Intimura complet"}</label>
-                  <Textarea rows={3} placeholder="CF_Authorization=...; ..." value={credsCookie} onChange={(e) => setCredsCookie(e.target.value)} data-testid="input-intimura-cookie" className="font-mono text-xs" />
-                  <Button
-                    size="sm"
-                    onClick={() => saveCredsMut.mutate()}
-                    disabled={saveCredsMut.isPending || (!credsCookie && !(credsCfId && credsCfSecret))}
-                    data-testid="button-save-creds"
-                  >
-                    {saveCredsMut.isPending ? (isEn ? "Saving..." : "Sauvegarde...") : (isEn ? "Save credentials" : "Sauvegarder")}
-                  </Button>
-                </div>
-              </details>
-            ) : null}
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setCredsOpen(false)} data-testid="button-close-creds">
-              {isEn ? "Done" : "Fermer"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
