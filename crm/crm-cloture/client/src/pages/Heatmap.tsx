@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/lib/language-context";
+import { useRole } from "@/lib/role-context";
 import type { Lead, Quote } from "@shared/schema";
 import { PROVINCES, SALES_STATUSES, INSTALL_STATUSES } from "@shared/schema";
 
@@ -263,11 +264,14 @@ function FlyToInstaller() {
 export function Heatmap() {
   const { language } = useLanguage();
   const isEn = language === "en";
+  const { role } = useRole();
+  const isSalesRep = role === "sales_rep";
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
   const activeLeads = leads.filter(l => l.status !== "test");
-  const installerProfilesQuery = useQuery<InstallerProfile[]>({ queryKey: ["/api/installer-profiles"] });
-  const installerProfiles = installerProfilesQuery.data ?? [];
+  // Sales reps don't see installer coverage circles (other people's data).
+  const installerProfilesQuery = useQuery<InstallerProfile[]>({ queryKey: ["/api/installer-profiles"], enabled: !isSalesRep });
+  const installerProfiles = isSalesRep ? [] : (installerProfilesQuery.data ?? []);
   const [province, setProvince] = useState("all");
   const [metric, setMetric] = useState<"count" | "value">("count");
   const [stage, setStage] = useState("all");

@@ -43,7 +43,7 @@ const PERMISSIONS: Record<RoleKey, Permission[]> = {
     "assign_installer", "view_all_quotes",
   ],
   sales_rep: [
-    "view_sales", "edit_sales", "edit_lead", "view_own_quotes",
+    "view_sales", "edit_sales", "edit_lead", "view_own_quotes", "view_sectors",
   ],
   installer: [
     "view_install", "edit_install", "view_own_quotes",
