@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { UploadCloud, CheckCircle2, AlertTriangle, Copy, Workflow, KeyRound } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,6 +84,16 @@ export function Intimura() {
   const { toast } = useToast();
   const [raw, setRaw] = useState(sample);
   const parsed = useMemo(() => parseIntimuraExport(raw), [raw]);
+  const isAdmin = currentUser?.role === "admin";
+  const { data: intimuraCreds } = useQuery<{ hasCookie?: boolean; hasCfServiceToken?: boolean }>({
+    queryKey: ["/api/intimura/credentials"],
+    enabled: isAdmin,
+  });
+  const hasServerCreds = !!(intimuraCreds?.hasCookie || intimuraCreds?.hasCfServiceToken);
+
+  const goToBookmarkletSetup = () => {
+    if (typeof window !== "undefined") window.location.hash = "#/intimura-bookmarklet";
+  };
 
   const importMut = useMutation({
     mutationFn: async () => {
@@ -119,9 +129,20 @@ export function Intimura() {
       });
     },
     onError: (err: any) => {
+      const raw = String(err?.message || "");
+      if (raw.includes("INTIMURA_CREDENTIALS_MISSING")) {
+        toast({
+          title: isEn ? "Use bookmarklet sync" : "Utilise la synchronisation bookmarklet",
+          description: isEn
+            ? "Server credentials are not configured. Opening bookmarklet setup."
+            : "Les identifiants serveur ne sont pas configurés. Ouverture du setup bookmarklet.",
+        });
+        goToBookmarkletSetup();
+        return;
+      }
       toast({
         title: isEn ? "Synchronization unavailable" : "Synchronisation non disponible",
-        description: err?.message || (isEn ? "Intimura session missing or expired." : "Session Intimura manquante ou expirée."),
+        description: raw || (isEn ? "Intimura session missing or expired." : "Session Intimura manquante ou expirée."),
         variant: "destructive",
       });
     },
@@ -133,8 +154,25 @@ export function Intimura() {
         title={isEn ? "Lead source - Intimura" : "Source des leads — Intimura"}
         description={isEn ? "Leads come from crm.intimura.com. This page prepares real import and already supports CSV exports into pipeline." : "Les leads proviennent de crm.intimura.com. Cette page prépare l’import réel et permet déjà d’entrer les exports Intimura dans le pipeline."}
         action={<div className="flex gap-2">
-          <Button data-testid="button-sync-intimura" disabled={syncMut.isPending} onClick={() => syncMut.mutate()} className="gap-2">
-            <Workflow className="h-4 w-4" />{syncMut.isPending ? (isEn ? "Synchronizing..." : "Synchronisation...") : (isEn ? "Sync Intimura" : "Synchroniser Intimura")}
+          <Button
+            data-testid="button-sync-intimura"
+            disabled={syncMut.isPending}
+            onClick={() => {
+              if (!hasServerCreds) {
+                toast({
+                  title: isEn ? "Use bookmarklet sync" : "Utilise la synchronisation bookmarklet",
+                  description: isEn
+                    ? "Server credentials are not configured. Opening bookmarklet setup."
+                    : "Les identifiants serveur ne sont pas configurés. Ouverture du setup bookmarklet.",
+                });
+                goToBookmarkletSetup();
+                return;
+              }
+              syncMut.mutate();
+            }}
+            className="gap-2"
+          >
+            <Workflow className="h-4 w-4" />{syncMut.isPending ? (isEn ? "Synchronizing..." : "Synchronisation...") : (hasServerCreds ? (isEn ? "Sync Intimura" : "Synchroniser Intimura") : (isEn ? "Open bookmarklet setup" : "Ouvrir setup bookmarklet"))}
           </Button>
           <Button data-testid="button-import-intimura" variant="outline" disabled={!parsed.length || importMut.isPending} onClick={() => importMut.mutate()} className="gap-2"><UploadCloud className="h-4 w-4" />{isEn ? "Import CSV" : "Importer CSV"}</Button>
         </div>}
