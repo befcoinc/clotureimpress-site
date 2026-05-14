@@ -69,7 +69,8 @@ const API_CACHE_TTL_MS = 15_000;
 function getApiCacheKey(req: Request) {
   const actor = req.user as any;
   const role = actor?.role || "anonymous";
-  return `${req.method}:${req.originalUrl}:role=${role}`;
+  const uid = actor?.id ?? "anon";
+  return `${req.method}:${req.originalUrl}:role=${role}:uid=${uid}`;
 }
 
 function getCachedApiResponse<T>(req: Request): T | null {
@@ -966,13 +967,22 @@ export async function registerRoutes(
     if (cached) {
       return res.json(cached);
     }
-    const leads = await storage.getLeads();
+    const actor = req.user as any;
+    let leads = await storage.getLeads();
+    // Sales reps only see leads assigned to them.
+    if (actor?.role === "sales_rep") {
+      leads = leads.filter((l: any) => l.assignedSalesId === actor.id);
+    }
     setCachedApiResponse(req, leads);
     res.json(leads);
   });
   app.get("/api/leads/:id", async (req, res) => {
     const lead = await storage.getLead(Number(req.params.id));
     if (!lead) return res.status(404).json({ error: "Not found" });
+    const actor = req.user as any;
+    if (actor?.role === "sales_rep" && lead.assignedSalesId !== actor.id) {
+      return res.status(403).json({ error: "Acces refuse" });
+    }
     res.json(lead);
   });
   app.post("/api/leads", async (req, res) => {
