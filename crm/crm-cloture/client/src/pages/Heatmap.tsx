@@ -219,6 +219,86 @@ function fallbackCoord(index: number): [number, number] {
   return [46.7 + (index % 7) * 0.45, -73.9 + Math.floor(index / 7) * 1.15];
 }
 
+// ── Address geocoding (Nominatim/OpenStreetMap, free) ────────────────────────
+// Cached in localStorage so each address is geocoded only once across sessions.
+const GEOCODE_CACHE_KEY = "ci_geocode_cache_v1";
+function loadGeocodeCache(): Record<string, [number, number] | null> {
+  try { return JSON.parse(localStorage.getItem(GEOCODE_CACHE_KEY) || "{}"); }
+  catch { return {}; }
+}
+function saveGeocodeCache(cache: Record<string, [number, number] | null>) {
+  try { localStorage.setItem(GEOCODE_CACHE_KEY, JSON.stringify(cache)); } catch {}
+}
+function buildAddressKey(q: { address?: string | null; city?: string | null; province?: string | null; postalCode?: string | null }) {
+  if (!q.address || !q.city) return null;
+  return [q.address, q.city, q.province || "QC", q.postalCode || "", "Canada"].filter(Boolean).join(", ");
+}
+
+function useGeocoding(addresses: string[]) {
+  const [coords, setCoords] = useState<Record<string, [number, number] | null>>(() => loadGeocodeCache());
+  const key = addresses.slice().sort().join("|");
+  useEffect(() => {
+    const todo = addresses.filter(a => a && !(a in coords));
+    if (todo.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const next = { ...coords };
+      for (const addr of todo) {
+        if (cancelled) return;
+        try {
+          const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=${encodeURIComponent(addr)}`;
+          const r = await fetch(url, { headers: { "Accept-Language": "fr,en" } });
+          if (r.ok) {
+            const data = await r.json();
+            next[addr] = (data && data[0]) ? [parseFloat(data[0].lat), parseFloat(data[0].lon)] : null;
+          } else {
+            next[addr] = null;
+          }
+        } catch {
+          next[addr] = null;
+        }
+        // Nominatim usage policy: max 1 request per second.
+        await new Promise(res => setTimeout(res, 1100));
+        if (cancelled) return;
+        setCoords({ ...next });
+        saveGeocodeCache(next);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return coords;
+}
+
+// Haversine distance in km
+function haversineKm(a: [number, number], b: [number, number]) {
+  const R = 6371;
+  const dLat = (b[0] - a[0]) * Math.PI / 180;
+  const dLng = (b[1] - a[1]) * Math.PI / 180;
+  const lat1 = a[0] * Math.PI / 180;
+  const lat2 = b[0] * Math.PI / 180;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// Nearest-neighbor TSP starting from index 0
+function optimizeRoute<T extends { lat: number; lng: number }>(stops: T[]): T[] {
+  if (stops.length <= 2) return stops;
+  const remaining = stops.slice();
+  const order: T[] = [remaining.shift()!];
+  while (remaining.length > 0) {
+    const last = order[order.length - 1];
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < remaining.length; i++) {
+      const d = haversineKm([last.lat, last.lng], [remaining[i].lat, remaining[i].lng]);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    }
+    order.push(remaining.splice(bestIdx, 1)[0]);
+  }
+  return order;
+}
+
 function getStage(quote: Quote): MapQuote["stageTone"] {
   if (quote.installStatus === "probleme") return "problem";
   if (["planifiee", "materiel", "en_route", "en_cours", "inspection", "terminee"].includes(quote.installStatus)) return "install";
@@ -287,6 +367,22 @@ export function Heatmap() {
     });
   }
 
+  // Collect all addresses with street info for precise geocoding (Nominatim/OSM).
+  const addressesToGeocode = useMemo(() => {
+    const set = new Set<string>();
+    for (const q of quotes) {
+      const k = buildAddressKey(q);
+      if (k) set.add(k);
+    }
+    for (const l of activeLeads) {
+      const k = buildAddressKey(l);
+      if (k) set.add(k);
+    }
+    return Array.from(set);
+  }, [quotes, activeLeads]);
+  const geocodeMap = useGeocoding(addressesToGeocode);
+  const geocodedCount = Object.values(geocodeMap).filter(v => v != null).length;
+
   const mapQuotes = useMemo(() => {
     let fallbackIndex = 0;
     const leadAsQuotes: Quote[] = activeLeads.map((l) => ({
@@ -324,10 +420,25 @@ export function Heatmap() {
       .map((q) => {
         const city = prettyCity(q.city);
         const key = normalize(city);
-        const base = CITY_COORDS[key] || fallbackCoord(fallbackIndex++);
-        const jitterSeed = Math.abs(q.id) % 9;
-        const lat = base[0] + ((jitterSeed % 3) - 1) * 0.018;
-        const lng = base[1] + (Math.floor(jitterSeed / 3) - 1) * 0.026;
+        const addrKey = buildAddressKey(q);
+        const geo = addrKey ? geocodeMap[addrKey] : null;
+        const fsa = postalToCoords(q.postalCode || "");
+        let lat: number;
+        let lng: number;
+        if (geo) {
+          // Precise geocoded address — no jitter.
+          [lat, lng] = geo;
+        } else if (fsa) {
+          // Postal code FSA: tight jitter around the FSA centroid.
+          const jitterSeed = Math.abs(q.id) % 9;
+          lat = fsa[0] + ((jitterSeed % 3) - 1) * 0.006;
+          lng = fsa[1] + (Math.floor(jitterSeed / 3) - 1) * 0.009;
+        } else {
+          const base = CITY_COORDS[key] || fallbackCoord(fallbackIndex++);
+          const jitterSeed = Math.abs(q.id) % 9;
+          lat = base[0] + ((jitterSeed % 3) - 1) * 0.018;
+          lng = base[1] + (Math.floor(jitterSeed / 3) - 1) * 0.026;
+        }
         return {
           ...q,
           lat,
@@ -344,7 +455,7 @@ export function Heatmap() {
         const isVente = ["signed", "install", "problem"].includes(q.stageTone);
         return (layers.has("estimations") && isEstimation) || (layers.has("ventes") && isVente);
       });
-  }, [quotes, activeLeads, province, stage, layers]);
+  }, [quotes, activeLeads, province, stage, layers, geocodeMap]);
 
   const hotspots = useMemo(() => {
     const map = new Map<string, Hotspot>();
@@ -383,12 +494,23 @@ export function Heatmap() {
   const routeDays = useMemo(() => {
     return hotspots
       .map((h) => {
-        const stops = h.quotes
+        // Optimize visit order with nearest-neighbor TSP using each quote's coords
+        // (precise geocoded address when available, FSA otherwise, city last).
+        const orderedQuotes = optimizeRoute(h.quotes);
+        // Google Maps Directions URL supports up to ~10 stops total.
+        const capped = orderedQuotes.slice(0, 10);
+        const stops = capped
           .map(q => {
-            const parts = [q.address, q.city, q.province, q.postalCode].filter(Boolean).join(", ");
-            return parts || `${q.mapCity}, ${q.province}`;
-          })
-          .filter((v, i, arr) => arr.indexOf(v) === i);
+            const addrKey = buildAddressKey(q);
+            const geo = addrKey ? geocodeMap[addrKey] : null;
+            // If we have an exact address use it, otherwise fall back to lat,lng
+            // so Google routes to the precise marker, not just the city center.
+            if (q.address && q.city) {
+              return [q.address, q.city, q.province, q.postalCode].filter(Boolean).join(", ");
+            }
+            if (geo) return `${geo[0]},${geo[1]}`;
+            return `${q.lat.toFixed(5)},${q.lng.toFixed(5)}`;
+          });
         const params = new URLSearchParams({ api: "1", travelmode: "driving" });
         if (stops.length > 0) {
           params.set("destination", stops[stops.length - 1]);
@@ -397,6 +519,14 @@ export function Heatmap() {
           params.set("destination", `${h.city}, ${h.province}`);
         }
         const mapsUrl = `https://www.google.com/maps/dir/?${params.toString()}`;
+        // Total optimized driving distance (km, straight-line approximation).
+        let totalKm = 0;
+        for (let i = 1; i < orderedQuotes.length; i++) {
+          totalKm += haversineKm(
+            [orderedQuotes[i - 1].lat, orderedQuotes[i - 1].lng],
+            [orderedQuotes[i].lat, orderedQuotes[i].lng],
+          );
+        }
         return {
           zone: `${h.province} · ${h.city}`,
           clients: h.count,
@@ -405,11 +535,13 @@ export function Heatmap() {
           sectors: [h.sector],
           mapsUrl,
           stopsCount: stops.length,
+          totalKm: Math.round(totalKm),
+          truncated: orderedQuotes.length > capped.length,
         };
       })
       .sort((a, b) => b.clients - a.clients || b.value - a.value)
       .slice(0, 8);
-  }, [hotspots]);
+  }, [hotspots, geocodeMap]);
 
   return (
     <>
@@ -637,7 +769,11 @@ export function Heatmap() {
                         <Badge variant={day.installReady ? "default" : "secondary"} className="text-[10px]">{day.installReady} {isEn ? "to schedule" : "à planifier"}</Badge>
                       </div>
                       <div className="mt-1 text-[11px] text-muted-foreground">{day.clients} {isEn ? "quote(s) in the same sector" : "soumission(s) dans le même secteur"} · {moneyFmt.format(day.value)}</div>
-                      <div className="mt-1 text-[10px] text-primary/80">{isEn ? `Open route in Google Maps (${day.stopsCount} stop${day.stopsCount > 1 ? "s" : ""})` : `Ouvrir l'itinéraire dans Google Maps (${day.stopsCount} arrêt${day.stopsCount > 1 ? "s" : ""})`}</div>
+                      <div className="mt-1 text-[10px] text-primary/80">
+                        {isEn ? `Optimized route in Google Maps · ${day.stopsCount} stop${day.stopsCount > 1 ? "s" : ""}` : `Itinéraire optimisé dans Google Maps · ${day.stopsCount} arrêt${day.stopsCount > 1 ? "s" : ""}`}
+                        {day.totalKm > 0 ? ` · ~${day.totalKm} km` : ""}
+                        {day.truncated ? (isEn ? " · capped at 10" : " · plafonné à 10") : ""}
+                      </div>
                     </a>
                   ))}
                 </div>
@@ -646,11 +782,24 @@ export function Heatmap() {
 
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2"><CalendarDays className="h-4 w-4" /> {isEn ? "Precision note" : "Note de précision"}</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><CalendarDays className="h-4 w-4" /> {isEn ? "Geocoding & routes" : "Géocodage & itinéraires"}</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground space-y-2">
-                <p>{isEn ? "The map is now interactive with zoom and pan. Markers are positioned by city because Intimura does not yet provide full addresses in synchronized data." : "La carte est maintenant interactive avec zoom et déplacement. Les marqueurs sont positionnés par ville, car Intimura ne fournit pas encore les adresses complètes dans la donnée synchronisée."}</p>
-                <p>{isEn ? "Next step: if we receive full addresses for each Intimura quote, I can add precise geocoding and installer-optimized routes." : "Prochaine étape : si on récupère l’adresse complète de chaque soumission Intimura, j’ajoute le géocodage exact et les routes optimisées par installateur."}</p>
+                <p>
+                  {isEn
+                    ? `Markers use the precise street address when available (geocoded via OpenStreetMap, cached locally — ${geocodedCount}/${addressesToGeocode.length} addresses resolved). Otherwise the postal code FSA is used, then the city center.`
+                    : `Les marqueurs utilisent l'adresse exacte quand elle est disponible (géocodée via OpenStreetMap, en cache local — ${geocodedCount}/${addressesToGeocode.length} adresses résolues). Sinon, le code postal (FSA) est utilisé, puis le centre-ville.`}
+                </p>
+                <p>
+                  {isEn
+                    ? "Field-day routes are optimized with a nearest-neighbor algorithm before being sent to Google Maps (max 10 stops per route — Google's free URL limit)."
+                    : "Les itinéraires des journées terrain sont optimisés par l'algorithme du plus proche voisin avant l'envoi à Google Maps (max 10 arrêts par itinéraire — limite des URL Google gratuites)."}
+                </p>
+                <p className="text-[11px] italic">
+                  {isEn
+                    ? "First load may take a few seconds while new addresses are geocoded (1 req/s, OpenStreetMap policy). Subsequent loads are instant thanks to the cache."
+                    : "Le premier chargement peut prendre quelques secondes le temps de géocoder les nouvelles adresses (1 req/s, politique OpenStreetMap). Les chargements suivants sont instantanés grâce au cache."}
+                </p>
               </CardContent>
             </Card>
           </div>
