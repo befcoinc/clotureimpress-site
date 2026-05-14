@@ -1492,14 +1492,62 @@ export async function registerRoutes(
 
   function extractIntimuraQuotes(payload: any): any[] {
     if (!payload) return [];
-    if (Array.isArray(payload)) return payload;
-    if (Array.isArray(payload.quotes)) return payload.quotes;
-    if (payload.nodes) {
+    let arr: any[] = [];
+    if (Array.isArray(payload)) arr = payload;
+    else if (Array.isArray(payload.quotes)) arr = payload.quotes;
+    else if (payload.nodes) {
       const node = payload.nodes.find((n: any) => n?.type === "data");
       const root = node?.data ? decodeSvelteData(node.data) : null;
-      if (Array.isArray(root?.quotes)) return root.quotes;
+      if (Array.isArray(root?.quotes)) arr = root.quotes;
     }
-    return [];
+    if (!arr.length) return [];
+
+    // Normalize. Items may already be Intimura-shaped ({id,title,status,...})
+    // or scraped rows from the bookmarklet (header-based keys + _id/_href).
+    const pickKey = (row: any, ...keys: string[]) => {
+      for (const k of keys) {
+        for (const rk of Object.keys(row)) {
+          if (rk.toLowerCase() === k.toLowerCase() && row[rk] != null && String(row[rk]).trim() !== "") {
+            return String(row[rk]).trim();
+          }
+        }
+      }
+      return "";
+    };
+    const parseMoney = (s: string) => {
+      if (!s) return 0;
+      const cleaned = s.replace(/[^0-9.,-]/g, "").replace(/\s/g, "");
+      const num = Number(cleaned.replace(/,/g, "."));
+      return isFinite(num) ? num : 0;
+    };
+
+    return arr.map((row: any) => {
+      // Already-shaped Intimura record
+      if (row && typeof row === "object" && row.id && (row.title || row.customer_name || row.status)) {
+        return row;
+      }
+      // Scraped row: derive id, title, status, etc. from common header names (FR + EN)
+      const id =
+        pickKey(row, "_id", "id", "quote_id", "numero", "no", "#") ||
+        (row?._href ? String(row._href).split(/[\/?#]/).filter(Boolean).pop() : "") ||
+        "";
+      const title = pickKey(row, "title", "titre", "name", "nom", "project", "projet");
+      const customer_name = pickKey(row, "customer", "client", "customer_name", "nom du client");
+      const status = pickKey(row, "status", "statut", "etat", "état");
+      const assigned_user_name = pickKey(row, "assigned to", "assigne", "assigné", "assigned_user_name", "owner", "vendeur", "salesperson");
+      const subtotal = String(parseMoney(pickKey(row, "subtotal", "sous-total", "total", "amount", "montant", "price", "prix")));
+      const date = pickKey(row, "date", "created", "created_at", "issued_at", "issued");
+      return {
+        id,
+        title: title || customer_name || `Intimura ${id}`,
+        customer_name,
+        status,
+        assigned_user_name,
+        subtotal,
+        target_date: date || null,
+        created_at: date || null,
+      };
+    }).filter((q: any) => q && q.id);
   }
 
   // -------- Intimura sync (server-side fetch with stored creds) --------

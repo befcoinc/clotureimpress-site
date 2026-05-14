@@ -14,6 +14,7 @@ import NotFound from "@/pages/not-found";
 import { Dashboard } from "@/pages/Dashboard";
 import { Leads } from "@/pages/Leads";
 import { IntimuraBookmarklet } from "@/pages/IntimuraBookmarklet";
+import { IntimuraReceive } from "@/pages/IntimuraReceive";
 import { Intimura } from "@/pages/Intimura";
 import { DispatchVendeur } from "@/pages/DispatchVendeur";
 import { Soumissions } from "@/pages/Soumissions";
@@ -39,6 +40,7 @@ function AppRouter({ canViewAdmin, isInstaller }: { canViewAdmin: boolean; isIns
         <Route path="/login" component={Dashboard} />
         <Route path="/leads" component={Leads} />
         <Route path="/intimura-bookmarklet" component={IntimuraBookmarklet} />
+        <Route path="/intimura-receive" component={IntimuraReceive} />
         <Route path="/intimura" component={Intimura} />
         <Route path="/dispatch-vendeur" component={DispatchVendeur} />
         <Route path="/soumissions" component={Soumissions} />
