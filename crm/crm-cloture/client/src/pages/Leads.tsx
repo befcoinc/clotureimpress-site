@@ -169,6 +169,7 @@ export function Leads() {
   };
 
   const isAdmin = currentUser?.role === "admin";
+  const canSyncIntimura = currentUser?.role === "admin" || currentUser?.role === "sales_director";
 
   // Handler pour aller à la page de setup du bookmarklet
   const handleGoToBookmarkletSetup = () => {
@@ -225,14 +226,16 @@ export function Leads() {
         description={isEn ? "Centralized leads from crm.intimura.com. Automatic classification by province, city, neighborhood and postal code." : "Centralisation des leads provenant de crm.intimura.com. Classification automatique par province, ville, quartier et code postal."}
         action={can("edit_lead") ? (
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              data-testid="button-sync-intimura"
-              className="gap-2"
-              onClick={handleGoToBookmarkletSetup}
-            >
-              <RefreshCw className="h-4 w-4" />
-              {isEn ? "Sync from Intimura" : "Synchroniser depuis Intimura"}
-            </Button>
+            {canSyncIntimura && (
+              <Button
+                data-testid="button-sync-intimura"
+                className="gap-2"
+                onClick={handleGoToBookmarkletSetup}
+              >
+                <RefreshCw className="h-4 w-4" />
+                {isEn ? "Sync from Intimura" : "Synchroniser depuis Intimura"}
+              </Button>
+            )}
             {isAdmin ? (
               <Button
                 data-testid="button-intimura-server-sync"
