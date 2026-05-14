@@ -1,1 +1,4 @@
 tmp_bundle*.js
+
+.tmp_bundle*.js
+tmp.json
