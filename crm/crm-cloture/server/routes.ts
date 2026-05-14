@@ -813,6 +813,37 @@ export async function registerRoutes(
       res.status(500).json({ error: error?.message || "Erreur lors du renvoi" });
     }
   });
+
+  // ── Admin: reset a user's password ─────────────────────────────────
+  // POST /api/users/:id/admin-reset-password
+  // Body: { newPassword?: string } (omit to auto-generate). Returns { ok, tempPassword }.
+  app.post("/api/users/:id/admin-reset-password", requireAuth, async (req, res) => {
+    try {
+      const actorRole = (req.user as any)?.role;
+      if (actorRole !== "admin") {
+        return res.status(403).json({ error: "Acces refuse" });
+      }
+      const id = Number(req.params.id);
+      const target = await storage.getUser(id);
+      if (!target) return res.status(404).json({ error: "Utilisateur introuvable" });
+
+      let newPassword = String(req.body?.newPassword || "").trim();
+      if (newPassword && newPassword.length < 8) {
+        return res.status(400).json({ error: "Le mot de passe doit contenir au moins 8 caracteres." });
+      }
+      if (!newPassword) {
+        const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+        const buf = randomBytes(12);
+        newPassword = Array.from(buf).map(b => chars[b % chars.length]).join("");
+      }
+      const hash = hashPassword(newPassword);
+      await storage.adminResetUserPassword(id, hash);
+      res.json({ ok: true, tempPassword: newPassword });
+    } catch (err: any) {
+      res.status(500).json({ error: err?.message || "Erreur serveur" });
+    }
+  });
+
   app.post("/api/users/:id/resend-installer-form", async (req, res) => {
     try {
       const actorRole = (req.user as any)?.role;

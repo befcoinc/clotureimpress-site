@@ -14,7 +14,7 @@ import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
 import type { Crew, User } from "@shared/schema";
 import { PROVINCES, ROLES } from "@shared/schema";
-import { FileText, Mail, Pencil, Plus, ShieldCheck, Trash2, UsersRound, Wrench } from "lucide-react";
+import { Copy, FileText, KeyRound, Mail, Pencil, Plus, ShieldCheck, Trash2, UsersRound, Wrench } from "lucide-react";
 
 const PERMISSIONS_TABLE: Array<{ perm: string; admin: boolean; sdir: boolean; idir: boolean; sales: boolean; install: boolean }> = [
   { perm: "Voir toutes les soumissions", admin: true, sdir: true, idir: true, sales: false, install: false },
@@ -164,6 +164,24 @@ export function Utilisateurs() {
       queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({ title: isEn ? "User deleted" : "Utilisateur supprimé" });
+    },
+    onError: onMutationError,
+  });
+
+  // Admin password reset
+  const [resetTarget, setResetTarget] = useState<User | null>(null);
+  const [resetCustomPassword, setResetCustomPassword] = useState("");
+  const [resetResult, setResetResult] = useState<null | { user: User; tempPassword: string }>(null);
+  const adminResetPassword = useMutation({
+    mutationFn: async ({ id, newPassword }: { id: number; newPassword?: string }) =>
+      (await apiRequest("POST", `/api/users/${id}/admin-reset-password`, newPassword ? { newPassword } : {})).json(),
+    onSuccess: (data: any, vars) => {
+      const u = users.find(x => x.id === vars.id);
+      if (u && data?.tempPassword) {
+        setResetResult({ user: u, tempPassword: data.tempPassword });
+      }
+      setResetTarget(null);
+      setResetCustomPassword("");
     },
     onError: onMutationError,
   });
@@ -342,6 +360,15 @@ export function Utilisateurs() {
                                 >
                                   <Mail className="h-3.5 w-3.5" /> {isEn ? "Resend invitation" : "Renvoyer l'invitation"}
                                 </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 gap-1.5"
+                                  onClick={() => { setResetTarget(u); setResetCustomPassword(""); }}
+                                  data-testid={`button-reset-password-${u.id}`}
+                                >
+                                  <KeyRound className="h-3.5 w-3.5" /> {isEn ? "Reset password" : "Réinitialiser mot de passe"}
+                                </Button>
                               </>
                             )}
                             {canManageInstallerForms && installerFormPending && (
@@ -501,6 +528,90 @@ export function Utilisateurs() {
               {inviteResult.smsError && <p className="text-[12px] text-muted-foreground">{isEn ? "SMS error" : "Erreur SMS"} : {inviteResult.smsError}</p>}
               <div className="flex justify-end">
                 <Button variant="outline" onClick={() => setInviteResult(null)}>{isEn ? "Close" : "Fermer"}</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin: reset password dialog */}
+      <Dialog open={!!resetTarget} onOpenChange={(open) => { if (!open) { setResetTarget(null); setResetCustomPassword(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isEn ? "Reset password for" : "Réinitialiser le mot de passe de"} {resetTarget?.name}</DialogTitle>
+            <DialogDescription>
+              {isEn
+                ? "Passwords are encrypted and cannot be displayed. Set a new password manually or generate a temporary one. The user will be required to change it at next login."
+                : "Les mots de passe sont chiffrés et ne peuvent pas être affichés. Définissez un nouveau mot de passe manuellement ou générez-en un temporaire. L'utilisateur devra le changer à sa prochaine connexion."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-[12px] text-muted-foreground">{isEn ? "New password (optional, min 8 chars)" : "Nouveau mot de passe (optionnel, min 8 car.)"}</label>
+              <Input
+                type="text"
+                placeholder={isEn ? "Leave empty to auto-generate" : "Laisser vide pour en générer un"}
+                value={resetCustomPassword}
+                onChange={(e) => setResetCustomPassword(e.target.value)}
+                data-testid="input-reset-password"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setResetTarget(null); setResetCustomPassword(""); }}>
+                {isEn ? "Cancel" : "Annuler"}
+              </Button>
+              <Button
+                disabled={adminResetPassword.isPending || !resetTarget}
+                onClick={() => resetTarget && adminResetPassword.mutate({ id: resetTarget.id, newPassword: resetCustomPassword.trim() || undefined })}
+                data-testid="button-confirm-reset-password"
+              >
+                {adminResetPassword.isPending ? (isEn ? "Resetting..." : "Réinitialisation...") : (isEn ? "Reset" : "Réinitialiser")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin: reset password result (show temp password once) */}
+      <Dialog open={!!resetResult} onOpenChange={(open) => { if (!open) setResetResult(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isEn ? "New password for" : "Nouveau mot de passe de"} {resetResult?.user.name}</DialogTitle>
+            <DialogDescription>
+              {isEn
+                ? "Copy and share this password securely with the user. It will not be shown again."
+                : "Copiez et partagez ce mot de passe en sécurité avec l'utilisateur. Il ne sera plus affiché."}
+            </DialogDescription>
+          </DialogHeader>
+          {resetResult && (
+            <div className="space-y-3">
+              <div className="rounded-md border bg-muted px-3 py-2 font-mono text-sm break-all" data-testid="text-temp-password">
+                {resetResult.tempPassword}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => { navigator.clipboard.writeText(resetResult.tempPassword); toast({ title: isEn ? "Copied" : "Copié" }); }}
+                >
+                  <Copy className="h-4 w-4" /> {isEn ? "Copy password" : "Copier le mot de passe"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => {
+                    const subject = encodeURIComponent(isEn ? "Your CRM password has been reset" : "Votre mot de passe CRM a été réinitialisé");
+                    const body = encodeURIComponent(isEn
+                      ? `Hello ${resetResult.user.name},\n\nYour password has been reset by an administrator.\n\nTemporary password: ${resetResult.tempPassword}\n\nPlease log in at https://cloture-crm.onrender.com and change it immediately.\n\nThank you!`
+                      : `Bonjour ${resetResult.user.name},\n\nVotre mot de passe a été réinitialisé par un administrateur.\n\nMot de passe temporaire : ${resetResult.tempPassword}\n\nConnectez-vous sur https://cloture-crm.onrender.com et changez-le immédiatement.\n\nMerci !`);
+                    window.location.href = `mailto:${resetResult.user.email}?subject=${subject}&body=${body}`;
+                  }}
+                >
+                  <Mail className="h-4 w-4" /> {isEn ? "Send by email" : "Envoyer par courriel"}
+                </Button>
+              </div>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setResetResult(null)}>{isEn ? "Close" : "Fermer"}</Button>
               </div>
             </div>
           )}

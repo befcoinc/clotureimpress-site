@@ -319,6 +319,7 @@ export interface IStorage {
   deleteUser(id: number): Promise<User | undefined>;
   getUserByEmailWithHash(email: string): Promise<(User & { passwordHash: string | null }) | undefined>;
   setUserPassword(id: number, passwordHash: string): Promise<void>;
+  adminResetUserPassword(id: number, passwordHash: string): Promise<void>;
   setInstallerProfileCompleted(id: number, completed: boolean): Promise<void>;
   setInviteToken(userId: number, token: string, expiresAt: number): Promise<void>;
   getUserByInviteToken(token: string): Promise<User | undefined>;
@@ -383,6 +384,9 @@ export class DatabaseStorage implements IStorage {
   }
   async setUserPassword(id: number, passwordHash: string): Promise<void> {
     await db.execute(sql`UPDATE users SET password_hash = ${passwordHash}, must_change_password = FALSE WHERE id = ${id}`);
+  }
+  async adminResetUserPassword(id: number, passwordHash: string): Promise<void> {
+    await db.execute(sql`UPDATE users SET password_hash = ${passwordHash}, must_change_password = TRUE WHERE id = ${id}`);
   }
   async setInstallerProfileCompleted(id: number, completed: boolean): Promise<void> {
     await db.execute(sql`UPDATE users SET installer_profile_completed = ${completed} WHERE id = ${id}`);
