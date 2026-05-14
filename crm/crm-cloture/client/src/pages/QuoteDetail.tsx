@@ -190,10 +190,43 @@ export function QuoteDetail() {
                   </div>
                 )}
 
-                {intimuraQuote?.internal_notes && (
+                {(intimuraQuote?.internal_notes || quote.salesNotes || canEditSales) && (
                   <div>
                     <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{isEn ? "Internal notes" : "Notes internes"}</div>
-                    <pre className="whitespace-pre-wrap text-[12px] bg-muted/40 rounded p-2">{intimuraQuote.internal_notes}</pre>
+                    {intimuraQuote?.internal_notes && (
+                      <pre className="whitespace-pre-wrap text-[12px] bg-muted/40 rounded p-2">{intimuraQuote.internal_notes}</pre>
+                    )}
+                    {quote.salesNotes && (
+                      <pre className="whitespace-pre-wrap text-[12px] bg-muted/40 rounded p-2 mt-2">{quote.salesNotes}</pre>
+                    )}
+                    {canEditSales && (
+                      <div className="mt-2 flex gap-2 items-start">
+                        <Textarea
+                          rows={2}
+                          placeholder={isEn ? "Add an internal note (will be timestamped)..." : "Ajouter une note interne (date et auteur ajoutés)..."}
+                          value={newNote}
+                          onChange={(e) => setNewNote(e.target.value)}
+                          className="text-[12px]"
+                          data-testid="textarea-add-internal-note"
+                        />
+                        <Button
+                          size="sm"
+                          disabled={!newNote.trim()}
+                          onClick={() => {
+                            const stamp = new Date().toISOString().slice(0, 10);
+                            const author = currentUser?.name || "";
+                            const prefix = author ? `${stamp} — ${author} : ` : `${stamp} : `;
+                            const line = prefix + newNote.trim();
+                            const next = quote.salesNotes ? `${quote.salesNotes}\n${line}` : line;
+                            updateMut.mutate({ salesNotes: next, _note: newNote.trim() });
+                            setNewNote("");
+                          }}
+                          data-testid="button-add-internal-note"
+                        >
+                          {isEn ? "Add" : "Ajouter"}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
 
