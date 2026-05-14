@@ -18,15 +18,44 @@ declare module "http" {
   }
 }
 
+// CORS for Intimura bookmarklet endpoints (must run BEFORE express.json so
+// preflight responses always include the ACAO header even when JSON parsing
+// fails on a malformed/oversize payload).
+app.use("/api/intimura/ingest", (req, res, next) => {
+  const origin = req.headers.origin as string | undefined;
+  if (origin && /^https?:\/\/(crm\.)?intimura\.com$/i.test(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Bookmarklet-Token");
+  res.setHeader("Access-Control-Max-Age", "86400");
+  if (req.method === "OPTIONS") return res.status(204).end();
+  next();
+});
+app.use("/api/intimura/ingest-details", (req, res, next) => {
+  const origin = req.headers.origin as string | undefined;
+  if (origin && /^https?:\/\/(crm\.)?intimura\.com$/i.test(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Bookmarklet-Token");
+  res.setHeader("Access-Control-Max-Age", "86400");
+  if (req.method === "OPTIONS") return res.status(204).end();
+  next();
+});
+
 app.use(
   express.json({
+    limit: "25mb",
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   }),
 );
 
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: "25mb" }));
 
 // ── Session + Passport ──────────────────────────────────────────────────
 const MemoryStore = createMemoryStore(session);
