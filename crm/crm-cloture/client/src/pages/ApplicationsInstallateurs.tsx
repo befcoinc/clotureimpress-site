@@ -62,6 +62,15 @@ export function ApplicationsInstallateurs() {
     },
   });
 
+  const { data: archivedApplications = [] } = useQuery<InstallerApplication[]>({
+    queryKey: ["/api/installer-applications", "archived-count"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/installer-applications?archived=1", undefined);
+      if (!res.ok) throw new Error("Failed to load archived installer applications");
+      return res.json();
+    },
+  });
+
   const patchMutation = useMutation({
     mutationFn: ({ id, status, notes }: { id: number; status: string; notes: string }) =>
       apiRequest("PATCH", `/api/installer-applications/${id}`, { status, notes }),
@@ -129,6 +138,7 @@ export function ApplicationsInstallateurs() {
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["/api/installer-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/installer-applications", "archived-count"] });
       toast({ title: language === "fr" ? "Compte créé et invitation envoyée" : "Account created and invite sent" });
       setSelected(null);
     } catch {
@@ -152,6 +162,7 @@ export function ApplicationsInstallateurs() {
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["/api/installer-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/installer-applications", "archived-count"] });
       toast({ title: isFr ? "Retiré de la liste active" : "Removed from active list" });
       setSelected(null);
     } catch {
@@ -175,6 +186,7 @@ export function ApplicationsInstallateurs() {
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["/api/installer-applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/installer-applications", "archived-count"] });
       toast({ title: isFr ? "Remis dans la liste active" : "Restored to active list" });
       setSelected(null);
     } catch {
@@ -199,7 +211,7 @@ export function ApplicationsInstallateurs() {
           >
             {showArchived
               ? (isFr ? "Voir les fiches actives" : "View active applications")
-              : (isFr ? "Fiches retirées" : "Removed applications")}
+              : `${isFr ? "Fiches retirées" : "Removed applications"}${archivedApplications.length ? ` (${archivedApplications.length})` : ""}`}
           </Button>
         }
       />
