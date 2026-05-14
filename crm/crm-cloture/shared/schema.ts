@@ -145,10 +145,11 @@ export const installerApplications = pgTable("installer_applications", {
   ficheData: text("fiche_data"),
   ficheCompletedAt: text("fiche_completed_at"),
   convertedUserId: integer("converted_user_id"),
+  archivedAt: text("archived_at"),
   createdAt: text("created_at").notNull().default("CURRENT_TIMESTAMP"),
 });
 
-export const insertInstallerApplicationSchema = createInsertSchema(installerApplications).omit({ id: true, createdAt: true, formToken: true, ficheData: true, ficheCompletedAt: true, convertedUserId: true });
+export const insertInstallerApplicationSchema = createInsertSchema(installerApplications).omit({ id: true, createdAt: true, formToken: true, ficheData: true, ficheCompletedAt: true, convertedUserId: true, archivedAt: true });
 export type InsertInstallerApplication = z.infer<typeof insertInstallerApplicationSchema>;
 export type InstallerApplication = typeof installerApplications.$inferSelect;
 

@@ -197,6 +197,7 @@ async function migrate() {
       years_experience TEXT,
       status TEXT NOT NULL DEFAULT 'en_attente',
       notes TEXT,
+      archived_at TEXT,
       created_at TEXT NOT NULL DEFAULT 'CURRENT_TIMESTAMP'
     )
   `);
@@ -205,6 +206,7 @@ async function migrate() {
   await db.execute(sql`ALTER TABLE installer_applications ADD COLUMN IF NOT EXISTS fiche_data TEXT`);
   await db.execute(sql`ALTER TABLE installer_applications ADD COLUMN IF NOT EXISTS fiche_completed_at TEXT`);
   await db.execute(sql`ALTER TABLE installer_applications ADD COLUMN IF NOT EXISTS converted_user_id INTEGER`);
+  await db.execute(sql`ALTER TABLE installer_applications ADD COLUMN IF NOT EXISTS archived_at TEXT`);
   // Intimura full submission blob on quotes
   await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS intimura_data TEXT`);
 }
@@ -347,6 +349,16 @@ export interface IStorage {
   // Activities
   getActivities(filter?: { quoteId?: number; leadId?: number }): Promise<Activity[]>;
   createActivity(data: InsertActivity): Promise<Activity>;
+  // Installer applications
+  getInstallerApplications(): Promise<InstallerApplication[]>;
+  getInstallerApplication(id: number): Promise<InstallerApplication | undefined>;
+  createInstallerApplication(data: InsertInstallerApplication): Promise<InstallerApplication>;
+  updateInstallerApplication(id: number, data: Partial<InsertInstallerApplication>): Promise<InstallerApplication | undefined>;
+  getInstallerApplicationByToken(token: string): Promise<InstallerApplication | undefined>;
+  setInstallerApplicationFormToken(id: number, token: string | null): Promise<void>;
+  setInstallerApplicationFicheData(id: number, ficheData: string, ficheCompletedAt: string): Promise<void>;
+  setInstallerApplicationConvertedUserId(id: number, userId: number): Promise<void>;
+  archiveInstallerApplication(id: number): Promise<InstallerApplication | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -495,7 +507,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getInstallerApplications(): Promise<InstallerApplication[]> {
-    return db.select().from(installerApplications).orderBy(desc(installerApplications.id));
+    return db.select().from(installerApplications).where(sql`${installerApplications.archivedAt} IS NULL`).orderBy(desc(installerApplications.id));
   }
   async getInstallerApplication(id: number): Promise<InstallerApplication | undefined> {
     return (await db.select().from(installerApplications).where(eq(installerApplications.id, id)))[0];
@@ -517,6 +529,9 @@ export class DatabaseStorage implements IStorage {
   }
   async setInstallerApplicationConvertedUserId(id: number, userId: number): Promise<void> {
     await db.update(installerApplications).set({ convertedUserId: userId }).where(eq(installerApplications.id, id));
+  }
+  async archiveInstallerApplication(id: number): Promise<InstallerApplication | undefined> {
+    return (await db.update(installerApplications).set({ archivedAt: new Date().toISOString() }).where(eq(installerApplications.id, id)).returning())[0];
   }
 }
 

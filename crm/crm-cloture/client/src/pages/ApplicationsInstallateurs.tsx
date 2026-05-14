@@ -49,6 +49,7 @@ export function ApplicationsInstallateurs() {
   const [notes, setNotes] = useState("");
   const [isSendingFiche, setIsSendingFiche] = useState(false);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const [showFicheData, setShowFicheData] = useState(false);
 
   const { data: applications = [], isLoading } = useQuery<InstallerApplication[]>({
@@ -128,6 +129,29 @@ export function ApplicationsInstallateurs() {
       toast({ title: language === "fr" ? "Erreur réseau" : "Network error", variant: "destructive" });
     } finally {
       setIsCreatingAccount(false);
+    }
+  }
+
+  async function archiveApplication(app: InstallerApplication) {
+    if (!confirm(isFr
+      ? `Retirer ${app.companyName} de la liste active? La demande restera conservée.`
+      : `Remove ${app.companyName} from the active list? The request will stay in the database.`
+    )) return;
+    setIsArchiving(true);
+    try {
+      const res = await apiRequest("POST", `/api/installer-applications/${app.id}/archive`, {});
+      const data = await res.json().catch(() => ({})) as any;
+      if (!res.ok) {
+        toast({ title: data?.error || (isFr ? "Erreur" : "Error"), variant: "destructive" });
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/installer-applications"] });
+      toast({ title: isFr ? "Retiré de la liste active" : "Removed from active list" });
+      setSelected(null);
+    } catch {
+      toast({ title: isFr ? "Erreur réseau" : "Network error", variant: "destructive" });
+    } finally {
+      setIsArchiving(false);
     }
   }
 
@@ -334,6 +358,14 @@ export function ApplicationsInstallateurs() {
                       : selected.convertedUserId
                         ? (isFr ? "Compte déjà créé" : "Account already created")
                         : (isFr ? "Créer compte installateur" : "Create installer account")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isArchiving}
+                    onClick={() => archiveApplication(selected)}
+                  >
+                    {isFr ? "Retirer de la liste" : "Remove from list"}
                   </Button>
                 </div>
                 <div className="flex gap-2">
