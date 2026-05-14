@@ -25,32 +25,46 @@ export function IntimuraReceive() {
       try {
         console.log("[IntimuraReceive] Starting...");
         
-        // Extract data from URL hash instead of localStorage
-        // Format: #/intimura-receive?data=BASE64_ENCODED_JSON&token=TOKEN
+        // Accept multiple transport modes:
+        // 1) URL hash/query params (legacy): #/intimura-receive?token=...&data=BASE64
+        // 2) window.name transfer (preferred): CI_INTIMURA::{token,payload}
+        // 3) localStorage fallback (very old bookmarklets)
         const hash = window.location.hash;
-        const dataMatch = hash.match(/[?&]data=([^&]+)/);
-        const tokenMatch = hash.match(/[?&]token=([^&]+)/);
-        
+        const search = window.location.search;
+        const hashQuery = hash.includes("?") ? hash.slice(hash.indexOf("?") + 1) : "";
+        const hashParams = new URLSearchParams(hashQuery);
+        const searchParams = new URLSearchParams(search);
+        const tokenFromParams = hashParams.get("token") || searchParams.get("token") || "";
+        const dataFromParams = hashParams.get("data") || searchParams.get("data") || "";
+
         console.log("[IntimuraReceive] hash:", hash.substring(0, 200));
-        
-        let token = "";
+
+        let token = tokenFromParams;
         let dataRaw = "";
-        
-        if (dataMatch && tokenMatch) {
-          // URL hash method (preferred)
-          console.log("[IntimuraReceive] Reading from URL hash");
-          const encoded64 = decodeURIComponent(dataMatch[1]);
+
+        if (dataFromParams) {
+          console.log("[IntimuraReceive] Reading payload from URL param");
+          const encoded64 = decodeURIComponent(dataFromParams);
           const binaryString = atob(encoded64);
           const bytes = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
             bytes[i] = binaryString.charCodeAt(i);
           }
           dataRaw = new TextDecoder().decode(bytes);
-          token = decodeURIComponent(tokenMatch[1]);
+        } else if (typeof window.name === "string" && window.name.startsWith("CI_INTIMURA::")) {
+          console.log("[IntimuraReceive] Reading payload from window.name");
+          const raw = window.name.slice("CI_INTIMURA::".length);
+          try {
+            const transfer = JSON.parse(raw) as { token?: string; payload?: unknown };
+            if (!token && transfer.token) token = transfer.token;
+            if (transfer.payload != null) dataRaw = JSON.stringify(transfer.payload);
+          } finally {
+            // Prevent accidental re-import on refresh/back.
+            window.name = "";
+          }
         } else {
-          // Fallback to localStorage (legacy)
           console.log("[IntimuraReceive] Trying localStorage (legacy)");
-          token = localStorage.getItem("intimura_token") || "";
+          token = token || localStorage.getItem("intimura_token") || "";
           dataRaw = localStorage.getItem("intimura_payload") || "";
         }
         
