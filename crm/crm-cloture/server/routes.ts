@@ -2069,13 +2069,20 @@ export async function registerRoutes(
     // SAFETY NET: even with the per-row dedup above, run a global dedup pass so any
     // duplicates that slipped in (across syncs, manual edits, schema gaps) are merged.
     let dedupedAfterImport = 0;
+    let dedupedQuotesAfterImport = 0;
     try {
       const d = await dedupAllLeads();
       dedupedAfterImport = d.mergedCount;
     } catch (e) {
-      console.error("[intimura import] dedup pass failed", e);
+      console.error("[intimura import] dedup leads pass failed", e);
     }
-    return { fetched: intimuraQuotes.length, createdLeads, createdQuotes, skipped, dedupedAfterImport, syncedAt: new Date().toISOString() };
+    try {
+      const dq = await dedupAllQuotes();
+      dedupedQuotesAfterImport = dq.mergedCount;
+    } catch (e) {
+      console.error("[intimura import] dedup quotes pass failed", e);
+    }
+    return { fetched: intimuraQuotes.length, createdLeads, createdQuotes, skipped, dedupedAfterImport, dedupedQuotesAfterImport, syncedAt: new Date().toISOString() };
   }
 
   /**
@@ -2235,6 +2242,40 @@ export async function registerRoutes(
     }).filter((q: any) => q && q.id);
   }
 
+  /**
+   * Global dedup pass over ALL quotes. Groups by leadId; the highest-id quote
+   * wins (newest), all others are merged into it (fields backfilled, activities
+   * repointed, dup quote deleted). Quotes with null leadId are left alone.
+   * Idempotent.
+   */
+  async function dedupAllQuotes(): Promise<{ mergedCount: number; merged: Array<{ removed: number; into: number }>; }> {
+    const allQuotes = await storage.getQuotes();
+    const byLead = new Map<number, typeof allQuotes>();
+    for (const q of allQuotes) {
+      if (q.leadId == null) continue;
+      const arr = byLead.get(q.leadId) || [];
+      arr.push(q);
+      byLead.set(q.leadId, arr);
+    }
+    const merged: Array<{ removed: number; into: number }> = [];
+    for (const [, arr] of byLead) {
+      if (arr.length < 2) continue;
+      // Keep highest id (newest). Sort desc.
+      arr.sort((a, b) => b.id - a.id);
+      const keeper = arr[0];
+      for (let i = 1; i < arr.length; i++) {
+        const dup = arr[i];
+        try {
+          const ok = await (storage as any).mergeQuoteInto(dup.id, keeper.id);
+          if (ok) merged.push({ removed: dup.id, into: keeper.id });
+        } catch (e) {
+          console.error("[dedup quotes] merge failed", dup.id, "->", keeper.id, e);
+        }
+      }
+    }
+    return { mergedCount: merged.length, merged };
+  }
+
   // -------- Intimura sync (server-side fetch with stored creds) --------
   app.post("/api/intimura/sync", async (_req, res) => {
     const headers = buildIntimuraHeaders();
@@ -2311,6 +2352,19 @@ export async function registerRoutes(
       res.json(result);
     } catch (err: any) {
       console.error("[admin/dedup-leads] error", err);
+      res.status(500).json({ error: "SERVER_ERROR", message: err?.message || "Erreur serveur" });
+    }
+  });
+
+  // -------- Admin: manual dedup pass over all quotes (one per leadId) --------
+  app.post("/api/admin/dedup-quotes", requireAuth, async (req, res) => {
+    const actor = req.user as any;
+    if (actor?.role !== "admin") return res.status(403).json({ error: "Acces admin requis" });
+    try {
+      const result = await dedupAllQuotes();
+      res.json(result);
+    } catch (err: any) {
+      console.error("[admin/dedup-quotes] error", err);
       res.status(500).json({ error: "SERVER_ERROR", message: err?.message || "Erreur serveur" });
     }
   });

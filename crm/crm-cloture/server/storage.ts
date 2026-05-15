@@ -545,6 +545,37 @@ export class DatabaseStorage implements IStorage {
 
   async getQuotes() { return db.select().from(quotes).orderBy(desc(quotes.id)); }
   async getQuote(id: number) { return (await db.select().from(quotes).where(eq(quotes.id, id)))[0]; }
+
+  /**
+   * Merge a duplicate quote INTO the keeper: backfills missing fields on the
+   * keeper from the duplicate, repoints all child activities to the keeper,
+   * then deletes the duplicate row. Safe and idempotent.
+   */
+  async mergeQuoteInto(dupId: number, keepId: number): Promise<boolean> {
+    if (dupId === keepId) return false;
+    const dup = await this.getQuote(dupId);
+    const keep = await this.getQuote(keepId);
+    if (!dup || !keep) return false;
+    const patch: Partial<InsertQuote> = {};
+    if (!keep.intimuraId && dup.intimuraId) patch.intimuraId = dup.intimuraId;
+    if (!keep.assignedSalesId && dup.assignedSalesId) patch.assignedSalesId = dup.assignedSalesId;
+    if (!keep.assignedInstallerId && dup.assignedInstallerId) patch.assignedInstallerId = dup.assignedInstallerId;
+    if (!keep.assignedCrewId && dup.assignedCrewId) patch.assignedCrewId = dup.assignedCrewId;
+    if (!keep.address && dup.address) patch.address = dup.address;
+    if (!keep.city && dup.city) patch.city = dup.city;
+    if (!keep.province && dup.province) patch.province = dup.province;
+    if ((!keep.estimatedPrice || keep.estimatedPrice === 0) && dup.estimatedPrice) patch.estimatedPrice = dup.estimatedPrice;
+    if (!keep.finalPrice && dup.finalPrice) patch.finalPrice = dup.finalPrice;
+    if (!keep.estimatedLength && dup.estimatedLength) patch.estimatedLength = dup.estimatedLength;
+    if (!keep.salesNotes && dup.salesNotes) patch.salesNotes = dup.salesNotes;
+    if (!keep.installNotes && dup.installNotes) patch.installNotes = dup.installNotes;
+    if (Object.keys(patch).length) {
+      await db.update(quotes).set(patch).where(eq(quotes.id, keep.id));
+    }
+    await db.update(activities).set({ quoteId: keep.id }).where(eq(activities.quoteId, dup.id));
+    await db.delete(quotes).where(eq(quotes.id, dup.id));
+    return true;
+  }
   async getQuoteByIntimuraId(intimuraId: string) { return (await db.select().from(quotes).where(eq(quotes.intimuraId, intimuraId)))[0]; }
   async createQuote(data: InsertQuote) {
     return (await db.insert(quotes).values(data).returning())[0];
