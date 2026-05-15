@@ -41,6 +41,8 @@ type Hotspot = {
   sector: string;
   count: number;
   value: number;
+  signedRevenue: number;
+  closureRate: number;
   active: number;
   signed: number;
   installReady: number;
@@ -344,7 +346,8 @@ function FlyToInstaller() {
 export function Heatmap() {
   const { language } = useLanguage();
   const isEn = language === "en";
-  const { role } = useRole();
+  const { role, can } = useRole();
+  const isDirector = ["admin", "sales_director", "install_director"].includes(role ?? "");
   const isSalesRep = role === "sales_rep";
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
@@ -467,6 +470,8 @@ export function Heatmap() {
         sector: q.sector || `${q.province || "QC"} › ${q.mapCity}`,
         count: 0,
         value: 0,
+        signedRevenue: 0,
+        closureRate: 0,
         active: 0,
         signed: 0,
         installReady: 0,
@@ -476,16 +481,22 @@ export function Heatmap() {
       };
       cur.count += 1;
       cur.value += q.estimatedPrice || 0;
+      if (q.salesStatus === "signee") cur.signedRevenue += (q as any).finalPrice || q.estimatedPrice || 0;
       if (!["perdue", "signee"].includes(q.salesStatus)) cur.active += 1;
       if (q.salesStatus === "signee") cur.signed += 1;
       if (q.installStatus === "a_planifier" || q.installStatus === "planifiee") cur.installReady += 1;
       cur.quotes.push(q);
       map.set(key, cur);
     }
-    return Array.from(map.values()).sort((a, b) => (metric === "count" ? b.count - a.count : b.value - a.value));
+    const result = Array.from(map.values());
+    // Compute closure rate
+    result.forEach(h => { h.closureRate = h.count > 0 ? Math.round((h.signed / h.count) * 100) : 0; });
+    if (metric === "revenue") return result.sort((a, b) => b.signedRevenue - a.signedRevenue);
+    return result.sort((a, b) => (metric === "count" ? b.count - a.count : b.value - a.value));
   }, [mapQuotes, metric]);
 
-  const maxIntensity = Math.max(1, ...hotspots.map(h => metric === "count" ? h.count : h.value));
+  const maxIntensity = Math.max(1, ...hotspots.map(h =>
+    metric === "count" ? h.count : metric === "revenue" ? h.signedRevenue : h.value));
   const totalValue = hotspots.reduce((s, h) => s + h.value, 0);
   const totalClients = hotspots.reduce((s, h) => s + h.count, 0);
   const topHotspot = hotspots[0];
@@ -563,6 +574,7 @@ export function Heatmap() {
                 <SelectContent>
                   <SelectItem value="count">{isEn ? "Volume intensity" : "Intensité volume"}</SelectItem>
                   <SelectItem value="value">{isEn ? "Value intensity" : "Intensité valeur"}</SelectItem>
+                  {isDirector && <SelectItem value="revenue">{isEn ? "Signed revenue" : "Revenus signés"}</SelectItem>}
                 </SelectContent>
               </Select>
               <Select value={stage} onValueChange={setStage}>
@@ -655,7 +667,8 @@ export function Heatmap() {
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
                   {hotspots.map((h) => {
-                    const intensity = Math.max(0.2, (metric === "count" ? h.count : h.value) / maxIntensity);
+                    const rawVal = metric === "count" ? h.count : metric === "revenue" ? h.signedRevenue : h.value;
+                    const intensity = Math.max(0.2, rawVal / maxIntensity);
                     const radius = 15 + intensity * 34;
                     const dominant = h.quotes.find(q => q.stageTone === "problem") || h.quotes.find(q => q.stageTone === "install") || h.quotes.find(q => q.stageTone === "signed") || h.quotes.find(q => q.stageTone === "appointment") || h.quotes[0];
                     const color = STAGE_COLORS[dominant?.stageTone || "sent"];
@@ -804,6 +817,98 @@ export function Heatmap() {
             </Card>
           </div>
         </div>
+
+        {/* ── Rentabilité par secteur (admin/directeur seulement) ── */}
+        {isDirector && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-emerald-600" />
+                {isEn ? "Profitability by sector" : "Rentabilité par secteur"}
+                <Badge variant="outline" className="ml-1 text-xs bg-amber-50 text-amber-700 border-amber-200">
+                  {isEn ? "Directors only" : "Directeurs seulement"}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-xs text-muted-foreground">
+                      <th className="text-left pb-2 font-medium">#</th>
+                      <th className="text-left pb-2 font-medium">{isEn ? "Sector" : "Secteur"}</th>
+                      <th className="text-right pb-2 font-medium">{isEn ? "Quotes" : "Soumissions"}</th>
+                      <th className="text-right pb-2 font-medium">{isEn ? "Signed" : "Signées"}</th>
+                      <th className="text-right pb-2 font-medium">{isEn ? "Closure" : "Fermeture"}</th>
+                      <th className="text-right pb-2 font-medium">{isEn ? "Revenue" : "Revenus"}</th>
+                      <th className="text-right pb-2 font-medium">{isEn ? "Avg deal" : "Valeur moy."}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...hotspots]
+                      .filter(h => h.signed > 0)
+                      .sort((a, b) => b.signedRevenue - a.signedRevenue)
+                      .slice(0, 12)
+                      .map((h, i) => {
+                        const avgDeal = h.signed > 0 ? h.signedRevenue / h.signed : 0;
+                        const rateColor = h.closureRate >= 60
+                          ? "text-green-600 bg-green-50"
+                          : h.closureRate >= 40
+                          ? "text-amber-600 bg-amber-50"
+                          : "text-red-500 bg-red-50";
+                        return (
+                          <tr key={`${h.province}-${h.city}`} className="border-b last:border-0 hover:bg-muted/30">
+                            <td className="py-2 pr-2 text-muted-foreground font-mono text-xs">{i + 1}</td>
+                            <td className="py-2">
+                              <div className="font-medium text-gray-800">{h.city}</div>
+                              <div className="text-xs text-muted-foreground">{h.province}</div>
+                            </td>
+                            <td className="text-right py-2 text-gray-600">{h.count}</td>
+                            <td className="text-right py-2 text-emerald-600 font-medium">{h.signed}</td>
+                            <td className="text-right py-2">
+                              <span className={`inline-block text-xs font-bold px-1.5 py-0.5 rounded ${rateColor}`}>
+                                {h.closureRate}%
+                              </span>
+                            </td>
+                            <td className="text-right py-2 font-semibold">{moneyFmt.format(h.signedRevenue)}</td>
+                            <td className="text-right py-2 text-muted-foreground">{moneyFmt.format(avgDeal)}</td>
+                          </tr>
+                        );
+                      })}
+                    {hotspots.filter(h => h.signed > 0).length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="text-center text-sm text-muted-foreground py-6">
+                          {isEn ? "No signed deals yet." : "Aucune vente signée pour l'instant."}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                  {hotspots.filter(h => h.signed > 0).length > 0 && (
+                    <tfoot>
+                      <tr className="border-t font-semibold text-sm">
+                        <td colSpan={3} className="pt-2 text-muted-foreground">{isEn ? "Total" : "Total"}</td>
+                        <td className="text-right pt-2 text-emerald-600">
+                          {hotspots.reduce((s, h) => s + h.signed, 0)}
+                        </td>
+                        <td className="text-right pt-2">
+                          <span className="text-xs">
+                            {hotspots.reduce((s, h) => s + h.count, 0) > 0
+                              ? `${Math.round(hotspots.reduce((s, h) => s + h.signed, 0) / hotspots.reduce((s, h) => s + h.count, 0) * 100)}%`
+                              : "—"}
+                          </span>
+                        </td>
+                        <td className="text-right pt-2">
+                          {moneyFmt.format(hotspots.reduce((s, h) => s + h.signedRevenue, 0))}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </>
   );
