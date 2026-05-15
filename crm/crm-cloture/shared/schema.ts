@@ -82,6 +82,8 @@ export const quotes = pgTable("quotes", {
   timeline: text("timeline"), // JSON array of {step, date, userId, note}
   intimuraData: text("intimura_data"), // JSON blob: full Intimura submission (customer, items, taxes, payments, metadata)
   completionPhotos: text("completion_photos"), // JSON array: [{url, uploadedAt, uploadedBy}]
+  satisfactionSmsSentAt: text("satisfaction_sms_sent_at"), // ISO timestamp when satisfaction SMS was sent
+  overdueAlertSentAt: text("overdue_alert_sent_at"),     // ISO timestamp when overdue alert email was sent
   createdAt: text("created_at").notNull().default("CURRENT_TIMESTAMP"),
 });
 

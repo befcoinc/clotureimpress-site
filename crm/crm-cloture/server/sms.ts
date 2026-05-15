@@ -249,3 +249,67 @@ export async function sendInstallerProfileReminderSms(
     return { ok: false, error: err?.message || String(err) };
   }
 }
+
+export async function sendSatisfactionSms(
+  toRaw: string,
+  clientName: string,
+): Promise<{ ok: boolean; error?: string; sid?: string }> {
+  const to = normalizePhone(toRaw);
+  if (!to) return { ok: false, error: "Numéro de téléphone invalide ou manquant" };
+
+  const firstName = (clientName || "").split(" ")[0] || "Bonjour";
+  const body = `Cloture Impress: Bonjour ${firstName}, votre installation est terminee! Etes-vous satisfait(e) du travail? Repondez OUI ou NON, ou appelez le (514) 000-0000. Merci de votre confiance!`;
+
+  if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_FROM) {
+    try {
+      const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+      const message = await client.messages.create({ from: TWILIO_FROM, to, body });
+      console.log("[sms] Satisfaction SMS sent to", to, "via Twilio sid:", message.sid);
+      return { ok: true, sid: message.sid };
+    } catch (err: any) {
+      console.error("[sms] Twilio satisfaction SMS failed:", err?.message);
+    }
+  }
+
+  if (BREVO_API_KEY) {
+    try {
+      const response = await fetch("https://api.brevo.com/v3/transactionalSMS/sms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": BREVO_API_KEY,
+          accept: "application/json",
+        },
+        body: JSON.stringify({
+          sender: BREVO_SMS_SENDER,
+          recipient: to,
+          content: body,
+          type: "transactional",
+        }),
+      });
+      const payload = (await response.json()) as any;
+      if (response.ok && payload?.messageId) {
+        console.log("[sms] Satisfaction SMS sent to", to, "via Brevo id:", payload.messageId);
+        return { ok: true, sid: String(payload.messageId) };
+      }
+    } catch (err: any) {
+      console.error("[sms] Brevo satisfaction SMS failed:", err?.message);
+    }
+  }
+
+  try {
+    const response = await fetch("https://textbelt.com/text", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ phone: to, message: body, key: TEXTBELT_API_KEY }).toString(),
+    });
+    const payload = (await response.json()) as any;
+    if (payload?.success) {
+      console.log("[sms] Satisfaction SMS sent to", to, "via Textbelt id:", payload?.textId);
+      return { ok: true, sid: payload?.textId ? String(payload.textId) : undefined };
+    }
+    return { ok: false, error: payload?.error || "Textbelt error" };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || String(err) };
+  }
+}

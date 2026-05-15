@@ -7,8 +7,8 @@ import path from "node:path";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage, detectSector, seed, hashPassword, verifyPassword } from "./storage";
-import { sendInviteEmail, sendInstallerProfileReminderEmail, sendInstallerFicheLinkEmail, sendRepresentativeFicheLinkEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail } from "./email";
-import { sendInviteSms, sendInstallerProfileReminderSms } from "./sms";
+import { sendInviteEmail, sendInstallerProfileReminderEmail, sendInstallerFicheLinkEmail, sendRepresentativeFicheLinkEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail, sendOverdueInstallAlert } from "./email";
+import { sendInviteSms, sendInstallerProfileReminderSms, sendSatisfactionSms } from "./sms";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema, insertInstallerApplicationSchema, insertRepresentativeApplicationSchema } from "@shared/schema";
 
 function decodeSvelteData(data: any[]) {
@@ -3095,6 +3095,111 @@ Sois concret, direct, adapté au marché québécois.`;
       next(err);
     }
   });
+
+
+  // ============= BACKGROUND JOBS : ALERTES RETARD + SMS SATISFACTION =============
+
+  async function checkOverdueInstalls() {
+    try {
+      const allQuotes = await storage.getQuotes();
+      const allUsers = await storage.getUsers();
+      const directors = allUsers.filter((u: any) =>
+        ["admin", "install_director"].includes((u as any).role) && (u as any).email,
+      );
+      if (!directors.length) return;
+
+      const now = Date.now();
+      const oneDayMs = 24 * 60 * 60 * 1000;
+      const terminalStatuses = ["terminee", "probleme", "inspection"];
+
+      for (const q of allQuotes) {
+        const sq = q as any;
+        if (!sq.scheduledDate) continue;
+        if (terminalStatuses.includes(sq.installStatus)) continue;
+
+        const scheduled = new Date(sq.scheduledDate).getTime();
+        if (isNaN(scheduled) || scheduled > now - oneDayMs) continue;
+
+        // Don't re-alert within 20h
+        if (sq.overdueAlertSentAt) {
+          const sentAt = new Date(sq.overdueAlertSentAt).getTime();
+          if (now - sentAt < 20 * 60 * 60 * 1000) continue;
+        }
+
+        let installerName: string | null = null;
+        if (sq.assignedInstallerId) {
+          const inst = allUsers.find((u: any) => u.id === sq.assignedInstallerId);
+          installerName = (inst as any)?.name ?? null;
+        }
+
+        await sendOverdueInstallAlert({
+          directors: directors.map((d: any) => ({ name: d.name, email: d.email })),
+          quote: {
+            id: sq.id,
+            clientName: sq.clientName,
+            city: sq.city,
+            scheduledDate: sq.scheduledDate,
+            installerName,
+            fenceType: sq.fenceType,
+          },
+        });
+
+        await storage.updateQuote(sq.id, { overdueAlertSentAt: new Date().toISOString() } as any);
+        console.log(`[jobs] Overdue alert sent for quote #${sq.id} (${sq.clientName})`);
+      }
+    } catch (err) {
+      console.error("[jobs] checkOverdueInstalls error:", err);
+    }
+  }
+
+  async function checkSatisfactionSms() {
+    try {
+      const allQuotes = await storage.getQuotes();
+      const allLeads = await storage.getLeads();
+      const now = Date.now();
+      const delay = 24 * 60 * 60 * 1000;
+
+      for (const q of allQuotes) {
+        const sq = q as any;
+        if (sq.installStatus !== "terminee") continue;
+        if (sq.satisfactionSmsSentAt) continue;
+        if (!sq.installedDate) continue;
+
+        const installedAt = new Date(sq.installedDate).getTime();
+        if (isNaN(installedAt) || now - installedAt < delay) continue;
+
+        let phone: string | null = null;
+        let clientName = sq.clientName || "Client";
+        if (sq.leadId) {
+          const lead = allLeads.find((l: any) => l.id === sq.leadId);
+          if (lead) {
+            phone = (lead as any).phone ?? null;
+            clientName = (lead as any).clientName || clientName;
+          }
+        }
+
+        if (!phone) {
+          console.log(`[jobs] No phone for quote #${sq.id} — marking skipped`);
+          await storage.updateQuote(sq.id, { satisfactionSmsSentAt: `no-phone-${new Date().toISOString()}` } as any);
+          continue;
+        }
+
+        const result = await sendSatisfactionSms(phone, clientName);
+        const sentAt = result.ok
+          ? new Date().toISOString()
+          : `error-${new Date().toISOString()}`;
+
+        await storage.updateQuote(sq.id, { satisfactionSmsSentAt: sentAt } as any);
+        console.log(`[jobs] Satisfaction SMS quote #${sq.id}: ok=${result.ok}`, result.sid || result.error || "");
+      }
+    } catch (err) {
+      console.error("[jobs] checkSatisfactionSms error:", err);
+    }
+  }
+
+  // Run on startup after 15s then every hour
+  setTimeout(() => { checkOverdueInstalls(); checkSatisfactionSms(); }, 15_000);
+  setInterval(() => { checkOverdueInstalls(); checkSatisfactionSms(); }, 60 * 60 * 1000);
 
   return httpServer;
 }

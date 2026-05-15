@@ -755,3 +755,73 @@ export async function sendInstallerAssignedEmail(params: {
     return { ok: false, error: err?.message || String(err) };
   }
 }
+
+export async function sendOverdueInstallAlert(params: {
+  directors: Array<{ name: string; email: string }>;
+  quote: {
+    id: number;
+    clientName: string;
+    city?: string | null;
+    scheduledDate: string;
+    installerName?: string | null;
+    fenceType?: string | null;
+  };
+}): Promise<void> {
+  const { directors, quote } = params;
+  if (!directors.length) return;
+
+  const appUrl = process.env.APP_URL || "https://cloture-crm.onrender.com";
+  const quoteUrl = `${appUrl}/#/soumissions/${quote.id}`;
+  const daysSince = Math.floor(
+    (Date.now() - new Date(quote.scheduledDate).getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  const subject = `⚠️ Installation en retard — ${quote.clientName} (${quote.city || "?"})`;
+  const textContent = [
+    `Alerte retard d'installation — Clôture Impress CRM`,
+    "",
+    `La soumission #${quote.id} est en retard de ${daysSince} jour${daysSince > 1 ? "s" : ""}.`,
+    "",
+    `Client     : ${quote.clientName}`,
+    `Ville      : ${quote.city || "Non précisée"}`,
+    quote.fenceType ? `Type       : ${quote.fenceType}` : null,
+    `Date prévue: ${quote.scheduledDate}`,
+    quote.installerName ? `Installateur: ${quote.installerName}` : null,
+    "",
+    `Ouvrir la fiche: ${quoteUrl}`,
+  ].filter((l) => l !== null).join("\n");
+
+  for (const dir of directors) {
+    try {
+      if (BREVO_API_KEY) {
+        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "api-key": BREVO_API_KEY },
+          body: JSON.stringify({
+            sender: { name: "Clôture Impress CRM", email: SMTP_USER },
+            to: [{ email: dir.email, name: dir.name }],
+            subject,
+            textContent,
+          }),
+        });
+        const payload = (await response.json()) as any;
+        if (response.ok && payload?.messageId) {
+          console.log("[email] Overdue alert sent to", dir.email, "via Brevo");
+          continue;
+        }
+      }
+      // SMTP fallback
+      if (SMTP_PASS) {
+        await transporter.sendMail({
+          from: FROM,
+          to: dir.email,
+          subject,
+          text: textContent,
+        });
+        console.log("[email] Overdue alert sent to", dir.email, "via SMTP");
+      }
+    } catch (err: any) {
+      console.error("[email] Failed to send overdue alert to", dir.email, ":", err?.message);
+    }
+  }
+}

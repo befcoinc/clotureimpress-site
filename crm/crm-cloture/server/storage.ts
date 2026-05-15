@@ -239,6 +239,9 @@ async function migrate() {
   await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS intimura_data TEXT`);
   // Photos de fin de chantier
   await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS completion_photos TEXT`);
+  // Alertes retard + SMS satisfaction
+  await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS satisfaction_sms_sent_at TEXT`);
+  await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS overdue_alert_sent_at TEXT`);
 }
 
 // =============== PASSWORD SEEDING ===============
