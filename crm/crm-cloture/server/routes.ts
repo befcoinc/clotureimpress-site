@@ -2030,8 +2030,14 @@ export async function registerRoutes(
       return scored[0] || all[0];
     };
 
+    const LEAD_CUTOFF = '2026-05-01';
     for (const iq of intimuraQuotes) {
       if (!iq?.id) continue;
+      // Ignorer les leads Intimura antérieurs au 2026-05-01
+      if (iq.created_at && String(iq.created_at).slice(0, 10) < LEAD_CUTOFF) {
+        skipped++;
+        continue;
+      }
       const existingLead = await storage.getLeadByIntimuraId(iq.id);
       let existingQuote = quoteByIntimuraId.get(iq.id);
       if (existingLead || existingQuote) {

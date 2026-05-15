@@ -242,6 +242,25 @@ async function migrate() {
   // Alertes retard + SMS satisfaction
   await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS satisfaction_sms_sent_at TEXT`);
   await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS overdue_alert_sent_at TEXT`);
+
+  // Nettoyage: supprimer leads/quotes/activités antérieurs au 2026-05-01
+  // On supprime dans l'ordre FK: activities -> quotes -> leads
+  const CUTOFF = '2026-05-01';
+  await db.execute(sql`
+    DELETE FROM activities
+    WHERE lead_id IN (
+      SELECT id FROM leads WHERE created_at < ${CUTOFF}
+    )
+  `);
+  await db.execute(sql`
+    DELETE FROM quotes
+    WHERE lead_id IN (
+      SELECT id FROM leads WHERE created_at < ${CUTOFF}
+    )
+  `);
+  await db.execute(sql`
+    DELETE FROM leads WHERE created_at < ${CUTOFF}
+  `);
 }
 
 // =============== PASSWORD SEEDING ===============
