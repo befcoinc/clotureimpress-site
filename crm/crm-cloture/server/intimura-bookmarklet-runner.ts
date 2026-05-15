@@ -1,3 +1,10 @@
+/** Favori court à glisser dans la barre de favoris (charge bookmarklet.js). */
+export function buildBookmarkletLoaderHref(apiBase: string, token: string): string {
+  const b = JSON.stringify(apiBase);
+  const t = JSON.stringify(token);
+  return `javascript:(function(){var b=${b};var t=${t};var o=document.getElementById('ci-sync-status');if(o)o.remove();var s=document.createElement('script');s.src=b+'/api/intimura/bookmarklet.js?token='+encodeURIComponent(t);s.onerror=function(){alert('Script sync non charge. Ouvre '+b+'/sync-intimura-install');};document.head.appendChild(s);})();`;
+}
+
 /** Script injecté sur crm.intimura.com (chargé via /api/intimura/bookmarklet.js). */
 export function buildIntimuraBookmarkletRunner(apiBase: string, token: string): string {
   const api = JSON.stringify(apiBase);

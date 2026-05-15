@@ -10,7 +10,7 @@ import { storage, detectSector, seed, hashPassword, verifyPassword } from "./sto
 import { sendInviteEmail, sendInstallerProfileReminderEmail, sendInstallerFicheLinkEmail, sendRepresentativeFicheLinkEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail, sendOverdueInstallAlert } from "./email";
 import { sendInviteSms, sendInstallerProfileReminderSms, sendSatisfactionSms } from "./sms";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema, insertInstallerApplicationSchema, insertRepresentativeApplicationSchema } from "@shared/schema";
-import { buildIntimuraBookmarkletRunner } from "./intimura-bookmarklet-runner";
+import { buildBookmarkletLoaderHref, buildIntimuraBookmarkletRunner } from "./intimura-bookmarklet-runner";
 
 function decodeSvelteData(data: any[]) {
   // Cycle/depth-protected resolver. Some Svelte payloads contain self-referential
@@ -2610,6 +2610,43 @@ export async function registerRoutes(
       return res.status(result.error === "INTIMURA_CREDENTIALS_MISSING" ? 400 : 502).json(result);
     }
     res.json(result);
+  });
+
+  // Page HTML : glisser le favori (token inclus, pas de copier-coller manuel)
+  app.get("/sync-intimura-install", (req, res) => {
+    if (!req.isAuthenticated()) {
+      const next = encodeURIComponent("/sync-intimura-install");
+      return res.redirect(`/#/login?next=${next}`);
+    }
+    const actor = req.user as any;
+    if (!canUseIntimuraBookmarklet(actor?.role)) {
+      return res.status(403).type("html").send("<p>Acces reserve aux administrateurs et directeurs des ventes.</p>");
+    }
+    const token = ensureBookmarkletToken();
+    const apiBase = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+    const href = buildBookmarkletLoaderHref(apiBase, token);
+    const safeHref = href.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    res.type("html").send(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Installer Sync Intimura</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:520px;margin:40px auto;padding:0 20px;color:#111}
+    h1{font-size:1.35rem}
+    .btn{display:inline-block;margin:20px 0;padding:16px 28px;background:#059669;color:#fff;font-weight:700;font-size:1.1rem;border-radius:10px;text-decoration:none;cursor:grab;box-shadow:0 4px 14px rgba(5,150,105,.4)}
+    .btn:active{cursor:grabbing}
+  </style>
+</head>
+<body>
+  <h1>Sync Intimura → ClôturePro</h1>
+  <p><strong>Glisse</strong> le bouton vert ci-dessous dans ta barre de favoris (barre du haut du navigateur).</p>
+  <a class="btn" href="${safeHref}" draggable="true">⇩ Sync Intimura → ClôturePro</a>
+  <p>Puis sur <a href="https://crm.intimura.com/app/quotes">crm.intimura.com/app/quotes</a>, clique ce favori une fois.</p>
+  <p style="font-size:.85rem;color:#666">Une boite verte en haut a droite confirme que ca fonctionne.</p>
+</body>
+</html>`);
   });
 
   // -------- Intimura bookmarklet runner (short loader → this script) --------

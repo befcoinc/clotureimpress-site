@@ -163,6 +163,11 @@ export function IntimuraBookmarklet() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <Button asChild className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700">
+                  <a href="/sync-intimura-install" target="_blank" rel="noreferrer">
+                    {isEn ? "Open install page (drag the button)" : "Ouvrir la page d'installation (glisser le bouton)"}
+                  </a>
+                </Button>
                 <p className="text-sm text-muted-foreground">
                   {isEn
                     ? "On crm.intimura.com/app/quotes, click once: each visible row becomes a lead + full submission in ClôturePro (same data as opening each quote)."
