@@ -403,6 +403,14 @@ export async function registerRoutes(
 ): Promise<Server> {
   await seed();
 
+  app.get("/health", (_req, res) => {
+    res.json({
+      ok: true,
+      build: process.env.RENDER_GIT_COMMIT?.slice(0, 7) || "local",
+      intimuraCutoff: INTIMURA_SYNC_CUTOFF,
+    });
+  });
+
   // ── Passport Local Strategy ─────────────────────────────────────────
   passport.use(
     new LocalStrategy({ usernameField: "email" }, async (email, password, done) => {
