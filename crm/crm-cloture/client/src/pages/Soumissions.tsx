@@ -13,7 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useRole } from "@/lib/role-context";
 import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
-import type { Crew, Quote, User } from "@shared/schema";
+import type { Crew, Lead, Quote, User } from "@shared/schema";
 import { FENCE_TYPES, INSTALL_STATUSES, PROVINCES, SALES_STATUSES } from "@shared/schema";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { getWinProbability, getProbabilityBadgeColor } from "@/lib/win-probability";
@@ -42,6 +42,7 @@ export function Soumissions() {
   const isEn = language === "en";
   const { toast } = useToast();
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
+  const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const { data: crews = [] } = useQuery<Crew[]>({ queryKey: ["/api/crews"] });
   const [search, setSearch] = useState("");
@@ -76,7 +77,13 @@ export function Soumissions() {
 
   const visible = useMemo(() => {
     let list = quotes;
-    if (role === "sales_rep") list = list.filter(q => q.assignedSalesId === currentUser?.id);
+    if (role === "sales_rep") {
+      // Mirror server-side logic: include quotes assigned directly to this rep
+      // OR linked to a lead assigned to this rep (Intimura quotes often have
+      // assignedSalesId=null on the quote itself but a properly-assigned lead).
+      const myLeadIds = new Set(leads.filter(l => l.assignedSalesId === currentUser?.id).map(l => l.id));
+      list = list.filter(q => q.assignedSalesId === currentUser?.id || (q.leadId != null && myLeadIds.has(q.leadId)));
+    }
     if (role === "installer") list = list.filter(q => q.assignedInstallerId === currentUser?.id);
     if (cityFilter) {
       const cityNorm = normalizeForSearch(cityFilter);
@@ -103,7 +110,7 @@ export function Soumissions() {
       );
     }
     return list;
-  }, [quotes, role, currentUser, search, statusFilter, cityFilter, provinceFilter]);
+  }, [quotes, leads, role, currentUser, search, statusFilter, cityFilter, provinceFilter]);
 
   const createQuote = useMutation({
     mutationFn: async (payload: any) => apiRequest("POST", "/api/quotes", {
