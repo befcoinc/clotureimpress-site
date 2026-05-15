@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Copy, ExternalLink, AlertCircle } from "lucide-react";
+import { Copy, ExternalLink, AlertCircle, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,26 @@ export function IntimuraBookmarklet() {
   const canSync =
     currentUser?.role === "admin" || currentUser?.role === "sales_director";
 
-  const { data: credsStatus, isLoading, isError } = useQuery<{ bookmarkletToken: string }>({
+  const { data: credsStatus, isLoading, isError } = useQuery<{
+    bookmarkletToken: string;
+    hasCookie?: boolean;
+    hasCfServiceToken?: boolean;
+  }>({
     queryKey: ["/api/intimura/credentials"],
     enabled: !!currentUser && canSync,
+  });
+
+  const { data: autoSync } = useQuery<{
+    enabled: boolean;
+    intervalMinutes: number;
+    lastAt: string | null;
+    lastOk: boolean;
+    lastError: string | null;
+    lastResult?: { createdLeads?: number; skipped?: number; detailsUpdated?: number };
+  }>({
+    queryKey: ["/api/intimura/auto-sync/status"],
+    enabled: !!currentUser && canSync,
+    refetchInterval: 60_000,
   });
 
   const apiBase = typeof window !== "undefined" ? window.location.origin : "";
@@ -101,6 +118,49 @@ export function IntimuraBookmarklet() {
           </Card>
         ) : (
           <>
+            <Card className={autoSync?.enabled ? "border-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/30" : "border-border"}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <RefreshCw className={`h-4 w-4 ${autoSync?.enabled ? "text-emerald-600" : ""}`} />
+                  {isEn ? "Automatic sync (server)" : "Sync automatique (serveur)"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm space-y-2">
+                {autoSync?.enabled ? (
+                  <>
+                    <p className="text-emerald-800 dark:text-emerald-200">
+                      {isEn
+                        ? `Active — checks Intimura every ${autoSync.intervalMinutes} min and imports new leads only.`
+                        : `Actif — vérifie Intimura toutes les ${autoSync.intervalMinutes} min et importe seulement les nouveaux leads.`}
+                    </p>
+                    {autoSync.lastAt && (
+                      <p className="text-xs text-muted-foreground">
+                        {isEn ? "Last run" : "Dernière exécution"} :{" "}
+                        {new Date(autoSync.lastAt).toLocaleString(isEn ? "en-CA" : "fr-CA")}
+                        {autoSync.lastResult != null && (
+                          <>
+                            {" "}
+                            — {autoSync.lastResult.createdLeads ?? 0}{" "}
+                            {isEn ? "new" : "nouveau(x)"}, {autoSync.lastResult.skipped ?? 0}{" "}
+                            {isEn ? "skipped" : "ignoré(s)"}
+                          </>
+                        )}
+                        {!autoSync.lastOk && autoSync.lastError && (
+                          <span className="text-red-600 block mt-1">{autoSync.lastError}</span>
+                        )}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-muted-foreground text-xs">
+                    {isEn
+                      ? "Not configured. Ask an admin to set CF_ACCESS_CLIENT_ID + CF_ACCESS_CLIENT_SECRET on Render (recommended), or INTIMURA_COOKIE. Until then, use the manual bookmarklet below."
+                      : "Non configuré. Demande à un admin de définir CF_ACCESS_CLIENT_ID + CF_ACCESS_CLIENT_SECRET sur Render (recommandé), ou INTIMURA_COOKIE. En attendant, utilise le bookmarklet manuel ci-dessous."}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
             <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/40">
               <CardContent className="pt-6 text-sm text-amber-900 space-y-2">
                 <p className="font-medium">

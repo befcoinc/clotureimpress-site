@@ -2301,31 +2301,114 @@ export async function registerRoutes(
     return { mergedCount: merged.length, merged };
   }
 
-  // -------- Intimura sync (server-side fetch with stored creds) --------
-  app.post("/api/intimura/sync", async (_req, res) => {
+  type IntimuraAutoSyncState = {
+    lastAt: string | null;
+    lastOk: boolean;
+    lastResult: any;
+    lastError: string | null;
+  };
+
+  function getIntimuraAutoSyncState(): IntimuraAutoSyncState {
+    const g = globalThis as any;
+    if (!g.__intimuraAutoSyncState) {
+      g.__intimuraAutoSyncState = { lastAt: null, lastOk: true, lastResult: null, lastError: null };
+    }
+    return g.__intimuraAutoSyncState as IntimuraAutoSyncState;
+  }
+
+  async function fetchIntimuraQuoteDetails(intimuraId: string, headers: Record<string, string>) {
+    const url = `https://crm.intimura.com/app/quotes/${intimuraId}/__data.json?x-sveltekit-invalidated=001`;
+    const r = await fetch(url, { headers });
+    if (!r.ok) return { ok: false as const, status: r.status };
+    const payload = (await r.json()) as any;
+    const node = payload?.nodes?.find((n: any) => n?.type === "data");
+    if (!node?.data) return { ok: false as const, reason: "NO_DATA_NODE" };
+    const decoded = decodeSvelteData(node.data);
+    return applyIntimuraDetails(intimuraId, decoded);
+  }
+
+  /** Server-side pull from Intimura (cookie or Cloudflare Access token). New leads only. */
+  async function runIntimuraServerSync(opts?: { enrichDetails?: boolean }) {
     const headers = buildIntimuraHeaders();
     if (!headers) {
-      return res.status(400).json({
+      return {
+        ok: false as const,
         error: "INTIMURA_CREDENTIALS_MISSING",
-        message: "Configure d'abord un cookie Intimura ou un Cloudflare Access Service Token, ou utilise le bookmarklet.",
-      });
+        message: "Configure un cookie Intimura ou un token Cloudflare Access sur Render.",
+      };
     }
 
-    const response = await fetch("https://crm.intimura.com/app/board/__data.json?x-sveltekit-invalidated=001", { headers });
+    const response = await fetch(
+      "https://crm.intimura.com/app/board/__data.json?x-sveltekit-invalidated=001",
+      { headers },
+    );
     if (!response.ok) {
       const body = await response.text().catch(() => "");
-      const looksLikeCfLogin = body.includes("Cloudflare Access") || body.includes("cf-access") || response.status === 302;
-      return res.status(response.status).json({
+      const looksLikeCfLogin =
+        body.includes("Cloudflare Access") || body.includes("cf-access") || response.status === 302;
+      return {
+        ok: false as const,
         error: looksLikeCfLogin ? "INTIMURA_AUTH_EXPIRED" : `INTIMURA_HTTP_${response.status}`,
         message: looksLikeCfLogin
-          ? "La session Cloudflare Access a expire. Utilise le bookmarklet ou recolle un cookie."
+          ? "La session Cloudflare Access a expire. Renouvelle le cookie ou le service token."
           : `Intimura HTTP ${response.status}`,
-      });
+      };
     }
 
-    const payload = await response.json() as any;
+    const payload = (await response.json()) as any;
     const intimuraQuotes = extractIntimuraQuotes(payload);
-    const result = await importIntimuraQuotes(intimuraQuotes);
+    const importResult = await importIntimuraQuotes(intimuraQuotes, { runPostDedup: false });
+
+    let detailsUpdated = 0;
+    const detailErrors: any[] = [];
+    if (opts?.enrichDetails !== false) {
+      const ids: string[] = importResult.createdIntimuraIds || [];
+      for (const id of ids) {
+        try {
+          const r = await fetchIntimuraQuoteDetails(id, headers);
+          if (r.ok) detailsUpdated++;
+          else detailErrors.push({ intimuraId: id, ...r });
+        } catch (err: any) {
+          detailErrors.push({ intimuraId: id, error: err?.message });
+        }
+      }
+    }
+
+    return {
+      ok: true as const,
+      ...importResult,
+      detailsUpdated,
+      detailErrors,
+      auto: true,
+    };
+  }
+
+  app.get("/api/intimura/auto-sync/status", requireAuth, async (req, res) => {
+    const actor = req.user as any;
+    if (!canUseIntimuraBookmarklet(actor?.role)) {
+      return res.status(403).json({ error: "Acces refuse" });
+    }
+    const st = getIntimuraAutoSyncState();
+    const intervalMin = Math.max(2, parseInt(process.env.INTIMURA_AUTO_SYNC_MINUTES || "5", 10) || 5);
+    res.json({
+      enabled: !!buildIntimuraHeaders(),
+      intervalMinutes: intervalMin,
+      lastAt: st.lastAt,
+      lastOk: st.lastOk,
+      lastError: st.lastError,
+      lastResult: st.lastResult,
+    });
+  });
+
+  app.post("/api/intimura/sync", requireAuth, async (req, res) => {
+    const actor = req.user as any;
+    if (!canUseIntimuraBookmarklet(actor?.role)) {
+      return res.status(403).json({ error: "Acces refuse" });
+    }
+    const result = await runIntimuraServerSync({ enrichDetails: true });
+    if (!result.ok) {
+      return res.status(result.error === "INTIMURA_CREDENTIALS_MISSING" ? 400 : 502).json(result);
+    }
     res.json(result);
   });
 
@@ -2649,20 +2732,44 @@ export async function registerRoutes(
     res.json({ candidates: targets.length, updated, errors });
   });
 
-  // Poll Intimura automatically while the CRM server is running, but only when
-  // server-side credentials are configured. Otherwise the sync is user-triggered
-  // via the bookmarklet on intimura.com.
+  // Auto-sync Intimura toutes les N minutes (Render/production) quand cookie ou CF token est configure.
   const g = globalThis as any;
   if (!g.__intimuraPollerStarted) {
     g.__intimuraPollerStarted = true;
-    setInterval(async () => {
+    const intervalMs =
+      Math.max(2, parseInt(process.env.INTIMURA_AUTO_SYNC_MINUTES || "5", 10) || 5) * 60 * 1000;
+    const tick = async () => {
       if (!buildIntimuraHeaders()) return;
+      const st = getIntimuraAutoSyncState();
       try {
-        await fetch("http://127.0.0.1:5000/api/intimura/sync", { method: "POST" });
-      } catch (error) {
-        console.warn("Intimura auto-sync failed", error);
+        const result = await runIntimuraServerSync({ enrichDetails: true });
+        st.lastAt = new Date().toISOString();
+        if (result.ok) {
+          st.lastOk = true;
+          st.lastError = null;
+          st.lastResult = result;
+          if ((result.createdLeads || 0) > 0) {
+            console.log(
+              `[intimura auto-sync] ${result.createdLeads} nouveau(x) lead(s), ${result.detailsUpdated || 0} fiche(s) detaillee(s)`,
+            );
+          }
+        } else {
+          st.lastOk = false;
+          st.lastError = result.message || result.error;
+          st.lastResult = null;
+          console.warn("[intimura auto-sync]", st.lastError);
+        }
+      } catch (error: any) {
+        st.lastAt = new Date().toISOString();
+        st.lastOk = false;
+        st.lastError = error?.message || String(error);
+        st.lastResult = null;
+        console.warn("[intimura auto-sync] error", error);
       }
-    }, 5 * 60 * 1000);
+    };
+    setTimeout(() => tick(), 15_000);
+    setInterval(tick, intervalMs);
+    console.log(`[intimura auto-sync] polling every ${intervalMs / 60000} min when credentials are set`);
   }
 
   // -------- Quotes --------
