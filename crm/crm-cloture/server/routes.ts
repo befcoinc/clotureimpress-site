@@ -2122,18 +2122,20 @@ export async function registerRoutes(
       const pkK = personKey(l.clientName || "");
       const isIntSource = (l.source || "") === "intimura";
 
-      const keyChecks: Array<{ type: string; key: string }> = [];
-      if (intK) keyChecks.push({ type: "intimuraId", key: intK });
-      if (phK) keyChecks.push({ type: "phone", key: `ph:${phK}` });
-      if (emK) keyChecks.push({ type: "email", key: `em:${emK}` });
-      // Fuzzy person-key match only for unidentified Intimura rows (no phone, no email)
-      if (isIntSource && !phK && !emK && pkK) {
-        keyChecks.push({ type: "name+intimura", key: `pk:${pkK}` });
-      }
+      // Keys we will USE for matching against earlier leads.
+      const matchChecks: Array<{ type: string; key: string }> = [];
+      if (intK) matchChecks.push({ type: "intimuraId", key: intK });
+      if (phK) matchChecks.push({ type: "phone", key: `ph:${phK}` });
+      if (emK) matchChecks.push({ type: "email", key: `em:${emK}` });
+      // Person-key fallback: only match when the CURRENT lead is a contact-less
+      // Intimura stub. This catches the recurring case where Intimura emits a
+      // fresh quote id with empty phone/email for an already-known customer.
+      const allowPkMatch = isIntSource && !phK && !emK && !!pkK;
+      if (allowPkMatch) matchChecks.push({ type: "name+intimura", key: `pk:${pkK}` });
 
       let target: number | undefined;
       let reason = "";
-      for (const { type, key } of keyChecks) {
+      for (const { type, key } of matchChecks) {
         const existing = keepers.get(key);
         if (existing != null && existing !== l.id) {
           target = canon(existing);
@@ -2149,7 +2151,9 @@ export async function registerRoutes(
             canonical.set(l.id, target);
             merged.push({ removed: l.id, into: target, reason });
             // Re-register every key under the keeper so subsequent rows resolve to it.
-            for (const { key } of keyChecks) keepers.set(key, target);
+            for (const { key } of matchChecks) keepers.set(key, target);
+            // Always re-register the keeper's person key so later stubs find it.
+            if (isIntSource && pkK) keepers.set(`pk:${pkK}`, target);
           }
         } catch (e) {
           console.error("[dedup] merge failed", l.id, "->", target, e);
@@ -2157,8 +2161,13 @@ export async function registerRoutes(
         continue;
       }
 
-      // No duplicate yet — register all keys for this lead.
-      for (const { key } of keyChecks) {
+      // No duplicate yet. Register strong keys, AND always register the
+      // person-key for Intimura-sourced leads so future stubs can match them.
+      const registerChecks = [...matchChecks];
+      if (isIntSource && pkK && !allowPkMatch) {
+        registerChecks.push({ type: "name+intimura", key: `pk:${pkK}` });
+      }
+      for (const { key } of registerChecks) {
         if (!keepers.has(key)) keepers.set(key, l.id);
       }
     }
@@ -2778,7 +2787,6 @@ export async function registerRoutes(
       const lead = allLeads.find((l: any) => l.id === quote.leadId) || null;
       const rep = allUsers.find((u: any) => u.id === quote.assignedSalesId) || null;
 
-      // Parse Intimura data if present
       let intimuraItems: any[] = [];
       let intimuraMeta: any[] = [];
       try {
@@ -2789,7 +2797,6 @@ export async function registerRoutes(
         }
       } catch {}
 
-      // Build activity summary (last 5)
       const recentActivities = (allActivities as any[]).slice(0, 5)
         .map((a: any) => `- ${a.createdAt?.slice(0, 10) || "?"} | ${a.userName || "?"} : ${a.note || a.action}`)
         .join("\n");
@@ -2802,90 +2809,60 @@ export async function registerRoutes(
         .map((m: any) => `${m.label}: ${m.value}`)
         .join(", ") || "Aucune spécification";
 
+      const stageLabel: Record<string, string> = {
+        nouveau: "premier contact",
+        contacte: "suivi après premier contact",
+        rdv_mesure: "confirmation du rendez-vous mesure",
+        envoyee: "suivi de soumission envoyée",
+        suivi: "relance après suivi",
+        rendez_vous: "préparation du rendez-vous de signature",
+        signee: "confirmation post-signature",
+        perdue: "tentative de récupération",
+      };
+
       const prompt = `Tu es un coach de vente senior spécialisé dans les clôtures résidentielles et commerciales au Canada.
 
 Génère un script d'appel personnalisé en français pour ce vendeur de Cloture Impress.
 
 ## Contexte du prospect
-- Nom : ${quote.clientName}
-- Ville : ${quote.city || "?"}, ${quote.province || "?"}
-- Type de clôture demandé : ${quote.fenceType || "Non précisé"}
-- Longueur estimée : ${quote.estimatedLength ? quote.estimatedLength + " pi" : "Non précisée"}
-- Prix estimé : ${quote.estimatedPrice ? quote.estimatedPrice + " $" : "Non précisé"}
-- Source du lead : ${lead?.source || "Non précisée"}
-- Message initial du prospect : ${lead?.message || "Aucun"}
+- Nom : ${(quote as any).clientName}
+- Ville : ${(quote as any).city || "?"}, ${(quote as any).province || "?"}
+- Type de clôture : ${(quote as any).fenceType || "Non précisé"}
+- Longueur estimée : ${(quote as any).estimatedLength ? (quote as any).estimatedLength + " pi" : "Non précisée"}
+- Prix estimé : ${(quote as any).estimatedPrice ? (quote as any).estimatedPrice + " $" : "Non précisé"}
+- Source du lead : ${(lead as any)?.source || "Non précisée"}
+- Message initial : ${(lead as any)?.message || "Aucun"}
+- Spécifications Intimura : ${metaDesc}
+- Articles soumis : ${itemsDesc}
+- Étape vente : ${(quote as any).salesStatus} (${stageLabel[(quote as any).salesStatus] || "suivi"})
+- Notes vente : ${(quote as any).salesNotes || "Aucune"}
+- Historique récent : ${recentActivities || "Aucune activité"}
+- Vendeur assigné : ${(rep as any)?.name || "Non assigné"} (${(rep as any)?.region || "?"})
 
-## Spécifications (Intimura)
-${metaDesc}
-
-## Articles soumis
-${itemsDesc}
-
-## Statut actuel
-- Étape vente : ${quote.salesStatus}
-- Étape installation : ${quote.installStatus}
-- Notes vente : ${quote.salesNotes || "Aucune"}
-
-## Historique récent
-${recentActivities || "Aucune activité enregistrée"}
-
-## Vendeur assigné
-${rep?.name || "Non assigné"} (${rep?.region || "région inconnue"})
-
----
-
-Produis un script structuré avec exactement ces sections :
+Produis un script structuré avec exactement ces 5 sections :
 
 **🎯 OBJECTIF DE L'APPEL**
-[1-2 phrases sur le but précis de cet appel selon l'étape actuelle]
+[1-2 phrases sur le but précis selon l'étape actuelle]
 
 **👋 OUVERTURE (30 secondes)**
-[Script mot-à-mot pour démarrer l'appel naturellement]
+[Script mot-à-mot pour démarrer l'appel]
 
 **❓ QUESTIONS CLÉS**
-[3-5 questions ciblées basées sur ce qu'on ne sait pas encore du prospect]
+[3-5 questions ciblées basées sur ce qu'on ne sait pas encore]
 
 **🚧 OBJECTIONS PROBABLES**
-[2-3 objections courantes pour ce type de projet et comment y répondre]
+[2-3 objections courantes et comment y répondre]
 
 **✅ PROCHAINE ÉTAPE**
 [Exactement quoi demander pour faire avancer le dossier]
 
-**📝 NOTE RAPIDE**
-[1 phrase de contexte unique sur ce prospect à garder en tête]
-
-Sois concret, direct, et adapté au marché québécois. Tutoyage ou vouvoiement selon le ton approprié.`;
+Sois concret, direct, adapté au marché québécois.`;
 
       const apiKey = process.env.ANTHROPIC_API_KEY;
 
       if (!apiKey) {
-        // Fallback sans IA : script template intelligent
-        const stageLabel: Record<string, string> = {
-          nouveau: "premier contact",
-          contacte: "suivi après premier contact",
-          rdv_mesure: "confirmation du rendez-vous mesure",
-          envoyee: "suivi de soumission envoyée",
-          suivi: "relance après suivi",
-          rendez_vous: "préparation du rendez-vous de signature",
-          signee: "confirmation post-signature",
-          perdue: "tentative de récupération",
-        };
-        const stagePurpose = stageLabel[quote.salesStatus] || "suivi";
         return res.json({
-          script: `**🎯 OBJECTIF DE L'APPEL**\nCet appel a pour but : ${stagePurpose} avec ${quote.clientName}.
-
-**👋 OUVERTURE (30 secondes)**\n"Bonjour ${quote.clientName}, c'est [votre prénom] de Cloture Impress. Je vous appelle concernant votre projet de ${quote.fenceType || "clôture"} à ${quote.city || "votre domicile"}. Avez-vous quelques minutes ?"
-
-**❓ QUESTIONS CLÉS**\n• Avez-vous eu le temps de regarder notre soumission ?\n• Est-ce que le budget correspond à ce que vous aviez en tête ?\n• Y a-t-il des détails à ajuster sur le projet ?\n• Quelle est votre date idéale pour les travaux ?\n• Avez-vous d'autres soumissions en cours ?
-
-**🚧 OBJECTIONS PROBABLES**\n• "C'est trop cher" → Valorisez la qualité, proposez un ajustement de portée\n• "Je dois y penser" → Demandez ce qui bloque, proposez un rendez-vous en personne\n• "J'attends une autre soumission" → Mettez en avant votre garantie et délais
-
-**✅ PROCHAINE ÉTAPE**\n"Est-ce qu'on peut confirmer un rendez-vous pour cette semaine afin de finaliser les détails ?"
-
-**📝 NOTE RAPIDE**\n${quote.fenceType || "Projet clôture"} · ${quote.city || "?"} · ${quote.estimatedPrice ? quote.estimatedPrice + " $" : "prix à confirmer"}
-
----
-*⚠️ Script généré sans IA (clé ANTHROPIC_API_KEY non configurée). Pour des scripts personnalisés, ajoutez votre clé dans les variables d'environnement Render.*`,
+          script: `**🎯 OBJECTIF DE L'APPEL**\n${stageLabel[(quote as any).salesStatus] || "suivi"} avec ${(quote as any).clientName}.\n\n**👋 OUVERTURE (30 secondes)**\n"Bonjour ${(quote as any).clientName}, c'est [votre prénom] de Cloture Impress. Je vous appelle concernant votre projet de ${(quote as any).fenceType || "clôture"} à ${(quote as any).city || "votre domicile"}. Avez-vous quelques minutes ?"\n\n**❓ QUESTIONS CLÉS**\n• Avez-vous eu le temps de regarder notre soumission ?\n• Le budget correspond-il à ce que vous aviez en tête ?\n• Y a-t-il des détails à ajuster sur le projet ?\n• Quelle est votre date idéale pour les travaux ?\n• Avez-vous d'autres soumissions en cours ?\n\n**🚧 OBJECTIONS PROBABLES**\n• "C'est trop cher" → Valorisez la qualité, proposez un ajustement de portée\n• "Je dois y penser" → Demandez ce qui bloque, proposez un RDV en personne\n• "J'attends une autre soumission" → Mettez en avant votre garantie et délais\n\n**✅ PROCHAINE ÉTAPE**\n"Est-ce qu'on peut confirmer un rendez-vous cette semaine pour finaliser les détails ?"\n\n---\n*⚠️ Script template — ajoutez ANTHROPIC_API_KEY dans Render pour des scripts personnalisés par IA.*`,
           source: "template",
         });
       }
@@ -2906,13 +2883,11 @@ Sois concret, direct, et adapté au marché québécois. Tutoyage ou vouvoiement
 
       if (!response.ok) {
         const err = await response.text();
-        console.error("Anthropic API error:", err);
         return res.status(502).json({ error: "Erreur API Anthropic", detail: err });
       }
 
       const data = await response.json() as any;
       const script = data?.content?.[0]?.text || "Impossible de générer le script.";
-
       res.json({ script, source: "ai" });
     } catch (err) {
       next(err);

@@ -531,6 +531,7 @@ export function QuoteDetail() {
             <CallScriptPanel quoteId={id} isEn={isEn} />
           )}
 
+
           <Card>
             <CardHeader className="pb-3"><CardTitle className="text-base">{isEn ? "Activity" : "Activité"}</CardTitle></CardHeader>
             <CardContent className="px-3">
@@ -775,6 +776,8 @@ function CallScriptPanel({ quoteId, isEn }: { quoteId: number; isEn: boolean }) 
     </Card>
   );
 }
+
+// Script d'appel IA
 
 function formatActivityDate(value?: string | null, locale = "fr-CA", fallback = "Date non disponible") {
   if (!value || value === "CURRENT_TIMESTAMP") return fallback;
