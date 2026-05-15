@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
-import { Link } from "wouter";
+import { useMemo, useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Mail, Phone, MapPin, Filter, Globe, Database, Clock, Trash2, FlaskConical, RefreshCw, KeyRound, ExternalLink, Pencil } from "lucide-react";
+import { Plus, Mail, Phone, MapPin, Filter, Globe, Database, Clock, Trash2, FlaskConical, RefreshCw, KeyRound, ExternalLink, Pencil, StickyNote } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,11 +38,139 @@ function normalizeForSearch(value: string) {
     .trim();
 }
 
+/** Texte notes vente tel que renvoyé par l'API (camelCase ou snake_case). */
+function quoteSalesNotes(q: any): string {
+  return String(q?.salesNotes ?? q?.sales_notes ?? "");
+}
+
+function quoteIntimuraBlob(q: any): unknown {
+  return q?.intimuraData ?? q?.intimura_data;
+}
+
+/** Ligne créée dans notre CRM via « Ajouter une note interne » (voir QuoteDetail : date — auteur : …). */
+const CRM_INTERNAL_NOTE_LINE =
+  /^\d{4}-\d{2}-\d{2}\s+(?:[—\-–]\s*.+|:\s*.+)$/;
+
+function getLastCrmInternalNoteLine(salesNotes: string): string | null {
+  const norm = salesNotes.replace(/\r\n/g, "\n");
+  const lines = norm.split("\n");
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const t = lines[i].trim();
+    if (!t) continue;
+    if (CRM_INTERNAL_NOTE_LINE.test(t)) return t;
+    if (/^\d{4}-\d{2}-\d{2}\b/.test(t) && /\s:\s/.test(t)) return t;
+  }
+  return null;
+}
+
+function truncateNote(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  return `${text.slice(0, maxLen - 1).trimEnd()}…`;
+}
+
+function extractInternalNoteCandidate(blob: unknown, syncedAt?: string | null): { text: string; ts: number } | null {
+  if (!blob) return null;
+  let d: any = blob;
+  if (typeof blob === "string") {
+    try {
+      d = JSON.parse(blob);
+    } catch {
+      return null;
+    }
+  }
+  const q = d?.quote;
+  const raw = q?.internal_notes ?? q?.internalNotes;
+  const text = typeof raw === "string" ? raw.trim() : "";
+  if (!text) return null;
+  const crmInInt = getLastCrmInternalNoteLine(text);
+  const displayBody = crmInInt || text;
+  const fetched = d?.fetchedAt || syncedAt;
+  const ts = fetched ? Date.parse(String(fetched)) : 0;
+  return { text: displayBody, ts: Number.isFinite(ts) ? ts : 0 };
+}
+
+/** Dernière note interne : lignes CRM datées sur la soumission, puis Intimura (JSON / bloc salesNotes). */
+function getSubmissionInternalNotePreview(quote: any, maxLen = 420): string | null {
+  if (!quote) return null;
+  const sn = quoteSalesNotes(quote);
+  const crmLast = getLastCrmInternalNoteLine(sn);
+
+  const candidates: { text: string; ts: number }[] = [];
+
+  const main = extractInternalNoteCandidate(quoteIntimuraBlob(quote), null);
+  if (main) candidates.push(main);
+
+  try {
+    const linkedRaw = quote.linkedIntimuraQuotes ?? quote.linked_intimura_quotes;
+    const arr = typeof linkedRaw === "string" ? JSON.parse(linkedRaw) : linkedRaw;
+    if (Array.isArray(arr)) {
+      for (const entry of arr) {
+        const n = extractInternalNoteCandidate(entry?.intimuraData ?? entry?.intimura_data, entry?.syncedAt ?? null);
+        if (n) candidates.push(n);
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+
+  candidates.sort((a, b) => a.ts - b.ts);
+  let chosen = candidates.length ? candidates[candidates.length - 1]!.text : null;
+
+  if (!chosen) {
+    const snNorm = sn.replace(/\r\n/g, "\n");
+    const doubleMk = "\n\n--- Intimura ---\n";
+    const singleMk = "\n--- Intimura ---\n";
+    let idx = snNorm.lastIndexOf(doubleMk);
+    let mkLen = doubleMk.length;
+    if (idx < 0) {
+      idx = snNorm.lastIndexOf(singleMk);
+      mkLen = singleMk.length;
+    }
+    if (idx >= 0) chosen = snNorm.slice(idx + mkLen).trim();
+  }
+
+  const out = crmLast || chosen;
+  if (!out) return null;
+  if (out.length > maxLen) return `${out.slice(0, maxLen - 1).trimEnd()}…`;
+  return out;
+}
+
+/** Dernière note sur la carte : d’abord notes CRM (`salesNotes`), puis repli contenu Intimura sur la soumission. */
+function getSubmissionNoteForLead(
+  leadId: number,
+  quotes: any[],
+  maxLen = 420,
+): { text: string; fromCrm: boolean } | null {
+  const forLead = quotes.filter((q) => q != null && Number(q.leadId) === Number(leadId));
+  if (!forLead.length) return null;
+
+  const mergedSn = forLead.map((q) => quoteSalesNotes(q)).join("\n");
+  const fromMerged = getLastCrmInternalNoteLine(mergedSn);
+  if (fromMerged) return { text: truncateNote(fromMerged, maxLen), fromCrm: true };
+
+  const sorted = [...forLead].sort((a, b) => Number(b.id) - Number(a.id));
+  for (const q of sorted) {
+    const crmOne = getLastCrmInternalNoteLine(quoteSalesNotes(q));
+    if (crmOne) return { text: truncateNote(crmOne, maxLen), fromCrm: true };
+  }
+
+  for (const q of sorted) {
+    const p = getSubmissionInternalNotePreview(q, maxLen);
+    if (p) return { text: p, fromCrm: false };
+  }
+  return null;
+}
+
 export function Leads() {
   const { currentUser, can } = useRole();
+  /** Dernière note sur la soumission (CRM d’abord, puis Intimura). */
+  const canViewSubmissionInternalNote = can("view_sales");
   const { language } = useLanguage();
   const isEn = language === "en";
   const { toast } = useToast();
+  const [location] = useLocation();
+  /** Liste Intimura : tout sauf source site web. Liste Impress : uniquement source `web`. */
+  const leadListKind: "intimura" | "impress" = location.startsWith("/leads-impress") ? "impress" : "intimura";
   const [open, setOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>(() => {
@@ -65,15 +193,27 @@ export function Leads() {
     queryKey: ["/api/intimura/credentials"],
     enabled: canSyncIntimuraRole,
   });
+  /** Soumission la plus récente (id max) pour le lien ; la note sur la carte agrège toutes les soumissions du lead. */
   const quoteByLeadId = useMemo(() => {
     const m = new Map<number, any>();
-    for (const q of quotes) if (q?.leadId) m.set(q.leadId, q);
+    for (const q of quotes) {
+      if (q?.leadId == null) continue;
+      const lid = Number(q.leadId);
+      const prev = m.get(lid);
+      if (!prev || Number(q.id) > Number(prev.id)) m.set(lid, q);
+    }
     return m;
   }, [quotes]);
   const salesReps = users.filter(u => u.role === "sales_rep");
 
   const filtered = useMemo(() => {
     return leads.filter(l => {
+      const src = (l.source || "").toLowerCase();
+      if (leadListKind === "impress") {
+        if (src !== "web") return false;
+      } else if (src === "web") {
+        return false;
+      }
       if (filterStatus !== "all" && l.status !== filterStatus) return false;
       if (filterProvince !== "all" && l.province !== filterProvince) return false;
       if (search) {
@@ -83,16 +223,26 @@ export function Leads() {
       }
       return true;
     });
-  }, [leads, filterStatus, filterProvince, search]);
+  }, [leads, filterStatus, filterProvince, search, leadListKind]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       clientName: "", phone: "", email: "", address: "", city: "", province: "QC",
       postalCode: "", neighborhood: "", fenceType: "Bois traité", message: "",
-      source: "intimura", status: "nouveau",
+      source: leadListKind === "impress" ? "web" : "intimura",
+      status: "nouveau",
     },
   });
+
+  useEffect(() => {
+    form.reset({
+      clientName: "", phone: "", email: "", address: "", city: "", province: "QC",
+      postalCode: "", neighborhood: "", fenceType: "Bois traité", message: "",
+      source: leadListKind === "impress" ? "web" : "intimura",
+      status: "nouveau",
+    });
+  }, [leadListKind, form]);
 
   const createMut = useMutation({
     mutationFn: async (data: any) => apiRequest("POST", "/api/leads", { ...data, _userId: currentUser?.id, _userName: currentUser?.name, _userRole: currentUser?.role }),
@@ -260,11 +410,27 @@ export function Leads() {
   return (
     <>
       <PageHeader
-        title={isEn ? "Incoming leads - Intimura" : "Leads entrants — Intimura"}
-        description={isEn ? "Centralized leads from crm.intimura.com. Automatic classification by province, city, neighborhood and postal code." : "Centralisation des leads provenant de crm.intimura.com. Classification automatique par province, ville, quartier et code postal."}
+        title={
+          leadListKind === "impress"
+            ? isEn
+              ? "Website leads — Impress"
+              : "Leads Impress (site web)"
+            : isEn
+              ? "Incoming leads - Intimura"
+              : "Leads entrants — Intimura"
+        }
+        description={
+          leadListKind === "impress"
+            ? isEn
+              ? "Requests submitted through the Clôture Impress website."
+              : "Demandes envoyées depuis le site Clôture Impress."
+            : isEn
+              ? "Centralized leads from crm.intimura.com. Automatic classification by province, city, neighborhood and postal code."
+              : "Centralisation des leads provenant de crm.intimura.com. Classification automatique par province, ville, quartier et code postal."
+        }
         action={can("edit_lead") ? (
           <div className="flex flex-wrap items-center gap-2">
-            {canSyncIntimura && (
+            {leadListKind === "intimura" && canSyncIntimura && (
               <Button
                 data-testid="button-sync-intimura"
                 className="gap-2"
@@ -274,7 +440,7 @@ export function Leads() {
                 {isEn ? "Sync from Intimura" : "Synchroniser depuis Intimura"}
               </Button>
             )}
-            {canSyncIntimura && canServerSyncIntimura ? (
+            {leadListKind === "intimura" && canSyncIntimura && canServerSyncIntimura ? (
               <Button
                 data-testid="button-intimura-server-sync"
                 variant="outline"
@@ -294,7 +460,15 @@ export function Leads() {
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>{isEn ? "New Intimura lead" : "Nouveau lead Intimura"}</DialogTitle>
+                  <DialogTitle>
+                    {leadListKind === "impress"
+                      ? isEn
+                        ? "New website lead (manual)"
+                        : "Nouveau lead site web (manuel)"
+                      : isEn
+                        ? "New Intimura lead"
+                        : "Nouveau lead Intimura"}
+                  </DialogTitle>
                 </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit((data) => createMut.mutate(data))} className="space-y-3">
@@ -386,6 +560,7 @@ export function Leads() {
             const rep = salesReps.find(r => r.id === lead.assignedSalesId);
             const isAssigned = !!lead.assignedSalesId;
             const linkedQuote = quoteByLeadId.get(lead.id);
+            const submissionNote = getSubmissionNoteForLead(lead.id, quotes);
             return (
               <Card
                 key={lead.id}
@@ -482,6 +657,16 @@ export function Leads() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                  )}
+
+                  {canViewSubmissionInternalNote && submissionNote && (
+                    <div className="rounded-md border-2 border-amber-400/70 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-[12px] text-foreground">
+                      <div className="flex items-center gap-1.5 mb-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                        <StickyNote className="h-3.5 w-3.5 shrink-0" />
+                        {isEn ? "Last internal note" : "Dernière note interne"}
+                      </div>
+                      <p className="line-clamp-3 whitespace-pre-wrap break-words text-foreground/80 leading-snug">{submissionNote.text}</p>
                     </div>
                   )}
 

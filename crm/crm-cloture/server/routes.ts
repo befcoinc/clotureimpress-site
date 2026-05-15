@@ -3100,7 +3100,17 @@ export async function registerRoutes(
       };
       if (idx >= 0) linked[idx] = { ...linked[idx], ...entry };
       else linked.push(entry);
-      await storage.updateQuote(quote.id, { linkedIntimuraQuotes: JSON.stringify(linked) } as any);
+      const qLinked = details.quote || {};
+      const patchLinked: any = { linkedIntimuraQuotes: JSON.stringify(linked) };
+      if (qLinked.internal_notes) {
+        const block = String(qLinked.internal_notes).trim();
+        if (block && !String(quote.salesNotes || "").includes(block)) {
+          patchLinked.salesNotes = quote.salesNotes
+            ? `${quote.salesNotes}\n\n--- Intimura ---\n${block}`
+            : block;
+        }
+      }
+      await storage.updateQuote(quote.id, patchLinked);
       if (quote.leadId) {
         const lead = await storage.getLead(quote.leadId);
         const notice = multiIntimuraNotice(linked.length + (quote.intimuraId ? 1 : 0));
