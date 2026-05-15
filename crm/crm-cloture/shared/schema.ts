@@ -81,6 +81,7 @@ export const quotes = pgTable("quotes", {
   paidDate: text("paid_date"),
   timeline: text("timeline"), // JSON array of {step, date, userId, note}
   intimuraData: text("intimura_data"), // JSON blob: full Intimura submission (customer, items, taxes, payments, metadata)
+  completionPhotos: text("completion_photos"), // JSON array: [{url, uploadedAt, uploadedBy}]
   createdAt: text("created_at").notNull().default("CURRENT_TIMESTAMP"),
 });
 

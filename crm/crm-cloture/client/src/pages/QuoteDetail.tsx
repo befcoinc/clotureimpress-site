@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { ArrowLeft, MapPin, Ruler, DollarSign, Calendar, Phone, Mail, User as UserIcon, Check, Sparkles, Copy, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, MapPin, Ruler, DollarSign, Calendar, Phone, Mail, User as UserIcon, Check, Sparkles, Copy, ChevronDown, ChevronUp, Camera, X as XIcon, ZoomIn } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -531,6 +531,13 @@ export function QuoteDetail() {
           {(can("edit_sales") || can("edit_install")) && (
             <CallScriptPanel quoteId={id} isEn={isEn} />
           )}
+          <CompletionPhotosPanel
+            quoteId={id}
+            isEn={isEn}
+            canUpload={canEditInstall || isDirector}
+            existingPhotos={(quote as any).completionPhotos ? JSON.parse((quote as any).completionPhotos) : []}
+            onUploaded={() => queryClient.invalidateQueries({ queryKey: [`/api/quotes/${id}`] })}
+          />
 
 
           <Card>
@@ -786,3 +793,183 @@ function formatActivityDate(value?: string | null, locale = "fr-CA", fallback = 
   if (Number.isNaN(date.getTime())) return fallback;
   return date.toLocaleString(locale, { dateStyle: "short", timeStyle: "short" });
 }
+
+// ─── Photos de fin de chantier ────────────────────────────────────────────────
+
+interface CompletionPhoto {
+  url: string;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+function CompletionPhotosPanel({
+  quoteId,
+  isEn,
+  canUpload,
+  existingPhotos,
+  onUploaded,
+}: {
+  quoteId: number;
+  isEn: boolean;
+  canUpload: boolean;
+  existingPhotos: CompletionPhoto[];
+  onUploaded: () => void;
+}) {
+  const { toast } = useToast();
+  const [photos, setPhotos] = useState<CompletionPhoto[]>(existingPhotos);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const compressImage = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 900;
+        let { width, height } = img;
+        if (width > MAX) { height = Math.round((height * MAX) / width); width = MAX; }
+        if (height > MAX) { width = Math.round((width * MAX) / height); height = MAX; }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(objectUrl);
+        resolve(canvas.toDataURL("image/jpeg", 0.72));
+      };
+      img.onerror = reject;
+      img.src = objectUrl;
+    });
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const remaining = 3 - photos.length;
+    if (remaining <= 0) {
+      toast({ title: isEn ? "Maximum 3 photos" : "Maximum 3 photos atteint", variant: "destructive" });
+      return;
+    }
+    setUploading(true);
+    try {
+      const toUpload = Array.from(files).slice(0, remaining);
+      const compressed = await Promise.all(toUpload.map(compressImage));
+      const payload = compressed.map((url) => ({ url, uploadedBy: "Installateur" }));
+      const res = await fetch(`/api/quotes/${quoteId}/completion-photos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photos: payload }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setPhotos(data.photos);
+      onUploaded();
+      toast({ title: isEn ? `${toUpload.length} photo(s) uploaded` : `${toUpload.length} photo(s) ajoutée(s)` });
+    } catch (e: any) {
+      toast({ title: isEn ? "Upload failed" : "Erreur d'envoi", description: e.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (idx: number) => {
+    try {
+      const res = await fetch(`/api/quotes/${quoteId}/completion-photos/${idx}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setPhotos(data.photos);
+      onUploaded();
+    } catch (e: any) {
+      toast({ title: isEn ? "Delete failed" : "Erreur de suppression", variant: "destructive" });
+    }
+  };
+
+  if (!canUpload && photos.length === 0) return null;
+
+  return (
+    <>
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+          onClick={() => setLightbox(null)}
+        >
+          <button className="absolute top-4 right-4 text-white" onClick={() => setLightbox(null)}>
+            <XIcon className="w-7 h-7" />
+          </button>
+          <img src={lightbox} alt="Photo chantier" className="max-w-[95vw] max-h-[90vh] rounded-lg object-contain" />
+        </div>
+      )}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Camera className="w-4 h-4 text-green-600" />
+            {isEn ? "Completion photos" : "Photos de fin de chantier"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {photos.length > 0 && (
+            <div className="grid grid-cols-3 gap-2">
+              {photos.map((p, i) => (
+                <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border bg-gray-50">
+                  <img
+                    src={p.url}
+                    alt={`Photo ${i + 1}`}
+                    className="w-full h-full object-cover cursor-pointer"
+                    onClick={() => setLightbox(p.url)}
+                  />
+                  <button
+                    className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => setLightbox(p.url)}
+                  >
+                    <ZoomIn className="w-3 h-3" />
+                  </button>
+                  {canUpload && (
+                    <button
+                      className="absolute bottom-1 right-1 bg-red-600/80 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleDelete(i)}
+                    >
+                      <XIcon className="w-3 h-3" />
+                    </button>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] px-1 py-0.5 truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                    {p.uploadedBy}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {canUpload && photos.length < 3 && (
+            <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-lg p-4 cursor-pointer hover:border-green-400 hover:bg-green-50/30 transition-colors">
+              <Camera className={`w-6 h-6 ${uploading ? "text-gray-300 animate-pulse" : "text-green-500"}`} />
+              <span className="text-xs text-muted-foreground text-center">
+                {uploading
+                  ? (isEn ? "Uploading..." : "Envoi en cours...")
+                  : (isEn
+                    ? `Add photo (${3 - photos.length} remaining)`
+                    : `Ajouter une photo (${3 - photos.length} restante${3 - photos.length > 1 ? "s" : ""})`)}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                multiple
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => handleFiles(e.target.files)}
+              />
+            </label>
+          )}
+
+          {canUpload && photos.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center pb-1">
+              {isEn ? "No photos yet. Tap above to capture." : "Aucune photo. Appuyez pour prendre une photo."}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+

@@ -2895,6 +2895,62 @@ Sois concret, direct, adapté au marché québécois.`;
   });
 
 
+
+  // ============= PHOTOS DE FIN DE CHANTIER =============
+  app.post("/api/quotes/:id/completion-photos", requireAuth, async (req, res, next) => {
+    try {
+      const id = Number(req.params.id);
+      const { photos } = req.body as { photos: Array<{ url: string; uploadedBy: string }> };
+      if (!Array.isArray(photos) || photos.length === 0) {
+        return res.status(400).json({ error: "photos array requis" });
+      }
+      if (photos.length > 3) {
+        return res.status(400).json({ error: "Maximum 3 photos" });
+      }
+      const quote = await storage.getQuote(id);
+      if (!quote) return res.status(404).json({ error: "Soumission introuvable" });
+
+      const existing: any[] = quote.completionPhotos ? JSON.parse(quote.completionPhotos as string) : [];
+      const now = new Date().toISOString();
+      const merged = [
+        ...existing,
+        ...photos.map((p) => ({ url: p.url, uploadedAt: now, uploadedBy: p.uploadedBy })),
+      ].slice(-3); // keep latest 3 max
+
+      await storage.updateQuote(id, { completionPhotos: JSON.stringify(merged) } as any);
+
+      // Log activity
+      const user = req.user as any;
+      await storage.createActivity({
+        quoteId: id,
+        leadId: (quote as any).leadId ?? null,
+        userId: user.id,
+        action: "Photos de fin de chantier ajoutées",
+        note: `${photos.length} photo(s) ajoutée(s) par ${user.name || user.email}`,
+      });
+
+      res.json({ ok: true, photos: merged });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.delete("/api/quotes/:id/completion-photos/:idx", requireAuth, async (req, res, next) => {
+    try {
+      const id = Number(req.params.id);
+      const idx = Number(req.params.idx);
+      const quote = await storage.getQuote(id);
+      if (!quote) return res.status(404).json({ error: "Soumission introuvable" });
+
+      const existing: any[] = quote.completionPhotos ? JSON.parse(quote.completionPhotos as string) : [];
+      existing.splice(idx, 1);
+      await storage.updateQuote(id, { completionPhotos: JSON.stringify(existing) } as any);
+      res.json({ ok: true, photos: existing });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // ============= ANALYTICS =============
   app.get("/api/analytics", requireAuth, async (req, res, next) => {
     try {
