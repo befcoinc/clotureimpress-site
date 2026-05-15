@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Inbox, UserCheck, FileText, Wrench, MapPin, CalendarDays,
-  Network, Users, ShieldCheck, Hammer, UploadCloud, Flame, AlertTriangle, X, LogOut,
+  Network, Users, ShieldCheck, Hammer, UploadCloud, Flame, AlertTriangle, X, LogOut, BarChart2,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { RoleSwitcher } from "./RoleSwitcher";
@@ -63,6 +63,7 @@ const NAV_SECTIONS: { labelKey: "nav.operations" | "nav.pilotage" | "nav.system"
       { href: "/tableau-ventes", labelKey: "nav.salesBoard", icon: ShieldCheck, perm: "view_sales" },
       { href: "/tableau-installation", labelKey: "nav.installBoard", icon: Hammer, perm: "view_install" },
       { href: "/secteurs", labelKey: "nav.sectorsPlanning", icon: MapPin, perm: "view_sectors" },
+      { href: "/analytics", labelKey: "nav.analytics", icon: BarChart2, perm: "view_admin" },
     ],
   },
   {

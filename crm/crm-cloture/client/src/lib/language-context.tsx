@@ -26,6 +26,7 @@ type TranslationKey =
   | "nav.usersRoles"
   | "nav.architecture"
   | "nav.dormantAlerts"
+  | "nav.analytics"
   | "layout.simulatedView"
   | "layout.logout"
   | "layout.loading"
@@ -63,6 +64,7 @@ const TRANSLATIONS: Record<AppLanguage, Record<TranslationKey, string>> = {
     "nav.usersRoles": "Utilisateurs et roles",
     "nav.architecture": "Architecture CRM",
     "nav.dormantAlerts": "Alertes dormants",
+    "nav.analytics": "Analytiques",
     "layout.simulatedView": "Vue simulee",
     "layout.logout": "Se deconnecter",
     "layout.loading": "Chargement...",
@@ -99,6 +101,7 @@ const TRANSLATIONS: Record<AppLanguage, Record<TranslationKey, string>> = {
     "nav.usersRoles": "Users and Roles",
     "nav.architecture": "CRM Architecture",
     "nav.dormantAlerts": "Dormant alerts",
+    "nav.analytics": "Analytics",
     "layout.simulatedView": "Simulated view",
     "layout.logout": "Log out",
     "layout.loading": "Loading...",

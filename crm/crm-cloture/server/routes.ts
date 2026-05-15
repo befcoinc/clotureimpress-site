@@ -2894,5 +2894,97 @@ Sois concret, direct, adapté au marché québécois.`;
     }
   });
 
+
+  // ============= ANALYTICS =============
+  app.get("/api/analytics", requireAuth, async (req, res, next) => {
+    try {
+      const [allQuotes, allLeads] = await Promise.all([
+        storage.getQuotes(),
+        storage.getLeads(),
+      ]);
+
+      // 1. Taux de fermeture par type de clôture
+      const fenceMap = new Map<string, { total: number; signed: number; lost: number }>();
+      for (const q of allQuotes) {
+        const ft = (q as any).fenceType || "Non défini";
+        if (!fenceMap.has(ft)) fenceMap.set(ft, { total: 0, signed: 0, lost: 0 });
+        const entry = fenceMap.get(ft)!;
+        entry.total++;
+        if ((q as any).salesStatus === "signee") entry.signed++;
+        if ((q as any).salesStatus === "perdue") entry.lost++;
+      }
+      const closureByFenceType = Array.from(fenceMap.entries())
+        .map(([fenceType, v]) => ({
+          fenceType: fenceType
+            .replace(/^Clôture d'intimité - /i, "Intimité - ")
+            .replace(/^Clôture ornementale - /i, "Ornementale - ")
+            .replace(/^Clôture pour /i, "Pour ")
+            .replace(/^Clôture /i, "")
+            .replace(/^Portail sur mesure - /i, "Portail - "),
+          fenceTypeFull: fenceType,
+          ...v,
+          rate: v.total > 0 ? Math.round((v.signed / v.total) * 100) : 0,
+        }))
+        .sort((a, b) => b.rate - a.rate);
+
+      // 2. Coût d'acquisition par source
+      const sourceMap = new Map<string, { leads: number; signed: number; revenue: number }>();
+      for (const lead of allLeads) {
+        const src = (lead as any).source || "inconnu";
+        if (!sourceMap.has(src)) sourceMap.set(src, { leads: 0, signed: 0, revenue: 0 });
+        sourceMap.get(src)!.leads++;
+      }
+      for (const q of allQuotes) {
+        if ((q as any).leadId && (q as any).salesStatus === "signee") {
+          const lead = allLeads.find((l: any) => l.id === (q as any).leadId);
+          if (lead) {
+            const src = (lead as any).source || "inconnu";
+            if (!sourceMap.has(src)) sourceMap.set(src, { leads: 0, signed: 0, revenue: 0 });
+            const entry = sourceMap.get(src)!;
+            entry.signed++;
+            entry.revenue += (q as any).finalPrice || (q as any).estimatedPrice || 0;
+          }
+        }
+      }
+      const acquisitionBySource = Array.from(sourceMap.entries())
+        .map(([source, v]) => ({
+          source,
+          leadCount: v.leads,
+          signedCount: v.signed,
+          totalRevenue: Math.round(v.revenue),
+          conversionRate: v.leads > 0 ? Math.round((v.signed / v.leads) * 100) : 0,
+        }))
+        .sort((a, b) => b.conversionRate - a.conversionRate);
+
+      // 3. Durée moyenne par étape
+      const subToSign: number[] = [];
+      const signToInstall: number[] = [];
+      for (const q of allQuotes) {
+        if ((q as any).signedDate && (q as any).createdAt) {
+          const created = new Date((q as any).createdAt).getTime();
+          const signed = new Date((q as any).signedDate).getTime();
+          const days = (signed - created) / (1000 * 60 * 60 * 24);
+          if (days >= 0 && days < 730) subToSign.push(days);
+        }
+        if ((q as any).signedDate && (q as any).installedDate) {
+          const signed = new Date((q as any).signedDate).getTime();
+          const installed = new Date((q as any).installedDate).getTime();
+          const days = (installed - signed) / (1000 * 60 * 60 * 24);
+          if (days >= 0 && days < 730) signToInstall.push(days);
+        }
+      }
+      const avgArr = (arr: number[]) =>
+        arr.length > 0 ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : 0;
+      const avgDurationByStage = [
+        { stage: "Soumission → Signature", avgDays: avgArr(subToSign), sampleSize: subToSign.length },
+        { stage: "Signature → Installation", avgDays: avgArr(signToInstall), sampleSize: signToInstall.length },
+      ];
+
+      res.json({ closureByFenceType, acquisitionBySource, avgDurationByStage });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   return httpServer;
 }

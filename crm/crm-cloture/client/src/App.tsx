@@ -32,6 +32,7 @@ import { InstallerOnboarding } from "@/pages/InstallerOnboarding";
 import { ApplicationsInstallateurs } from "@/pages/ApplicationsInstallateurs";
 import { ApplicationsRepresentants } from "@/pages/ApplicationsRepresentants";
 import { AlertesDormantes } from "@/pages/AlertesDormantes";
+import { Analytics } from "@/pages/Analytics";
 
 function AppRouter({ canViewAdmin, isInstaller }: { canViewAdmin: boolean; isInstaller: boolean }) {
 
@@ -59,6 +60,7 @@ function AppRouter({ canViewAdmin, isInstaller }: { canViewAdmin: boolean; isIns
         <Route path="/applications-installateurs" component={canViewAdmin ? ApplicationsInstallateurs : NotFound} />
         <Route path="/applications-representants" component={canViewAdmin ? ApplicationsRepresentants : NotFound} />
         <Route path="/architecture" component={canViewAdmin ? Architecture : NotFound} />
+        <Route path="/analytics" component={canViewAdmin ? Analytics : NotFound} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
@@ -122,4 +124,3 @@ function App() {
 }
 
 export default App;
-

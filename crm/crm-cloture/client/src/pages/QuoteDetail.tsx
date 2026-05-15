@@ -120,9 +120,10 @@ export function QuoteDetail() {
   }
 
   const timeline: Array<{ step: string; date?: string; note?: string }> = quote.timeline ? JSON.parse(quote.timeline) : [];
-  const canEditSales = can("edit_sales") && (role !== "sales_rep" || quote.assignedSalesId === currentUser?.id);
-  const canEditInstall = can("edit_install") && (role !== "installer" || quote.assignedInstallerId === currentUser?.id);
-  const canEditClient = can("edit_sales") || can("edit_lead");
+  const isDirector = role === "admin" || role === "sales_director" || role === "install_director";
+  const canEditSales = (can("edit_sales") || isDirector) && (role !== "sales_rep" || quote.assignedSalesId === currentUser?.id);
+  const canEditInstall = (can("edit_install") || isDirector) && (role !== "installer" || quote.assignedInstallerId === currentUser?.id);
+  const canEditClient = can("edit_sales") || can("edit_lead") || isDirector;
   const canMarkStep = (team: string) => canEditSales || (team === "install" && canEditInstall);
   const stepKey = (label: string) => label.replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
   const markStep = (step: typeof TIMELINE_STEPS[number]) => updateMut.mutate({

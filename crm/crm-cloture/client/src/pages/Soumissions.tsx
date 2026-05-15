@@ -70,8 +70,9 @@ export function Soumissions() {
     if (province) setProvinceFilter(province);
   }, []);
 
-  const canManageQuotes = can("edit_sales") || role === "admin" || role === "sales_director";
-  const canDeleteQuotes = role === "admin" || role === "sales_director";
+  const isDirector = role === "admin" || role === "sales_director" || role === "install_director";
+  const canManageQuotes = can("edit_sales") || isDirector;
+  const canDeleteQuotes = isDirector;
 
   const visible = useMemo(() => {
     let list = quotes;
