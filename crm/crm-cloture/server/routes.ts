@@ -10,11 +10,7 @@ import { storage, detectSector, seed, hashPassword, verifyPassword } from "./sto
 import { sendInviteEmail, sendInstallerProfileReminderEmail, sendInstallerFicheLinkEmail, sendRepresentativeFicheLinkEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail, sendOverdueInstallAlert } from "./email";
 import { sendInviteSms, sendInstallerProfileReminderSms, sendSatisfactionSms } from "./sms";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema, insertInstallerApplicationSchema, insertRepresentativeApplicationSchema } from "@shared/schema";
-import {
-  buildBookmarkletLoaderHref,
-  buildIntimuraBookmarkletRunner,
-  INTIMURA_BOOKMARKLET_MAX_ROWS,
-} from "./intimura-bookmarklet-runner";
+import { buildBookmarkletLoaderHref, buildIntimuraBookmarkletRunner } from "./intimura-bookmarklet-runner";
 import {
   INTIMURA_SYNC_CUTOFF,
   isDecodedIntimuraQuoteOnOrAfterCutoff,
@@ -2793,7 +2789,7 @@ export async function registerRoutes(
   <p><strong>Glisse</strong> le bouton vert ci-dessous dans ta barre de favoris (barre du haut du navigateur).</p>
   <a class="btn" href="${safeHref}" draggable="true">⇩ Sync Intimura → ClôturePro</a>
   <p>Puis sur <a href="https://crm.intimura.com/app/quotes">crm.intimura.com/app/quotes</a>, clique ce favori une fois.</p>
-  <p style="font-size:.85rem;color:#666">Seules les soumissions du <strong>${INTIMURA_SYNC_CUTOFF}</strong> ou apres sont importees (max ${INTIMURA_BOOKMARKLET_MAX_ROWS} lignes visibles). Boite verte = progression.</p>
+  <p style="font-size:.85rem;color:#666">Seules les soumissions du <strong>${INTIMURA_SYNC_CUTOFF}</strong> ou apres sont importees. Boite verte = progression.</p>
 </body>
 </html>`);
   });
@@ -3740,6 +3736,57 @@ Sois concret, direct, adapté au marché québécois.`;
   });
 
   // ============= ANALYTICS =============
+
+  // -------- Geocoding serveur (cache en mémoire, Nominatim/OSM) --------
+  const geocodeMemCache = new Map<string, [number, number] | null>();
+  const geocodeQueue: string[] = [];
+  let geocodeQueueRunning = false;
+
+  async function runGeocodeQueue() {
+    if (geocodeQueueRunning) return;
+    geocodeQueueRunning = true;
+    while (geocodeQueue.length > 0) {
+      const addr = geocodeQueue.shift()!;
+      if (geocodeMemCache.has(addr)) continue;
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=${encodeURIComponent(addr)}`;
+        const r = await fetch(url, {
+          headers: { "Accept-Language": "fr,en", "User-Agent": "CRM-CloturImpress/1.0" },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (r.ok) {
+          const data = await r.json();
+          geocodeMemCache.set(addr, data?.[0] ? [parseFloat(data[0].lat), parseFloat(data[0].lon)] : null);
+        } else {
+          geocodeMemCache.set(addr, null);
+        }
+      } catch {
+        geocodeMemCache.set(addr, null);
+      }
+      await new Promise(res => setTimeout(res, 1200));
+    }
+    geocodeQueueRunning = false;
+  }
+
+  app.post("/api/geocode", requireAuth, async (req, res) => {
+    const addresses: string[] = (Array.isArray(req.body?.addresses) ? req.body.addresses : [])
+      .filter((a: any) => typeof a === "string" && a.trim())
+      .slice(0, 200);
+    const results: Record<string, [number, number] | null | "pending"> = {};
+    let pending = 0;
+    for (const addr of addresses) {
+      if (geocodeMemCache.has(addr)) {
+        results[addr] = geocodeMemCache.get(addr)!;
+      } else {
+        results[addr] = "pending";
+        pending++;
+        if (!geocodeQueue.includes(addr)) geocodeQueue.push(addr);
+      }
+    }
+    if (pending > 0) runGeocodeQueue().catch(() => {});
+    res.json({ results, pending });
+  });
+
   app.get("/api/analytics", requireAuth, async (req, res, next) => {
     try {
       const [allQuotes, allLeads] = await Promise.all([
