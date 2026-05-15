@@ -1880,6 +1880,50 @@ export async function registerRoutes(
     res.json({ ok: true });
   });
 
+  function intimuraQuoteUrl(intimuraId: string) {
+    return `https://crm.intimura.com/app/quotes/${intimuraId}`;
+  }
+
+  async function createQuoteFromIntimuraRow(lead: any, iq: any) {
+    const city = extractCity(iq.title || "") || lead.city;
+    const province = inferProvince(city || String(lead.province || ""));
+    const salesStatus = mapIntimuraStatus(iq.status);
+    const url = intimuraQuoteUrl(iq.id);
+    return storage.createQuote({
+      leadId: lead.id,
+      intimuraId: iq.id,
+      clientName: lead.clientName,
+      address: lead.address,
+      city,
+      province,
+      sector: lead.sector,
+      status: salesStatus === "signee" ? "signee" : "envoyee",
+      salesStatus,
+      installStatus: "a_planifier",
+      assignedSalesId: lead.assignedSalesId ?? null,
+      assignedInstallerId: null,
+      fenceType: lead.fenceType || "À confirmer",
+      estimatedLength: lead.estimatedLength,
+      estimatedPrice: Number(iq.subtotal || lead.estimatedValue || 0),
+      finalPrice: null,
+      salesNotes: `Import Intimura ${iq.id}.\nLien fiche: ${url}`,
+      installNotes: iq.with_installation ? "Installation demandée dans Intimura." : null,
+      scheduledDate: iq.target_date || null,
+      signedDate: salesStatus === "signee" ? iq.issued_at || null : null,
+      installedDate: null,
+      paidDate: iq.first_payment_paid_at || null,
+      timeline: JSON.stringify([
+        { step: "Import Intimura", date: new Date().toISOString(), note: url },
+        { step: "Statut Intimura", date: iq.created_at || new Date().toISOString(), note: iq.status || "" },
+      ]),
+    });
+  }
+
+  function queueIntimuraDetailFetch(queue: string[], intimuraId: string, quote: any | undefined | null) {
+    if (!intimuraId || !quote || quote.intimuraData) return;
+    if (!queue.includes(intimuraId)) queue.push(intimuraId);
+  }
+
   // Shared importer used by /api/intimura/sync (server-side fetch) and
   // /api/intimura/ingest (client-side push from bookmarklet).
   async function importIntimuraQuotes(
@@ -1890,6 +1934,19 @@ export async function registerRoutes(
     let createdQuotes = 0;
     let skipped = 0;
     const createdIntimuraIds: string[] = [];
+    const detailIntimuraIds: string[] = [];
+
+    const allQuotes = await storage.getQuotes();
+    const quoteByIntimuraId = new Map<string, (typeof allQuotes)[number]>();
+    const quotesByLeadId = new Map<number, (typeof allQuotes)[number][]>();
+    for (const q of allQuotes) {
+      if (q.intimuraId) quoteByIntimuraId.set(q.intimuraId, q);
+      if (q.leadId != null) {
+        const arr = quotesByLeadId.get(q.leadId) || [];
+        arr.push(q);
+        quotesByLeadId.set(q.leadId, arr);
+      }
+    }
 
     // Pre-load all leads once to enable robust secondary dedup when the
     // Intimura quote id differs (bookmarklet row vs API row).
@@ -1976,9 +2033,23 @@ export async function registerRoutes(
     for (const iq of intimuraQuotes) {
       if (!iq?.id) continue;
       const existingLead = await storage.getLeadByIntimuraId(iq.id);
-      const existingQuote = await storage.getQuoteByIntimuraId(iq.id);
+      let existingQuote = quoteByIntimuraId.get(iq.id);
       if (existingLead || existingQuote) {
         skipped++;
+        if (existingLead && !existingQuote) {
+          existingQuote = await createQuoteFromIntimuraRow(existingLead, iq);
+          createdQuotes++;
+          quoteByIntimuraId.set(iq.id, existingQuote);
+          const lq = quotesByLeadId.get(existingLead.id) || [];
+          lq.push(existingQuote);
+          quotesByLeadId.set(existingLead.id, lq);
+        } else if (existingLead && existingQuote && !existingQuote.leadId) {
+          try {
+            await storage.updateQuote(existingQuote.id, { leadId: existingLead.id } as any);
+            existingQuote = { ...existingQuote, leadId: existingLead.id };
+          } catch {}
+        }
+        queueIntimuraDetailFetch(detailIntimuraIds, iq.id, existingQuote);
         continue;
       }
 
@@ -2015,10 +2086,24 @@ export async function registerRoutes(
           }
         }
 
+        let linkedQuote =
+          quoteByIntimuraId.get(iq.id) ||
+          (quotesByLeadId.get(dupe.id) || []).find((q) => q.intimuraId === iq.id) ||
+          (quotesByLeadId.get(dupe.id) || [])[0];
+        if (!linkedQuote) {
+          linkedQuote = await createQuoteFromIntimuraRow(dupe, iq);
+          createdQuotes++;
+          quoteByIntimuraId.set(iq.id, linkedQuote);
+          const lq = quotesByLeadId.get(dupe.id) || [];
+          lq.push(linkedQuote);
+          quotesByLeadId.set(dupe.id, lq);
+        }
+        queueIntimuraDetailFetch(detailIntimuraIds, iq.id, linkedQuote);
         skipped++;
         continue;
       }
       const salesStatus = mapIntimuraStatus(iq.status);
+      const intimuraUrl = intimuraQuoteUrl(iq.id);
       const lead = await storage.createLead({
         clientName: iq.customer_name || iq.title || "Client Intimura",
         phone: iq.customer_phone || null,
@@ -2047,7 +2132,7 @@ export async function registerRoutes(
       const le = normEmail(lead.email || "");
       if (le) pushMap(byEmail, le, lead as any);
 
-      await storage.createQuote({
+      const newQuote = await storage.createQuote({
         leadId: lead.id,
         intimuraId: iq.id,
         clientName: lead.clientName,
@@ -2064,19 +2149,23 @@ export async function registerRoutes(
         estimatedLength: null,
         estimatedPrice: Number(iq.subtotal || 0),
         finalPrice: null,
-        salesNotes: `Import Intimura ${iq.id}. Premier paiement: ${iq.first_payment_amount || "n/d"}.`,
+        salesNotes: `Import Intimura ${iq.id}.\nLien fiche: ${intimuraUrl}\nPremier paiement: ${iq.first_payment_amount || "n/d"}.`,
         installNotes: iq.with_installation ? "Installation demandée dans Intimura." : null,
         scheduledDate: iq.target_date || null,
         signedDate: salesStatus === "signee" ? iq.issued_at || null : null,
         installedDate: null,
         paidDate: iq.first_payment_paid_at || null,
         timeline: JSON.stringify([
-          { step: "Import Intimura", date: new Date().toISOString(), note: `Quote ${iq.id}` },
+          { step: "Import Intimura", date: new Date().toISOString(), note: intimuraUrl },
           { step: "Statut Intimura", date: iq.created_at || new Date().toISOString(), note: iq.status || "" },
         ]),
       });
       createdQuotes++;
       createdIntimuraIds.push(iq.id);
+      quoteByIntimuraId.set(iq.id, newQuote);
+      const lq = quotesByLeadId.get(lead.id) || [];
+      lq.push(newQuote);
+      quotesByLeadId.set(lead.id, lq);
 
       await storage.createActivity({
         leadId: lead.id,
@@ -2111,6 +2200,7 @@ export async function registerRoutes(
       createdQuotes,
       skipped,
       createdIntimuraIds,
+      detailIntimuraIds,
       dedupedAfterImport,
       dedupedQuotesAfterImport,
       syncedAt: new Date().toISOString(),
@@ -2380,7 +2470,7 @@ export async function registerRoutes(
   }
 
   async function fetchIntimuraQuoteDetails(intimuraId: string, headers: Record<string, string>) {
-    const url = `https://crm.intimura.com/app/quotes/${intimuraId}/__data.json?x-sveltekit-invalidated=001`;
+    const url = `${intimuraQuoteUrl(intimuraId)}/__data.json?x-sveltekit-invalidated=001`;
     const r = await fetch(url, { headers });
     if (!r.ok) return { ok: false as const, status: r.status };
     const payload = (await r.json()) as any;
@@ -2388,6 +2478,35 @@ export async function registerRoutes(
     if (!node?.data) return { ok: false as const, reason: "NO_DATA_NODE" };
     const decoded = decodeSvelteData(node.data);
     return applyIntimuraDetails(intimuraId, decoded);
+  }
+
+  async function enrichIntimuraQuoteDetails(
+    intimuraIds: string[],
+    headers: Record<string, string>,
+    max = 25,
+  ) {
+    const unique = [...new Set(intimuraIds.filter(Boolean))];
+    let detailsUpdated = 0;
+    const detailErrors: any[] = [];
+    const limit = Math.min(unique.length, max);
+    for (let i = 0; i < limit; i++) {
+      const id = unique[i];
+      try {
+        const r = await fetchIntimuraQuoteDetails(id, headers);
+        if (r.ok) detailsUpdated++;
+        else detailErrors.push({ intimuraId: id, ...r });
+      } catch (err: any) {
+        detailErrors.push({ intimuraId: id, error: err?.message });
+      }
+    }
+    if (unique.length > limit) {
+      detailErrors.push({
+        intimuraId: "_truncated",
+        reason: `DETAILS_LIMIT_${limit}`,
+        remaining: unique.length - limit,
+      });
+    }
+    return { detailsUpdated, detailErrors, detailCandidates: unique.length };
   }
 
   /** Server-side pull from Intimura (cookie or Cloudflare Access token). New leads only. */
@@ -2422,27 +2541,19 @@ export async function registerRoutes(
       const importResult = await importIntimuraQuotes(listRes.quotes, { runPostDedup: false });
 
       let detailsUpdated = 0;
-      const detailErrors: any[] = [];
+      let detailErrors: any[] = [];
+      let detailCandidates = 0;
       if (opts?.enrichDetails !== false) {
-        const ids: string[] = importResult.createdIntimuraIds || [];
-        const maxDetails = Math.min(ids.length, 25);
-        for (let i = 0; i < maxDetails; i++) {
-          const id = ids[i];
-          try {
-            const r = await fetchIntimuraQuoteDetails(id, headers);
-            if (r.ok) detailsUpdated++;
-            else detailErrors.push({ intimuraId: id, ...r });
-          } catch (err: any) {
-            detailErrors.push({ intimuraId: id, error: err?.message });
-          }
-        }
-        if (ids.length > maxDetails) {
-          detailErrors.push({
-            intimuraId: "_truncated",
-            reason: `DETAILS_LIMIT_${maxDetails}`,
-            remaining: ids.length - maxDetails,
-          });
-        }
+        const idsToEnrich = [
+          ...new Set([
+            ...(importResult.createdIntimuraIds || []),
+            ...(importResult.detailIntimuraIds || []),
+          ]),
+        ];
+        const enriched = await enrichIntimuraQuoteDetails(idsToEnrich, headers, 25);
+        detailsUpdated = enriched.detailsUpdated;
+        detailErrors = enriched.detailErrors;
+        detailCandidates = enriched.detailCandidates;
       }
 
       return {
@@ -2451,6 +2562,7 @@ export async function registerRoutes(
         fetchedFromIntimura: listRes.quotes.length,
         detailsUpdated,
         detailErrors,
+        detailCandidates,
         auto: true,
       };
     } finally {
@@ -2592,7 +2704,7 @@ export async function registerRoutes(
   }
 
   // Picks the subset of a decoded Svelte payload we care about for display/edit.
-  function pickIntimuraDetails(decoded: any): any {
+  function pickIntimuraDetails(decoded: any, intimuraIdHint?: string): any {
     if (!decoded || typeof decoded !== "object") return null;
     const sanitize = (v: any, depth = 0): any => {
       if (depth > 12) return null;
@@ -2625,8 +2737,17 @@ export async function registerRoutes(
       if (serviceAddr) customer.service_address_resolved = serviceAddr;
       if (billingAddr) customer.billing_address_resolved = billingAddr;
     }
+    const quoteObj =
+      decoded.quote && typeof decoded.quote === "object"
+        ? sanitize(decoded.quote)
+        : decoded.id && (decoded.title || decoded.status)
+          ? sanitize(decoded)
+          : null;
+    const resolvedId = String(intimuraIdHint || quoteObj?.id || decoded.id || "").trim() || null;
     return {
-      quote: sanitize(decoded.quote),
+      intimuraId: resolvedId,
+      intimuraUrl: resolvedId ? intimuraQuoteUrl(resolvedId) : null,
+      quote: quoteObj,
       customer,
       items: Array.isArray(decoded.items) ? decoded.items.map((i: any) => sanitize(i)) : [],
       lots: Array.isArray(decoded.lots) ? decoded.lots.map((i: any) => sanitize(i)) : [],
@@ -2648,7 +2769,7 @@ export async function registerRoutes(
   }
 
   async function applyIntimuraDetails(intimuraId: string, decoded: any) {
-    const details = pickIntimuraDetails(decoded);
+    const details = pickIntimuraDetails(decoded, intimuraId);
     if (!details || !intimuraId) return { ok: false, reason: "EMPTY" };
     let quote = await storage.getQuoteByIntimuraId(intimuraId);
     if (!quote && intimuraId.length >= 8) {
@@ -2664,7 +2785,43 @@ export async function registerRoutes(
         }
       }
     }
-    if (!quote) return { ok: false, reason: "QUOTE_NOT_FOUND" };
+    if (!quote) {
+      const q = details.quote || {};
+      const c = details.customer || {};
+      const title = q.title || q.name || "";
+      const clientName = c.name || c.full_name || q.customer_name || title || "Client Intimura";
+      const city = c.city || extractCity(title) || "";
+      const province = c.state || c.province || inferProvince(city);
+      const salesStatus = mapIntimuraStatus(String(q.status || ""));
+      const lead = await storage.createLead({
+        clientName: String(clientName),
+        phone: c.phone || c.mobile || null,
+        email: c.email || null,
+        address: intimuraFormatAddress(c, true),
+        city,
+        province,
+        postalCode: c.postal_code || null,
+        neighborhood: city,
+        fenceType: intimuraFenceTypeFromMeta(details.metadata) || "À confirmer",
+        message: `Import fiche Intimura ${intimuraId}.`,
+        source: "intimura",
+        intimuraId,
+        status: salesStatus === "signee" ? "gagne" : "en_cours",
+        assignedSalesId: null,
+        estimatedValue: Number(q.total ?? q.subtotal ?? 0) || null,
+        estimatedLength: intimuraLengthFromItems(details.items || []),
+      });
+      quote = await createQuoteFromIntimuraRow(lead, {
+        id: intimuraId,
+        title,
+        status: q.status,
+        subtotal: q.subtotal ?? q.total,
+        target_date: q.target_date,
+        created_at: q.created_at,
+        with_installation: q.with_installation,
+        first_payment_paid_at: q.first_payment_paid_at,
+      });
+    }
     // Ne pas réécrire les soumissions déjà synchronisées (sync = nouveaux leads seulement).
     if (quote.intimuraData) return { ok: false, reason: "ALREADY_SYNCED" };
 
@@ -2790,7 +2947,7 @@ export async function registerRoutes(
     const errors: any[] = [];
     for (const q of targets) {
       try {
-        const url = `https://crm.intimura.com/app/quotes/${q.intimuraId}/__data.json?x-sveltekit-invalidated=001`;
+        const url = `${intimuraQuoteUrl(q.intimuraId)}/__data.json?x-sveltekit-invalidated=001`;
         const r = await fetch(url, { headers });
         if (!r.ok) { errors.push({ id: q.intimuraId, status: r.status }); continue; }
         const payload = await r.json() as any;

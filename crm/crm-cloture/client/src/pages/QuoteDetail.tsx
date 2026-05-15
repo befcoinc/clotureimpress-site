@@ -259,7 +259,7 @@ export function QuoteDetail() {
               <CardHeader className="pb-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-base">{isEn ? "Intimura submission" : "Soumission Intimura"}</CardTitle>
                 <a
-                  href={`https://crm.intimura.com/app/quotes/${quote.intimuraId}`}
+                  href={intimura?.intimuraUrl || (quote.intimuraId ? `https://crm.intimura.com/app/quotes/${quote.intimuraId}` : "#")}
                   target="_blank"
                   rel="noreferrer"
                   className="text-[11px] text-primary hover:underline"

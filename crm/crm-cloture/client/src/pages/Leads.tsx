@@ -226,16 +226,14 @@ export function Leads() {
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
       queryClient.invalidateQueries({ queryKey: ["/api/intimura/auto-sync/status"] });
       const created = data?.createdLeads ?? 0;
+      const quotes = data?.createdQuotes ?? 0;
+      const detailed = data?.detailsUpdated ?? 0;
       const skipped = data?.skipped ?? 0;
       toast({
         title: isEn ? "Sync complete" : "Synchronisation terminée",
         description: isEn
-          ? created > 0
-            ? `${created} new lead(s) added. ${skipped} already in CRM (skipped).`
-            : `No new leads. ${skipped} already in CRM.`
-          : created > 0
-            ? `${created} nouveau(x) lead(s) ajouté(s). ${skipped} déjà dans le CRM (ignoré(s)).`
-            : `Aucun nouveau lead. ${skipped} déjà dans le CRM.`,
+          ? `${created} new lead(s), ${quotes} quote(s), ${detailed} full Intimura sheet(s). ${skipped} skipped.`
+          : `${created} nouveau(x) lead(s), ${quotes} soumission(s), ${detailed} fiche(s) Intimura complète(s). ${skipped} ignoré(s).`,
       });
     },
     onError: (err: any) => {

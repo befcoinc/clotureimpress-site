@@ -128,6 +128,12 @@ async function runUnitTests() {
   );
   assert(r3.created === 0 && r3.skipped === 2, "doublon phone ignore");
 
+  function mergeDetailIds(created: string[], detail: string[]) {
+    return [...new Set([...created, ...detail])];
+  }
+  const mergedIds = mergeDetailIds(["new-1"], ["new-1", "existing-no-data"]);
+  assert(mergedIds.length === 2 && mergedIds.includes("existing-no-data"), "detailIntimuraIds union");
+
   console.log("  OK extractIntimuraQuotes (scrape)");
   console.log("  OK nouveaux leads seulement");
   console.log("  OK skip par intimuraId existant");
