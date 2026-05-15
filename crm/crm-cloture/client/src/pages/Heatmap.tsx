@@ -65,7 +65,7 @@ const CITY_COORDS: Record<string, [number, number]> = {
   "sainte-agathe-des-monts": [46.0539, -74.2833],
   "sainte-adele": [45.9501, -74.1315], "sainte-adèle": [45.9501, -74.1315],
   "saint-sauveur": [45.8951, -74.1743],
-  "longueuil": [45.5312, -73.5181], "boucherville": [45.5956, -73.4345],
+  "boucherville": [45.5956, -73.4345],
   "varennes": [45.6918, -73.4328], "sainte-julie": [45.5918, -73.3276],
   "beloeil": [45.5658, -73.2041], "mont-saint-hilaire": [45.5600, -73.1957],
   "chambly": [45.4514, -73.2876], "saint-jean-sur-richelieu": [45.3093, -73.2638],
