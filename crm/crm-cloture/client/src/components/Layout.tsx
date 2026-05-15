@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard, Inbox, UserCheck, FileText, Wrench, MapPin, CalendarDays,
-  Network, Users, ShieldCheck, Hammer, UploadCloud, Flame, AlertTriangle, X, LogOut, BarChart2,
+  Network, Users, ShieldCheck, Hammer, UploadCloud, Flame, AlertTriangle, X, LogOut, BarChart2, Globe,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { RoleSwitcher } from "./RoleSwitcher";
@@ -21,6 +21,7 @@ interface NavItem {
   labelKey:
     | "nav.dashboard"
     | "nav.leads"
+    | "nav.leadsImpress"
     | "nav.intimuraImport"
     | "nav.salesDispatch"
     | "nav.quotes"
@@ -48,6 +49,7 @@ const NAV_SECTIONS: { labelKey: "nav.operations" | "nav.pilotage" | "nav.system"
     items: [
       { href: "/", labelKey: "nav.dashboard", icon: LayoutDashboard, perm: "view_admin" },
       { href: "/leads", labelKey: "nav.leads", icon: Inbox, perm: "view_sales" },
+      { href: "/leads-impress", labelKey: "nav.leadsImpress", icon: Globe, perm: "view_sales" },
       { href: "/dispatch-vendeur", labelKey: "nav.salesDispatch", icon: UserCheck, perm: "assign_sales" },
       { href: "/alertes-dormantes", labelKey: "nav.dormantAlerts", icon: AlertTriangle, perm: "view_sales" },
       { href: "/soumissions", labelKey: "nav.quotes", icon: FileText, perm: "view_sales" },
@@ -148,9 +150,12 @@ export function Layout({ children }: { children: ReactNode }) {
                 </div>
                 <ul className="space-y-0.5">
                   {visible.map((item) => {
-                    const isActive =
-                      location === item.href ||
-                      (item.href !== "/" && location.startsWith(item.href));
+                    const isActive = (() => {
+                      if (item.href === "/") return location === "/";
+                      if (item.href === "/leads") return location === "/leads";
+                      if (item.href === "/leads-impress") return location === "/leads-impress" || location.startsWith("/leads-impress/");
+                      return location === item.href || location.startsWith(`${item.href}/`);
+                    })();
                     return (
                       <li key={item.href}>
                         <Link href={item.href}>

@@ -41,6 +41,7 @@ function AppRouter({ canViewAdmin, isInstaller }: { canViewAdmin: boolean; isIns
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/login" component={Dashboard} />
+        <Route path="/leads-impress" component={Leads} />
         <Route path="/leads" component={Leads} />
         <Route path="/intimura-bookmarklet" component={IntimuraBookmarklet} />
         <Route path="/intimura-receive" component={IntimuraReceive} />

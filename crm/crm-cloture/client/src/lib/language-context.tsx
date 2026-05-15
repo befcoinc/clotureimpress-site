@@ -11,6 +11,7 @@ type TranslationKey =
   | "nav.system"
   | "nav.dashboard"
   | "nav.leads"
+  | "nav.leadsImpress"
   | "nav.intimuraImport"
   | "nav.salesDispatch"
   | "nav.quotes"
@@ -49,6 +50,7 @@ const TRANSLATIONS: Record<AppLanguage, Record<TranslationKey, string>> = {
     "nav.system": "Systeme",
     "nav.dashboard": "Tableau de bord",
     "nav.leads": "Leads Intimura",
+    "nav.leadsImpress": "Leads Impress",
     "nav.intimuraImport": "Import Intimura",
     "nav.salesDispatch": "Dispatch vendeur",
     "nav.quotes": "Soumissions",
@@ -86,6 +88,7 @@ const TRANSLATIONS: Record<AppLanguage, Record<TranslationKey, string>> = {
     "nav.system": "System",
     "nav.dashboard": "Dashboard",
     "nav.leads": "Intimura Leads",
+    "nav.leadsImpress": "Impress Leads",
     "nav.intimuraImport": "Intimura Import",
     "nav.salesDispatch": "Sales Dispatch",
     "nav.quotes": "Quotes",
