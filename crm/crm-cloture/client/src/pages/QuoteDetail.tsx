@@ -382,7 +382,8 @@ export function QuoteDetail() {
                           size="sm"
                           disabled={!newNote.trim()}
                           onClick={() => {
-                            const stamp = new Date().toISOString().slice(0, 10);
+                            const _now = new Date();
+                            const stamp = _now.toISOString().slice(0, 10) + " " + _now.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" });
                             const author = currentUser?.name || "";
                             const prefix = author ? `${stamp} — ${author} : ` : `${stamp} : `;
                             const line = prefix + newNote.trim();
