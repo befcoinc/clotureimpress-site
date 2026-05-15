@@ -11,9 +11,6 @@ export default defineConfig({
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
-  optimizeDeps: {
-    exclude: ["mapbox-gl"],
-  },
   root: path.resolve(import.meta.dirname, "client"),
   base: "./",
   build: {
