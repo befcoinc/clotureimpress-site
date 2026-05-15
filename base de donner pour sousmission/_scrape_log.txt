@@ -1,0 +1,615 @@
+Produits a traiter: 215
+[1/215] 1 - /fr/clotures-details/1/2/0/accessoires-pour-barrieres-doubles
+  Accessoires pour barrières doubles | options=2 | option1=2 | couleurs blocks=4
+  -> 5 variantes
+[2/215] 100 - /fr/clotures-details/100/0/0/bear-hold
+  Bear hold | options=1 | option1=3 | couleurs blocks=0
+  -> 3 variantes
+[3/215] 101 - /fr/clotures-details/101/1/0/barriere-porte-a-faux
+  Barrière porte-à-faux | options=2 | option1=6 | couleurs blocks=53
+  -> 54 variantes
+[4/215] 102 - /fr/clotures-details/102/1/0/barriere-de-controle-dacces
+  Barrière de contrôle d'accès | options=2 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[5/215] 105 - /fr/clotures-details/105/2/0/chanel-en-acier-noir
+  Chanel en acier noir | options=3 | option1=2 | couleurs blocks=7
+  -> 8 variantes
+[6/215] 106 - /fr/clotures-details/106/1/0/barriere-de-securite-biseaute
+  Barrière de sécurité biseauté | options=2 | option1=1 | couleurs blocks=11
+  -> 12 variantes
+[7/215] 11 - /fr/clotures-details/11/1/0/boulon-coude-avec-ecrous
+  Boulon coudé (avec écrous) | options=2 | option1=2 | couleurs blocks=5
+  -> 3 variantes
+[8/215] 11 - /fr/clotures-details/11/2/0/boulon-coude-avec-ecrous
+  Boulon coudé (avec écrous) | options=2 | option1=2 | couleurs blocks=5
+  -> 3 variantes
+[9/215] 110 - /fr/clotures-details/110/2/0/sac-de-caps-coniques-pour-lattes
+  Sac de caps coniques pour lattes | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[10/215] 111 - /fr/clotures-details/111/2/0/porte-en-acier:-composite-et-dentelle.
+  Porte en acier: composite et dentelle. | options=2 | option1=3 | couleurs blocks=5
+  -> 6 variantes
+[11/215] 114 - /fr/clotures-details/114/2/0/cadre-barriere-1-morceau-galv.
+  Cadre barrière 1 morceau galv. | options=2 | option1=3 | couleurs blocks=9
+  -> 10 variantes
+[12/215] 115 - /fr/clotures-details/115/2/0/cadre-barriere-2-morceaux-galv.
+  Cadre barrière 2 morceaux galv. | options=2 | option1=3 | couleurs blocks=5
+  -> 6 variantes
+[13/215] 116 - /fr/clotures-details/116/1/0/tube-carre
+  Tube Carré | options=3 | option1=2 | couleurs blocks=4
+  -> 5 variantes
+[14/215] 117 - /fr/clotures-details/117/1/0/embout-traverse-double
+  EMBOUT TRAVERSE DOUBLE | options=1 | option1=6 | couleurs blocks=5
+  -> 6 variantes
+[15/215] 118 - /fr/clotures-details/118/2/0/charniEre-rEsidentielle
+  CHARNIÈRE RÉSIDENTIELLE | options=2 | option1=2 | couleurs blocks=3
+  -> 4 variantes
+[16/215] 119 - /fr/clotures-details/119/1/0/fil-de-bas-galvanisE
+  FIL DE BAS GALVANISÉ | options=3 | option1=2 | couleurs blocks=3
+  -> 4 variantes
+[17/215] 121 - /fr/clotures-details/121/1/0/boulon-galvanise-avec-ecrou
+  Boulon galvanisé avec écrou | options=4 | option1=1 | couleurs blocks=4
+  -> 5 variantes
+[18/215] 121 - /fr/clotures-details/121/2/0/boulon-galvanise-avec-ecrou
+  Boulon galvanisé avec écrou | options=4 | option1=1 | couleurs blocks=4
+  -> 5 variantes
+[19/215] 122 - /fr/clotures-details/122/1/0/Ecrou-galvanise
+  Écrou galvanisé | options=2 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[20/215] 122 - /fr/clotures-details/122/2/0/Ecrou-galvanise
+   | options=2 | option1=0 | couleurs blocks=1
+[21/215] 124 - /fr/clotures-details/124/2/0/bride-universel
+  Bride universel | options=1 | option1=9 | couleurs blocks=8
+  -> 9 variantes
+[22/215] 125 - /fr/clotures-details/125/2/0/braquette-murale-acier-noir
+  Braquette murale acier noir | options=1 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[23/215] 126 - /fr/clotures-details/126/2/0/cap-barriere-plastique-noir
+  Cap barrière plastique noir | options=1 | option1=4 | couleurs blocks=3
+  -> 4 variantes
+[24/215] 127 - /fr/clotures-details/127/1/0/braquette-pour-verrou
+  Braquette pour verrou | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[25/215] 128 - /fr/clotures-details/128/2/0/braquette-pour-verrou-residentiel
+  Braquette pour verrou résidentiel | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[26/215] 129 - /fr/clotures-details/129/2/0/poteau-corde-a-linge
+  Poteau Corde à linge | options=3 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[27/215] 13 - /fr/clotures-details/13/1/0/broches-galvanise
+  Broches galvanisé | options=5 | option1=2 | couleurs blocks=35
+  -> 45 variantes
+[28/215] 130 - /fr/clotures-details/130/2/0/spigot-en-acier-inoxydable-satin-316
+  Spigot en acier inoxydable satin 316 | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[29/215] 131 - /fr/clotures-details/131/2/0/pentures-en-acier-inoxydable-316
+  Pentures en acier inoxydable 316 | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[30/215] 132 - /fr/clotures-details/132/2/0/loquet-acier-inoxydable-316
+  Loquet acier inoxydable 316 | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[31/215] 133 - /fr/clotures-details/133/2/0/barriEre-verre-10-mm---clOture--en-verre-sur-spigot
+  BARRIÈRE VERRE 10 MM - CLÔTURE  EN VERRE SUR SPIGOT | options=3 | option1=1 | couleurs blocks=0
+  -> 2 variantes
+[32/215] 136 - /fr/clotures-details/136/2/0/barriEre-verre-6-mm-cadre-2-x-2---clOture-de-verre-sur-baquette
+  BARRIÈRE VERRE 6 MM CADRE 2'' x 2'' - CLÔTURE DE VERRE SUR BAQUETTE | options=3 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[33/215] 137 - /fr/clotures-details/137/2/0/poteau-carre-sur-semelle
+  Poteau carré sur semelle | options=2 | option1=2 | couleurs blocks=3
+  -> 4 variantes
+[34/215] 138 - /fr/clotures-details/138/2/0/cache-plaque-acier-noir
+  Cache plaque acier noir | options=1 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[35/215] 139 - /fr/clotures-details/139/2/0/braquette-verre-noir-mat
+   | options=1 | option1=0 | couleurs blocks=0
+[36/215] 140 - /fr/clotures-details/140/2/0/braquette-verre-stainless
+  Braquette verre stainless | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[37/215] 141 - /fr/clotures-details/141/2/0/dd-serrure-A-clEe
+  DD-SERRURE À CLÉE | options=1 | option1=2 | couleurs blocks=3
+  Aucune variante recuperee, fallback
+[38/215] 142 - /fr/clotures-details/142/2/0/dd-bouton-poussoir-noir
+  DD-BOUTON POUSSOIR NOIR | options=0 | option1=0 | couleurs blocks=0
+[39/215] 143 - /fr/clotures-details/143/2/0/dd-serrure-A-clEe-frost-2-cOtEs
+  DD-SERRURE À CLÉE FROST (2 CÔTÉS) | options=0 | option1=0 | couleurs blocks=0
+[40/215] 144 - /fr/clotures-details/144/2/0/dd---magna-latch-vertical-pull-orno
+  DD - MAGNA LATCH VERTICAL PULL (ORNO) | options=1 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[41/215] 145 - /fr/clotures-details/145/2/0/dd---magna-latch-adaptateur-noir-poteau-rond
+  DD - MAGNA LATCH ADAPTATEUR NOIR (POTEAU ROND) | options=0 | option1=0 | couleurs blocks=0
+[42/215] 147 - /fr/clotures-details/147/2/0/dd-penture-ajustable-noir-2
+  DD PENTURE AJUSTABLE NOIR 2'' | options=0 | option1=0 | couleurs blocks=0
+[43/215] 148 - /fr/clotures-details/148/2/0/dd-penture-ajustable-pour-frost--noir
+  DD PENTURE AJUSTABLE POUR FROST  NOIR | options=0 | option1=0 | couleurs blocks=0
+[44/215] 15 - /fr/clotures-details/15/2/0/broches-vinyle
+  Broches vinyle | options=4 | option1=2 | couleurs blocks=22
+  -> 23 variantes
+[45/215] 151 - /fr/clotures-details/151/2/0/kit-de-barriEre-simple-orno-frame-de-barriEre-1-1-2
+  KIT DE BARRIÈRE SIMPLE ORNO (FRAME DE BARRIÈRE 1 1/2) | options=1 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[46/215] 152 - /fr/clotures-details/152/2/0/kit-de-barriEre-double-orno-cadre--1-1-2
+  KIT DE BARRIÈRE DOUBLE ORNO (CADRE  1 1/2) | options=1 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[47/215] 153 - /fr/clotures-details/153/2/0/loquet-rEsidentiel-orno
+  LOQUET RÉSIDENTIEL ORNO | options=1 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[48/215] 154 - /fr/clotures-details/154/2/0/mentonnet-rEsidentiel-orno-1-1-2
+  MENTONNET RÉSIDENTIEL ORNO 1 1/2 | options=0 | option1=0 | couleurs blocks=0
+[49/215] 157 - /fr/clotures-details/157/2/0/section-classique-ornementale-en-acier-rail-1-1-2
+  Section classique ornementale en acier rail 1 1/2'' | options=2 | option1=3 | couleurs blocks=5
+  -> 6 variantes
+[50/215] 158 - /fr/clotures-details/158/2/0/section-contemporain-ornementale-en-acier-rail-1-1-2
+  Section contemporain ornementale en acier rail 1 1/2'' | options=2 | option1=3 | couleurs blocks=5
+  -> 6 variantes
+[51/215] 159 - /fr/clotures-details/159/2/0/section-moderne-ornementale-en-acier-rail-1
+  Section Moderne ornementale en acier rail 1'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[52/215] 16 - /fr/clotures-details/16/1/0/barre-de-tension
+  Barre de tension | options=2 | option1=1 | couleurs blocks=9
+  -> 7 variantes
+[53/215] 16 - /fr/clotures-details/16/2/0/barre-de-tension
+  Barre de tension | options=2 | option1=1 | couleurs blocks=9
+  -> 3 variantes
+[54/215] 160 - /fr/clotures-details/160/2/0/section-moderne-ornementale-en-acier-rail-1-1-2
+  Section Moderne ornementale en acier rail 1 1/2'' | options=2 | option1=4 | couleurs blocks=5
+  -> 6 variantes
+[55/215] 162 - /fr/clotures-details/162/2/0/barriere-modele-classique-regulier-rail-1-1-2---ornementale
+  Barrière modèle classique régulier Rail 1 1/2'' - ornementale | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[56/215] 164 - /fr/clotures-details/164/2/0/barriere-modele-contemporain-regulier-rail-1-1-2--ornementale
+  Barrière modèle contemporain régulier Rail 1 1/2''- ornementale | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[57/215] 167 - /fr/clotures-details/167/1/0/roue-6
+  Roue 6'' | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[58/215] 168 - /fr/clotures-details/168/1/0/cap-cable
+  CAP CABLE | options=1 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[59/215] 17 - /fr/clotures-details/17/1/0/bride-de-tension-barriere
+  Bride de tension barrière | options=2 | option1=1 | couleurs blocks=2
+  -> 3 variantes
+[60/215] 17 - /fr/clotures-details/17/2/0/bride-de-tension-barriere
+  Bride de tension barrière | options=2 | option1=1 | couleurs blocks=2
+  -> 3 variantes
+[61/215] 171 - /fr/clotures-details/171/2/0/bride-de-tension-carree
+  Bride de tension carree | options=1 | option1=4 | couleurs blocks=3
+  -> 4 variantes
+[62/215] 173 - /fr/clotures-details/173/1/0/barriere-piste-cyclable
+   | options=0 | option1=0 | couleurs blocks=0
+[63/215] 18 - /fr/clotures-details/18/1/0/bride-de-tension
+  Bride de tension | options=2 | option1=9 | couleurs blocks=14
+  -> 15 variantes
+[64/215] 18 - /fr/clotures-details/18/2/0/bride-de-tension
+  Bride de tension | options=2 | option1=2 | couleurs blocks=14
+  -> 4 variantes
+[65/215] 19 - /fr/clotures-details/19/1/0/bride-de-traverse
+  Bride de traverse | options=2 | option1=8 | couleurs blocks=11
+  -> 12 variantes
+[66/215] 19 - /fr/clotures-details/19/2/0/bride-de-traverse
+  Bride de traverse | options=2 | option1=2 | couleurs blocks=11
+  -> 4 variantes
+[67/215] 192 - /fr/clotures-details/192/2/0/porte-en-acier-noir:-bois-et-dentelle.
+  porte en acier noir: bois et dentelle. | options=2 | option1=3 | couleurs blocks=0
+  -> 6 variantes
+[68/215] 2 - /fr/clotures-details/2/2/0/accessoires-pour-barrieres-simple
+  Accessoires pour barrières simple | options=2 | option1=2 | couleurs blocks=4
+  -> 5 variantes
+[69/215] 200 - /fr/clotures-details/200/2/0/section-chateau-ornementale-en-acier-rail-1
+  SECTION CHATEAU ORNEMENTALE EN ACIER RAIL 1'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[70/215] 201 - /fr/clotures-details/201/2/0/section-chateau-ornementale-en-acier-rail-1-1-2
+   | options=0 | option1=0 | couleurs blocks=0
+[71/215] 202 - /fr/clotures-details/202/2/0/section-chateau-ornementale-en-acier-rail-1-1-2
+  SECTION CHATEAU ORNEMENTALE EN ACIER RAIL 1 1/2'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[72/215] 203 - /fr/clotures-details/203/2/0/bride-de-traverse-carrEe
+  BRIDE DE TRAVERSE CARRÉE | options=1 | option1=4 | couleurs blocks=3
+  -> 4 variantes
+[73/215] 204 - /fr/clotures-details/204/2/0/braquette-murale-pivotante-en-acier
+  BRAQUETTE MURALE PIVOTANTE EN ACIER | options=1 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[74/215] 205 - /fr/clotures-details/205/2/0/kit-de-barriEre-simple-orno-pot-2-1-2-frame-de-barriEre-1-1-2
+  KIT DE BARRIÈRE SIMPLE ORNO (POT 2 1/2'') (FRAME DE BARRIÈRE 1 1/2'')) | options=0 | option1=0 | couleurs blocks=0
+[75/215] 206 - /fr/clotures-details/206/2/0/loquet-rEsidentiel-orno-poteau-2
+  LOQUET RÉSIDENTIEL ORNO (POTEAU 2'') | options=0 | option1=0 | couleurs blocks=0
+[76/215] 208 - /fr/clotures-details/208/2/0/charniEre-orno-poteau-2-1-2-x-2-1-2
+   | options=0 | option1=0 | couleurs blocks=0
+[77/215] 209 - /fr/clotures-details/209/2/0/charnon-ajustable-sq
+  CHARNON AJUSTABLE SQ | options=1 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[78/215] 21 - /fr/clotures-details/21/2/0/charnon-ajustable-residentiel
+  Charnon ajustable résidentiel | options=2 | option1=2 | couleurs blocks=2
+  -> 3 variantes
+[79/215] 210 - /fr/clotures-details/210/2/0/boulon-coudE-1-2-x-3
+  BOULON COUDÉ 1/2'' X 3'' | options=0 | option1=0 | couleurs blocks=0
+[80/215] 212 - /fr/clotures-details/212/2/0/barriEre-modEle-moderne--rEgulier-rail-1-1-2
+   | options=0 | option1=0 | couleurs blocks=0
+[81/215] 213 - /fr/clotures-details/213/2/0/barriEre-modEle-moderne--rEgulier-rail-1-1-2-ornementale
+  BARRIÈRE MODÈLE MODERNE  RÉGULIER RAIL 1 1/2''-ORNEMENTALE | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[82/215] 214 - /fr/clotures-details/214/2/0/barriEre-modEle-chAteau-cd-rail-1--ornementale
+  BARRIÈRE MODÈLE CHÂTEAU CD RAIL 1'' -ORNEMENTALE | options=2 | option1=3 | couleurs blocks=5
+  -> 6 variantes
+[83/215] 216 - /fr/clotures-details/216/2/0/barrriEre-modEle-chateau-cd-rail-1-1-2--ornementale
+  BARRRIÈRE MODÈLE CHATEAU CD RAIL 1 1/2''- ORNEMENTALE | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[84/215] 217 - /fr/clotures-details/217/2/0/bride-de-ligne
+  Bride de ligne | options=1 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[85/215] 218 - /fr/clotures-details/218/2/0/fermeture-a-ressort
+  Fermeture à ressort | options=0 | option1=0 | couleurs blocks=0
+[86/215] 219 - /fr/clotures-details/219/2/0/adapteur-poteau-rond-double-pour-frost
+  ADAPTEUR POTEAU ROND DOUBLE POUR FROST | options=0 | option1=0 | couleurs blocks=0
+[87/215] 22 - /fr/clotures-details/22/1/0/capuchon-principal
+  Capuchon principal | options=2 | option1=7 | couleurs blocks=12
+  -> 12 variantes
+[88/215] 22 - /fr/clotures-details/22/2/0/capuchon-principal
+  Capuchon principal | options=2 | option1=2 | couleurs blocks=12
+  -> 4 variantes
+[89/215] 220 - /fr/clotures-details/220/2/0/adapteur-poteau-rond-double-pour-frost
+   | options=0 | option1=0 | couleurs blocks=0
+[90/215] 223 - /fr/clotures-details/223/1/0/mentonnet-industriel-pour-poteau-carrEe
+  MENTONNET INDUSTRIEL POUR POTEAU CARRÉE | options=1 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[91/215] 225 - /fr/clotures-details/225/1/0/loquet-industriel-pour-poteau-carrEe
+  LOQUET INDUSTRIEL POUR POTEAU CARRÉE | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[92/215] 228 - /fr/clotures-details/228/2/0/cap-de-fleur-de-lys-5-8
+  CAP DE FLEUR DE LYS 5/8'' | options=0 | option1=0 | couleurs blocks=1
+[93/215] 23 - /fr/clotures-details/23/2/0/cap-boule-aluminium
+  Cap boule aluminium | options=1 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[94/215] 232 - /fr/clotures-details/232/2/0/section-urbain-ornementale-en-acier-rail-1
+  SECTION URBAIN ORNEMENTALE EN ACIER RAIL 1'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[95/215] 233 - /fr/clotures-details/233/2/0/section-urbain-ornementale-en-acier-rail-1-1-2
+  SECTION URBAIN ORNEMENTALE EN ACIER RAIL 1 1/2'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[96/215] 234 - /fr/clotures-details/234/2/0/connecteur-180-degrE-stainless-pour-verre-10-mm
+  CONNECTEUR 180 DEGRÉ STAINLESS POUR VERRE 10 MM | options=2 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[97/215] 235 - /fr/clotures-details/235/2/0/connecteur-90-degrE-stainless-pour-verre-10-mm
+  CONNECTEUR 90 DEGRÉ STAINLESS POUR VERRE 10 MM | options=2 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[98/215] 236 - /fr/clotures-details/236/2/0/braquette-swivel-stainless
+  BRAQUETTE ''SWIVEL'' STAINLESS | options=0 | option1=0 | couleurs blocks=0
+[99/215] 237 - /fr/clotures-details/237/2/0/vis-mEtal-12-14-x-1-paquet:-25
+  VIS MÉTAL 12-14'' X 1'' (PAQUET: 25) | options=0 | option1=0 | couleurs blocks=0
+[100/215] 239 - /fr/clotures-details/239/2/0/barriEre-verre-6-mm-cadre-1-x-1---clOture-de-verre-avec-cadre
+  BARRIÈRE VERRE 6 MM CADRE 1'' X 1'' - CLÔTURE DE VERRE AVEC CADRE | options=2 | option1=1 | couleurs blocks=0
+  -> 4 variantes
+[101/215] 24 - /fr/clotures-details/24/1/0/charnon-fixe
+  Charnon fixe | options=2 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[102/215] 240 - /fr/clotures-details/240/2/0/rail-ouvert-double
+  RAIL OUVERT DOUBLE | options=1 | option1=4 | couleurs blocks=3
+  -> 4 variantes
+[103/215] 242 - /fr/clotures-details/242/2/0/gasket-pour-rail-ouvert
+  GASKET POUR RAIL OUVERT | options=1 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[104/215] 243 - /fr/clotures-details/243/1/0/peinture-de-retouche-avec-pinceau
+  PEINTURE DE RETOUCHE AVEC PINCEAU | options=1 | option1=9 | couleurs blocks=5
+  -> 9 variantes
+[105/215] 244 - /fr/clotures-details/244/1/0/tuyaux-galvanise-peint
+  Tuyaux galvanisé peint | options=3 | option1=10 | couleurs blocks=45
+  -> 46 variantes
+[106/215] 247 - /fr/clotures-details/247/1/0/charniEre-industriel-pour-poteau-carrE
+  CHARNIÈRE INDUSTRIEL POUR POTEAU CARRÉ | options=1 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[107/215] 249 - /fr/clotures-details/249/2/0/porte-A-faux-ornementale-sur-track-aluminium
+  PORTE-À-FAUX ORNEMENTALE SUR TRACK ALUMINIUM | options=2 | option1=3 | couleurs blocks=26
+  -> 27 variantes
+[108/215] 251 - /fr/clotures-details/251/1/0/poteau-manchon-commercial
+  POTEAU MANCHON COMMERCIAL | options=2 | option1=4 | couleurs blocks=3
+  -> 4 variantes
+[109/215] 252 - /fr/clotures-details/252/2/0/adapteur-pour-poteau-mural-2-3-8
+  ADAPTEUR POUR POTEAU MURAL 2 3/8'' | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[110/215] 253 - /fr/clotures-details/253/1/0/enfonce-pieuxA-essence-rhino
+   | options=0 | option1=0 | couleurs blocks=0
+[111/215] 254 - /fr/clotures-details/254/2/0/barriEre-modEle-urbain-rEgulier-rail-1-ornementale
+  BARRIÈRE MODÈLE URBAIN RÉGULIER RAIL 1''-ORNEMENTALE | options=2 | option1=3 | couleurs blocks=5
+  -> 6 variantes
+[112/215] 255 - /fr/clotures-details/255/2/0/barriEre-modEle-urbain-rEgulier-rail-1-1-2-ornementale
+  BARRIÈRE MODÈLE URBAIN RÉGULIER RAIL 1 1/2''-ORNEMENTALE | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[113/215] 256 - /fr/clotures-details/256/2/0/barriere-modele-moderne-arrondie-rail-1---ornementale
+  Barrière modèle moderne arrondie Rail 1'' - ornementale | options=2 | option1=3 | couleurs blocks=5
+  -> 6 variantes
+[114/215] 257 - /fr/clotures-details/257/2/0/barriere-modele-urbain-arrondie-rail-1---ornementale
+  Barrière modèle urbain arrondie Rail 1'' - ornementale | options=2 | option1=3 | couleurs blocks=5
+  -> 6 variantes
+[115/215] 258 - /fr/clotures-details/258/2/0/section-royaume-contemporain-ornementale-en-acier-rail-1-1-2-avec-barrotins-3-4
+  Section royaume contemporain ornementale en acier rail 1 1/2'' avec barrotins 3/4'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[116/215] 259 - /fr/clotures-details/259/2/0/section-royaume-moderne-ornementale-en-acier-rail-1-1-2-avec-barrotins-3-4
+  Section royaume moderne ornementale en acier rail 1 1/2'' avec barrotins 3/4'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[117/215] 26 - /fr/clotures-details/26/1/0/charnon-ajustable-industriel
+  Charnon ajustable industriel | options=1 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[118/215] 260 - /fr/clotures-details/260/2/0/section-royaume-classique-ornementale-en-acier-rail-1-1-2-avec-barrotins-3-4
+  Section royaume classique ornementale en acier rail 1 1/2'' avec barrotins 3/4'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[119/215] 261 - /fr/clotures-details/261/2/0/section-royaume-chateau-ornementale-en-acier-rail-1-1-2-avec-barrotins-3-4
+  Section royaume château ornementale en acier rail 1 1/2'' avec barrotins 3/4'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[120/215] 262 - /fr/clotures-details/262/2/0/section-royaume-urbain-ornementale-en-acier-rail-1-1-2-avec-barrotins-3-4
+  Section royaume urbain ornementale en acier rail 1 1/2'' avec barrotins 3/4'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[121/215] 263 - /fr/clotures-details/263/2/0/barrriEre-modEle-royaume-contemporain--rail-1-1-2-avec-barrotins-3-4--ornemental
+  BARRRIÈRE MODÈLE ROYAUME CONTEMPORAIN  RAIL 1 1/2''-AVEC BARROTINS 3/4'' -ORNEMENTAL | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[122/215] 264 - /fr/clotures-details/264/2/0/barrriEre-modEle-royaume-moderne-rail-1-1-2-avec-barrotins-3-4--ornemental
+  BARRRIÈRE MODÈLE ROYAUME MODERNE RAIL 1 1/2''-AVEC BARROTINS 3/4'' -ORNEMENTAL | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[123/215] 265 - /fr/clotures-details/265/2/0/barrriEre-modEle-royaume-classique-rail-1-1-2-avec-barrotins-3-4--ornemental
+  BARRRIÈRE MODÈLE ROYAUME CLASSIQUE RAIL 1 1/2''-AVEC BARROTINS 3/4'' -ORNEMENTAL | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[124/215] 266 - /fr/clotures-details/266/2/0/barrriEre-modEle-royaume-chAteau-rail-1-1-2-avec-barrotins-3-4--ornemental
+  BARRRIÈRE MODÈLE ROYAUME CHÂTEAU RAIL 1 1/2''-AVEC BARROTINS 3/4'' -ORNEMENTAL | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[125/215] 267 - /fr/clotures-details/267/2/0/barrriEre-modEle-royaume-urbain-rail-1-1-2-avec-barrotins-3-4--ornemental
+  BARRRIÈRE MODÈLE ROYAUME URBAIN RAIL 1 1/2''-AVEC BARROTINS 3/4'' -ORNEMENTAL | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[126/215] 268 - /fr/clotures-details/268/2/0/section-royal-contemporain-ornementale-en-acier-rail-2-1-2-avec-barrotins-1
+  Section royal contemporain ornementale en acier rail 2 1/2'' avec barrotins 1'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[127/215] 269 - /fr/clotures-details/269/2/0/section-royal-moderne-ornementale-en-acier-rail-2-1-2-avec-barrotins-1
+  Section royal moderne ornementale en acier rail 2 1/2'' avec barrotins 1'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[128/215] 27 - /fr/clotures-details/27/1/0/charniere-industrielle
+  Charnière industrielle | options=1 | option1=6 | couleurs blocks=5
+  -> 6 variantes
+[129/215] 270 - /fr/clotures-details/270/2/0/section-royal-classique-ornementale-en-acier-rail-2-1-2-avec-barrotins-1
+  Section royal classique ornementale en acier rail 2 1/2'' avec barrotins 1'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[130/215] 271 - /fr/clotures-details/271/2/0/section-royal-chateau-ornementale-en-acier-rail-2-1-2-avec-barrotins-1
+  Section royal chateau ornementale en acier rail 2 1/2'' avec barrotins 1'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[131/215] 272 - /fr/clotures-details/272/2/0/section-royal-urbain-ornementale-en-acier-rail-2-1-2-avec-barrotins-1
+  Section royal urbain ornementale en acier rail 2 1/2'' avec barrotins 1'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[132/215] 273 - /fr/clotures-details/273/2/0/prise-murale-aluminium
+  PRISE MURALE ALUMINIUM | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[133/215] 274 - /fr/clotures-details/274/2/0/prise-murale-aluminium-A-angle
+  PRISE MURALE ALUMINIUM À ANGLE | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[134/215] 275 - /fr/clotures-details/275/1/0/rail-en-acier
+  RAIL EN ACIER | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[135/215] 276 - /fr/clotures-details/276/1/0/guide-de-bas
+  GUIDE DE BAS | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[136/215] 278 - /fr/clotures-details/278/2/0/adapteur-acier-a-bois-2-3-8-x-6-galv
+  ADAPTEUR ACIER A BOIS 2 3/8 X 6'' GALV | options=2 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[137/215] 279 - /fr/clotures-details/279/1/0/rail-aluminium
+  RAIL ALUMINIUM | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[138/215] 28 - /fr/clotures-details/28/2/0/cap-pyramide-aluminium
+  Cap pyramide aluminium | options=1 | option1=6 | couleurs blocks=5
+  -> 6 variantes
+[139/215] 280 - /fr/clotures-details/280/1/0/lien-en-acier-galvanisE-easy-twist
+  LIEN EN ACIER GALVANISÉ-EASY TWIST | options=3 | option1=1 | couleurs blocks=0
+  -> 5 variantes
+[140/215] 281 - /fr/clotures-details/281/1/0/outil-pour-les-lien-easy-twist
+  OUTIL POUR LES LIEN EASY TWIST | options=0 | option1=0 | couleurs blocks=0
+[141/215] 282 - /fr/clotures-details/282/1/0/lattes-commerciales
+   | options=5 | option1=0 | couleurs blocks=0
+[142/215] 29 - /fr/clotures-details/29/1/0/capuchon-de-barriere
+  Capuchon de barrière | options=2 | option1=2 | couleurs blocks=2
+  -> 3 variantes
+[143/215] 30 - /fr/clotures-details/30/1/0/capuchon-de-poteau-intermediaire
+  Capuchon de poteau intermédiaire | options=1 | option1=7 | couleurs blocks=10
+  -> 4 variantes
+[144/215] 30 - /fr/clotures-details/30/2/0/capuchon-de-poteau-intermediaire
+  Capuchon de poteau intermédiaire | options=1 | option1=2 | couleurs blocks=10
+  -> 1 variantes
+[145/215] 31 - /fr/clotures-details/31/2/0/crochet-en-s
+  Crochet en s | options=2 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[146/215] 32 - /fr/clotures-details/32/2/0/cap-spiral
+  Cap spiral | options=1 | option1=7 | couleurs blocks=6
+  -> 7 variantes
+[147/215] 34 - /fr/clotures-details/34/1/0/tariere-a-main-digger
+  Tarière à main-digger | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[148/215] 35 - /fr/clotures-details/35/1/0/embout-de-traverse
+  Embout de traverse | options=1 | option1=2 | couleurs blocks=3
+  -> 2 variantes
+[149/215] 35 - /fr/clotures-details/35/2/0/embout-de-traverse
+  Embout de traverse | options=1 | option1=2 | couleurs blocks=3
+  -> 2 variantes
+[150/215] 36 - /fr/clotures-details/36/1/0/fil-barbele
+  Fil barbelé | options=2 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[151/215] 37 - /fr/clotures-details/37/2/0/fil-de-bas-vinyle
+  Fil de bas vinyle | options=3 | option1=2 | couleurs blocks=3
+  -> 4 variantes
+[152/215] 38 - /fr/clotures-details/38/1/0/corniere
+  Cornière | options=2 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[153/215] 4 - /fr/clotures-details/4/1/0/boulon-galvanise-a-chaud
+  Boulon galvanisé à chaud | options=3 | option1=1 | couleurs blocks=1
+  -> 2 variantes
+[154/215] 4 - /fr/clotures-details/4/2/0/boulon-galvanise-a-chaud
+  Boulon galvanisé à chaud | options=3 | option1=1 | couleurs blocks=1
+  -> 2 variantes
+[155/215] 40 - /fr/clotures-details/40/1/0/lien-aluminium
+  Lien aluminium | options=3 | option1=1 | couleurs blocks=6
+  -> 7 variantes
+[156/215] 41 - /fr/clotures-details/41/1/0/lien-aluminium-crochet
+  Lien aluminium crochet | options=3 | option1=1 | couleurs blocks=3
+  -> 4 variantes
+[157/215] 43 - /fr/clotures-details/43/1/0/lattes-verticales-intimiteavec-caps-coniques
+   | options=4 | option1=0 | couleurs blocks=7
+[158/215] 43 - /fr/clotures-details/43/2/0/lattes-verticales-intimiteavec-caps-coniques
+  Lattes verticales intimité(avec caps coniques) | options=4 | option1=1 | couleurs blocks=6
+  -> 7 variantes
+[159/215] 44 - /fr/clotures-details/44/2/0/verrou-vertical-ornementale
+  Verrou vertical ornementale | options=0 | option1=0 | couleurs blocks=0
+[160/215] 45 - /fr/clotures-details/45/1/0/ligature
+   | options=2 | option1=0 | couleurs blocks=2
+[161/215] 45 - /fr/clotures-details/45/2/0/ligature
+  Ligature | options=2 | option1=1 | couleurs blocks=1
+  -> 2 variantes
+[162/215] 46 - /fr/clotures-details/46/1/0/loquet-industriel
+  Loquet industriel | options=1 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[163/215] 47 - /fr/clotures-details/47/1/0/loquet-2-3-8-porte-a-faux
+  Loquet 2 3/8 porte à faux | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[164/215] 48 - /fr/clotures-details/48/2/0/loquet-residentiel
+  Loquet résidentiel | options=2 | option1=2 | couleurs blocks=3
+  -> 4 variantes
+[165/215] 49 - /fr/clotures-details/49/2/0/lien-vinyle-droit
+  Lien vinyle droit | options=3 | option1=2 | couleurs blocks=5
+  -> 6 variantes
+[166/215] 5 - /fr/clotures-details/5/1/0/boulon-dancrage
+  Boulon d'ancrage | options=2 | option1=1 | couleurs blocks=2
+  -> 1 variantes
+[167/215] 5 - /fr/clotures-details/5/2/0/boulon-dancrage
+  Boulon d'ancrage | options=2 | option1=2 | couleurs blocks=2
+  -> 2 variantes
+[168/215] 50 - /fr/clotures-details/50/2/0/lien-vinyle-crochet
+  Lien vinyle crochet | options=3 | option1=2 | couleurs blocks=6
+  -> 7 variantes
+[169/215] 51 - /fr/clotures-details/51/1/0/manchon
+  Manchon | options=2 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[170/215] 52 - /fr/clotures-details/52/1/0/main-pour-barriere-coulissante
+  Main pour barrière coulissante | options=0 | option1=0 | couleurs blocks=0
+[171/215] 53 - /fr/clotures-details/53/1/0/mentonnet-industriel
+  Mentonnet industriel | options=1 | option1=8 | couleurs blocks=7
+  -> 8 variantes
+[172/215] 54 - /fr/clotures-details/54/1/0/mentonnet-porte-a-faux
+  Mentonnet porte à faux | options=1 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[173/215] 55 - /fr/clotures-details/55/2/0/mentonnet-residentiel
+  Mentonnet résidentiel | options=2 | option1=1 | couleurs blocks=1
+  -> 2 variantes
+[174/215] 58 - /fr/clotures-details/58/1/0/outil-a-lier
+  Outil à lier | options=0 | option1=0 | couleurs blocks=0
+[175/215] 59 - /fr/clotures-details/59/1/0/plaque-dancrage
+  Plaque d'ancrage | options=3 | option1=3 | couleurs blocks=6
+  -> 7 variantes
+[176/215] 6 - /fr/clotures-details/6/2/0/cadre-barriere-2-morceaux
+  Cadre barrière 2 morceaux | options=2 | option1=3 | couleurs blocks=5
+  -> 6 variantes
+[177/215] 60 - /fr/clotures-details/60/2/0/barriere-modele-classique-arrondie--rail-1---ornementale
+  Barrière modèle classique arrondie  Rail 1'' - ornementale | options=2 | option1=3 | couleurs blocks=5
+  -> 6 variantes
+[178/215] 62 - /fr/clotures-details/62/2/0/poteau-carre-acier
+  Poteau carré acier | options=2 | option1=3 | couleurs blocks=12
+  -> 13 variantes
+[179/215] 63 - /fr/clotures-details/63/1/0/peinture
+  Peinture | options=1 | option1=9 | couleurs blocks=6
+  -> 9 variantes
+[180/215] 64 - /fr/clotures-details/64/1/0/pince
+  Pince | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[181/215] 65 - /fr/clotures-details/65/2/0/poteau-rond-en-acier
+  Poteau rond en acier | options=2 | option1=3 | couleurs blocks=9
+  -> 10 variantes
+[182/215] 66 - /fr/clotures-details/66/2/0/poteau--sur-semelle
+  Poteau  sur semelle | options=2 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[183/215] 67 - /fr/clotures-details/67/2/0/poteau-manchon
+  Poteau manchon | options=3 | option1=1 | couleurs blocks=1
+  -> 2 variantes
+[184/215] 68 - /fr/clotures-details/68/2/0/barriere-modele-classique-regulier-rail-1--ornementale
+  Barrière modèle classique régulier Rail 1''- ornementale | options=2 | option1=3 | couleurs blocks=5
+  -> 6 variantes
+[185/215] 69 - /fr/clotures-details/69/2/0/barriere-modele-contemporain-regulier-rail-1--ornementale
+  Barrière modèle contemporain régulier Rail 1''- ornementale | options=2 | option1=3 | couleurs blocks=5
+  -> 6 variantes
+[186/215] 7 - /fr/clotures-details/7/2/0/bride-a-angle-double
+  Bride à angle double | options=1 | option1=5 | couleurs blocks=4
+  -> 5 variantes
+[187/215] 70 - /fr/clotures-details/70/2/0/cadre-de-porte-en-acier-hybride
+  Cadre de porte en acier-hybride | options=2 | option1=3 | couleurs blocks=5
+  -> 6 variantes
+[188/215] 71 - /fr/clotures-details/71/1/0/poteau-en-t-standard-galvanise
+  Poteau en t standard galvanisé | options=2 | option1=1 | couleurs blocks=5
+  -> 6 variantes
+[189/215] 73 - /fr/clotures-details/73/2/0/rallonge-pour-barriere-frost
+  Rallonge pour barrière frost | options=3 | option1=1 | couleurs blocks=1
+  -> 2 variantes
+[190/215] 74 - /fr/clotures-details/74/1/0/galet-pour-barriere-porte-a-faux
+  Galet pour barrière (porte-à-faux) | options=2 | option1=2 | couleurs blocks=3
+  -> 4 variantes
+[191/215] 75 - /fr/clotures-details/75/1/0/fermeture-a-ressort-residentiel
+   | options=1 | option1=0 | couleurs blocks=1
+[192/215] 75 - /fr/clotures-details/75/2/0/fermeture-a-ressort-residentiel
+  Fermeture à ressort résidentiel | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[193/215] 76 - /fr/clotures-details/76/1/0/fermeture-a-ressort-industriel
+  Fermeture à ressort industriel | options=0 | option1=0 | couleurs blocks=0
+[194/215] 77 - /fr/clotures-details/77/2/0/section-classique--ornementale-en-acier-rail-1
+  Section classique  ornementale en acier rail 1'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[195/215] 78 - /fr/clotures-details/78/2/0/section-contemporain-ornementale-en-acier-rail-1
+  Section contemporain ornementale en acier rail 1'' | options=2 | option1=3 | couleurs blocks=2
+  -> 3 variantes
+[196/215] 79 - /fr/clotures-details/79/1/0/support-de-rail-aluminium
+  Support de rail aluminium | options=2 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[197/215] 8 - /fr/clotures-details/8/2/0/bride-a-angle-de-fin-de-ligne
+  Bride à angle de fin de ligne | options=1 | option1=5 | couleurs blocks=4
+  -> 5 variantes
+[198/215] 80 - /fr/clotures-details/80/1/0/bavolet-45
+  Bavolet 45° | options=1 | option1=8 | couleurs blocks=5
+  -> 8 variantes
+[199/215] 81 - /fr/clotures-details/81/1/0/tendeur
+  Tendeur | options=2 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[200/215] 82 - /fr/clotures-details/82/1/0/tuyaux-galvanise
+  Tuyaux galvanisé | options=3 | option1=13 | couleurs blocks=56
+  -> 57 variantes
+[201/215] 82 - /fr/clotures-details/82/1/0/tuyaux-galvanises-commerciaux
+  Tuyaux galvanisé | options=3 | option1=13 | couleurs blocks=56
+  -> 57 variantes
+[202/215] 83 - /fr/clotures-details/83/2/0/traverse-superieure
+  Traverse supérieure | options=3 | option1=2 | couleurs blocks=1
+  -> 2 variantes
+[203/215] 84 - /fr/clotures-details/84/1/0/chariot-pour-rail-aluminium
+  Chariot pour rail aluminium | options=0 | option1=0 | couleurs blocks=0
+[204/215] 85 - /fr/clotures-details/85/1/0/support-en-u
+  Support en ''u'' | options=2 | option1=4 | couleurs blocks=3
+  -> 4 variantes
+[205/215] 86 - /fr/clotures-details/86/1/0/verrou-vertical
+  Verrou vertical | options=3 | option1=1 | couleurs blocks=4
+  -> 3 variantes
+[206/215] 86 - /fr/clotures-details/86/2/0/verrou-vertical
+  Verrou vertical | options=3 | option1=1 | couleurs blocks=4
+  -> 2 variantes
+[207/215] 87 - /fr/clotures-details/87/2/0/vis-12-14-x-3-4
+  Vis 12-14 X 3/4 | options=2 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[208/215] 88 - /fr/clotures-details/88/1/0/pince-fil
+   | options=0 | option1=0 | couleurs blocks=0
+[209/215] 89 - /fr/clotures-details/89/1/0/poteau-en-t
+  Poteau en t | options=3 | option1=1 | couleurs blocks=4
+  -> 5 variantes
+[210/215] 9 - /fr/clotures-details/9/2/0/cadre-barriere-1-morceau
+  Cadre barrière 1 morceau | options=2 | option1=3 | couleurs blocks=9
+  -> 10 variantes
+[211/215] 90 - /fr/clotures-details/90/1/0/grillage-de-ferme
+  Grillage de ferme | options=3 | option1=2 | couleurs blocks=6
+  -> 7 variantes
+[212/215] 92 - /fr/clotures-details/92/1/0/bavolet-90
+  Bavolet 90° | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[213/215] 93 - /fr/clotures-details/93/1/0/barriere-commerciale-a-battant
+  Barrière commerciale à battant | options=2 | option1=6 | couleurs blocks=101
+  -> 102 variantes
+[214/215] 95 - /fr/clotures-details/95/1/0/pince-malco
+  Pince MALCO | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+[215/215] 98 - /fr/clotures-details/98/1/0/corde-nylon
+  Corde Nylon | options=1 | option1=1 | couleurs blocks=0
+  -> 1 variantes
+
+TERMINE: 1091 lignes -> C:\Users\math6\Documents\GitHub\clotureimpress-site\base de donner pour sousmission\produits_cd_variantes.csv

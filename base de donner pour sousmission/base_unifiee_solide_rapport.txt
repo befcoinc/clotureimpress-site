@@ -1,0 +1,16 @@
+BASE UNIFIEE SOLIDE
+Date: 2026-05-14 10:21:49
+Total lignes: 1486
+Source CLOTURES_DIRECTES: 1009
+Source SML: 477
+
+Qualite
+- product_name manquant: 9
+- sku manquant: 0
+- price manquant: 12
+- main_image manquante: 85
+
+Fichiers generes
+- base_unifiee_solide.csv
+- base_unifiee_solide.json
+- base_unifiee_solide_rapport.txt

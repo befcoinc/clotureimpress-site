@@ -1,0 +1,1537 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planificateur de cloture</title>
+  <style>
+    :root {
+      --bg: #edf4f2;
+      --panel: #ffffff;
+      --panel-2: #f7fbfa;
+      --ink: #17313b;
+      --muted: #60707a;
+      --line: #d5e2df;
+      --brand: #0a6f63;
+      --brand-2: #0d8b84;
+      --accent: #f4b400;
+      --good: #1a7f4b;
+      --warn: #8a5b00;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 0%, #d9efe9 0, transparent 32%),
+        radial-gradient(circle at 92% 12%, #e8f2d9 0, transparent 28%),
+        linear-gradient(180deg, #eef6f5 0%, #edf4f2 100%);
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+    }
+
+    .app {
+      width: min(1480px, 95vw);
+      margin: 18px auto 28px;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 14px;
+    }
+
+    .hero {
+      background: linear-gradient(120deg, var(--brand), var(--brand-2));
+      color: #fff;
+      border-radius: 18px;
+      padding: 20px 22px;
+      box-shadow: 0 10px 28px rgba(10, 111, 99, 0.22);
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.45rem, 2.2vw, 2.2rem);
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 72ch;
+      line-height: 1.45;
+      opacity: 0.96;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 8px 22px rgba(23, 49, 59, 0.05);
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .sidebar {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+    }
+
+    .toolbar {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-2);
+    }
+
+    .toolbar input,
+    .toolbar select,
+    .toolbar button {
+      height: 42px;
+      width: 100%;
+      border-radius: 11px;
+      border: 1px solid var(--line);
+      font-size: 0.95rem;
+    }
+
+    .toolbar input,
+    .toolbar select {
+      padding: 0 12px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .toolbar button {
+      cursor: pointer;
+      background: var(--accent);
+      border: none;
+      font-weight: 700;
+      color: #2d2502;
+    }
+
+    .toolbar .row {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: 1fr 110px;
+    }
+
+    .toolbar .secondary {
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .check-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .check-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 0.9rem;
+      color: var(--ink);
+    }
+
+    .check-row input {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+    }
+
+    .segment-editor {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .segment-row {
+      display: grid;
+      grid-template-columns: 70px 1fr 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .segment-row span {
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .segment-row button {
+      height: 34px;
+      border-radius: 9px;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      cursor: pointer;
+      padding: 0 10px;
+      font-size: 0.82rem;
+    }
+
+    .add-segment-btn {
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .plan-svg {
+      width: 100%;
+      height: 210px;
+      display: block;
+      background: #f9fcfb;
+    }
+
+    .supplier-variant-grid {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .supplier-variant-grid .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .supplier-variant-grid .field label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .stats {
+      padding: 0 12px 12px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .main {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+    }
+
+    .main-top {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff, #f7fbfa);
+    }
+
+    .product-hero {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .image-box {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      min-height: 210px;
+      display: grid;
+      place-items: center;
+    }
+
+    .image-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .image-placeholder {
+      color: var(--muted);
+      font-size: 0.92rem;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: start;
+      flex-wrap: wrap;
+    }
+
+    .title-row h2 {
+      margin: 0;
+      font-size: clamp(1.1rem, 1.8vw, 1.75rem);
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.4;
+      max-width: 80ch;
+    }
+
+    .price-box {
+      min-width: 220px;
+      padding: 12px 14px;
+      background: #0d2f2b;
+      color: #fff;
+      border-radius: 14px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+    }
+
+    .price-label {
+      font-size: 0.78rem;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .price-value {
+      margin-top: 4px;
+      font-size: clamp(1.5rem, 2.6vw, 2.2rem);
+      font-weight: 800;
+    }
+
+    .price-note {
+      margin-top: 4px;
+      font-size: 0.85rem;
+      opacity: 0.86;
+      line-height: 1.35;
+    }
+
+    .details {
+      padding: 14px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .tester,
+    .variant-table {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      min-height: 0;
+    }
+
+    .tester {
+      padding: 14px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .option-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .field select,
+    .field input {
+      height: 42px;
+      border-radius: 11px;
+      border: 1px solid var(--line);
+      padding: 0 12px;
+      font-size: 0.95rem;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .result-box {
+      background: linear-gradient(180deg, #f7fffd, #fff);
+      border: 1px solid #cfe7df;
+      border-radius: 14px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .need-list {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 6px;
+      color: var(--ink);
+      font-size: 0.92rem;
+      line-height: 1.35;
+    }
+
+    .need-list li strong {
+      color: var(--brand);
+    }
+
+    .result-main {
+      font-weight: 800;
+      font-size: 1.05rem;
+    }
+
+    .result-meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .result-bad {
+      color: var(--warn);
+      font-weight: 700;
+    }
+
+    .small-help {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.35;
+    }
+
+    .variant-table {
+      overflow: auto;
+    }
+
+    .variant-table table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    .variant-table th,
+    .variant-table td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .variant-table th {
+      position: sticky;
+      top: 0;
+      background: #f6faf9;
+      z-index: 1;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    .variant-table tr.active {
+      background: #f0fbf7;
+    }
+
+    .empty {
+      padding: 20px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    @media (max-width: 1100px) {
+      .layout,
+      .details,
+      .product-hero {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app { width: min(100vw - 16px, 100%); margin: 8px auto 16px; }
+      .main-top,
+      .details,
+      .tester,
+      .toolbar { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="hero">
+      <h1>Planificateur d'assemblage de cloture</h1>
+      <p>Choisis un type de cloture, la longueur totale, le nombre de portes et les accessoires. Le systeme calcule automatiquement les quantites estimees selon des regles d'installation et associe les produits de la base.</p>
+    </section>
+
+    <div class="layout">
+      <aside class="panel sidebar">
+        <div class="toolbar">
+          <select id="fenceType" aria-label="Type de cloture">
+            <option value="verre-spigot">Cloture en verre sur spigot (10 mm)</option>
+            <option value="verre-braquette">Cloture en verre sur braquette / baquette (6 mm)</option>
+            <option value="maille-chain">Cloture maillee (commerciale/residentielle)</option>
+            <option value="ornementale">Cloture ornementale en acier</option>
+            <option value="composite">Cloture composite/aluminium</option>
+          </select>
+          <div class="row">
+            <input id="lengthInput" type="number" min="1" step="0.1" value="12" aria-label="Longueur totale" title="Longueur totale" />
+            <input id="gateCountInput" type="number" min="0" step="1" value="1" aria-label="Nombre de portes" title="Nombre de portes" />
+          </div>
+          <div class="row">
+            <input id="gateWidthInput" type="number" min="0.9" step="0.1" value="1.2" aria-label="Largeur de porte" title="Largeur de porte" />
+            <input id="cornerCountInput" type="number" min="0" step="1" value="0" aria-label="Nombre de coins" title="Nombre de coins" />
+          </div>
+          <div class="row">
+            <select id="supplierHeightOption" aria-label="Option hauteur fournisseur">
+              <option value="">Hauteur fournisseur (auto)</option>
+            </select>
+            <select id="supplierLengthOption" aria-label="Option longueur fournisseur">
+              <option value="">Longueur/largeur fournisseur (auto)</option>
+            </select>
+          </div>
+          <div id="supplierVariantGrid" class="supplier-variant-grid"></div>
+          <select id="sourceFilter">
+            <option value="all">Toutes les sources</option>
+            <option value="CLOTURES_DIRECTES">Clotures Directes</option>
+            <option value="SML">SML</option>
+          </select>
+
+          <div class="check-grid">
+            <label class="check-row"><input id="includeLocks" type="checkbox" checked /> Inclure serrure/loquet de portes</label>
+            <label class="check-row"><input id="includeCaps" type="checkbox" checked /> Inclure caps/cache plaques</label>
+            <label class="check-row"><input id="includeTools" type="checkbox" /> Inclure outils d'installation</label>
+          </div>
+
+          <div class="check-grid">
+            <label class="check-row"><input id="planMode" type="checkbox" /> Utiliser plan par segments (2D)</label>
+          </div>
+          <div class="segment-editor" id="segmentEditor" hidden></div>
+          <button id="addSegmentBtn" type="button" class="add-segment-btn" hidden>Ajouter un segment</button>
+
+          <button id="resetBtn" type="button">Reinitialiser</button>
+          <button id="copyProductBtn" type="button" class="secondary">Copier le BOM</button>
+          <div class="small-help">Entree longueur (m). En mode segments 2D, la longueur et les coins sont calcules automatiquement.</div>
+        </div>
+        <div class="stats" id="stats"></div>
+      </aside>
+
+      <main class="panel main">
+        <div class="main-top">
+          <div class="product-hero">
+            <div class="image-box" id="productImageBox"></div>
+            <div>
+              <div class="title-row">
+                <div>
+                  <h2 id="productName">Plan d'assemblage</h2>
+                  <div class="subtitle" id="productSubtitle">Selectionne un type de cloture et les dimensions a gauche pour generer automatiquement les quantites.</div>
+                </div>
+                <div class="price-box">
+                  <div class="price-label">Budget estime</div>
+                  <div class="price-value" id="priceValue">--</div>
+                  <div class="price-note" id="priceNote">Le calcul se met a jour automatiquement</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="details">
+          <section class="tester">
+            <div class="result-box" id="resultBox">
+              <div class="result-main" id="resultMain">Renseigne les dimensions pour calculer les quantites.</div>
+              <div class="result-meta" id="resultMeta">Le calcul applique des modules de pose et arrondit au superieur.</div>
+            </div>
+
+            <div>
+              <h3 class="section-title">Quantites calculees</h3>
+              <div class="result-box">
+                <ul class="need-list" id="assemblyList"></ul>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="section-title">Guides d'installation utilises</h3>
+              <div class="result-box">
+                <ul class="need-list" id="guideList"></ul>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="section-title">Hypotheses de calcul</h3>
+              <div class="result-box">
+                <div class="result-meta" id="productInfo"></div>
+              </div>
+            </div>
+          </section>
+
+          <aside class="variant-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Composant</th>
+                  <th>Produit associe</th>
+                  <th>Qte</th>
+                  <th>Prix unit.</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="bomBody"></tbody>
+            </table>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="base_unifiee_solide_data.js"></script>
+  <script>
+    const products = Array.isArray(window.BASE_UNIFIEE_SOLIDE_DATA) ? window.BASE_UNIFIEE_SOLIDE_DATA : [];
+
+    const els = {
+      fenceType: document.getElementById('fenceType'),
+      lengthInput: document.getElementById('lengthInput'),
+      gateCountInput: document.getElementById('gateCountInput'),
+      gateWidthInput: document.getElementById('gateWidthInput'),
+      cornerCountInput: document.getElementById('cornerCountInput'),
+      supplierHeightOption: document.getElementById('supplierHeightOption'),
+      supplierLengthOption: document.getElementById('supplierLengthOption'),
+      supplierVariantGrid: document.getElementById('supplierVariantGrid'),
+      sourceFilter: document.getElementById('sourceFilter'),
+      includeLocks: document.getElementById('includeLocks'),
+      includeCaps: document.getElementById('includeCaps'),
+      includeTools: document.getElementById('includeTools'),
+      planMode: document.getElementById('planMode'),
+      segmentEditor: document.getElementById('segmentEditor'),
+      addSegmentBtn: document.getElementById('addSegmentBtn'),
+      resetBtn: document.getElementById('resetBtn'),
+      copyProductBtn: document.getElementById('copyProductBtn'),
+      stats: document.getElementById('stats'),
+      productName: document.getElementById('productName'),
+      productSubtitle: document.getElementById('productSubtitle'),
+      priceValue: document.getElementById('priceValue'),
+      priceNote: document.getElementById('priceNote'),
+      productImageBox: document.getElementById('productImageBox'),
+      resultMain: document.getElementById('resultMain'),
+      resultMeta: document.getElementById('resultMeta'),
+      assemblyList: document.getElementById('assemblyList'),
+      guideList: document.getElementById('guideList'),
+      productInfo: document.getElementById('productInfo'),
+      bomBody: document.getElementById('bomBody')
+    };
+
+    const state = {
+      segments: [
+        { length: 6, turn: 'none' },
+        { length: 6, turn: 'none' }
+      ],
+      supplierSelection: {
+        height: '',
+        span: '',
+        variantOptions: {}
+      }
+    };
+
+    const fenceConfigs = {
+      'verre-spigot': {
+        title: 'Cloture en verre sur spigot',
+        moduleM: 1.2,
+        pitch: 'Module ~1.2 m entre panneaux',
+        dimensionKeywords: ['barriere verre 10 mm', 'spigot'],
+        guideRefs: [
+          { label: 'BARRIERE VERRE 10 MM - CLOTURE EN VERRE SUR SPIGOT', url: 'https://www.cloturesdirectes.ca/fr/clotures-details/133/2/0/barriEre-verre-10-mm---clOture--en-verre-sur-spigot' },
+          { label: 'Spigot en acier inoxydable satin 316', url: 'https://www.cloturesdirectes.ca/fr/clotures-details/130/2/0/spigot-en-acier-inoxydable-satin-316' },
+          { label: 'Pentures acier inoxydable 316', url: 'https://www.cloturesdirectes.ca/fr/clotures-details/131/2/0/pentures-en-acier-inoxydable-316' }
+        ],
+        components: [
+          { label: 'Panneau de verre 10 mm', qty: (c) => c.panels, keywords: ['verre', '10 mm', 'spigot'] },
+          { label: 'Spigot inox 316', qty: (c) => c.panels * 2, keywords: ['spigot', 'acier inoxydable', '316'] },
+          { label: 'Pentures porte', qty: (c) => c.gates * 2, keywords: ['pentures', 'acier inoxydable', '316'], optional: 'locks' },
+          { label: 'Loquet/serrure de porte', qty: (c) => c.gates, keywords: ['loquet', 'acier inoxydable', '316'], optional: 'locks' },
+          { label: 'Cache plaque acier noir', qty: (c) => c.posts, keywords: ['cache plaque', 'acier noir'], optional: 'caps' }
+        ]
+      },
+      'verre-braquette': {
+        title: 'Cloture en verre sur braquette/baquette',
+        moduleM: 1.2,
+        pitch: 'Module ~1.2 m avec poteaux/cadres',
+        dimensionKeywords: ['barriere verre 6 mm', 'braquette'],
+        guideRefs: [
+          { label: 'BARRIERE VERRE 6 MM CADRE 2 X 2 - CLOTURE DE VERRE SUR BAQUETTE', url: 'https://www.cloturesdirectes.ca/fr/clotures-details/136/2/0/barriEre-verre-6-mm-cadre-2-x-2---clOture-de-verre-sur-baquette' },
+          { label: 'VERRE 6 MM - CLOTURE DE VERRE SUR BRAQUETTE', url: 'https://www.cloturesdirectes.ca/fr/clotures-details/135/2/0/verre-6mm---clOture-de-verre-sur-braquette' }
+        ],
+        components: [
+          { label: 'Panneau de verre 6 mm', qty: (c) => c.panels, keywords: ['verre', '6mm', 'braquette'] },
+          { label: 'Poteau carree sur semelle', qty: (c) => c.posts, keywords: ['poteau', 'carre', 'semelle'] },
+          { label: 'Cache plaque acier noir', qty: (c) => c.posts, keywords: ['cache plaque', 'acier noir'], optional: 'caps' },
+          { label: 'Cap pyramide aluminium', qty: (c) => c.posts, keywords: ['cap pyramide', 'aluminium'], optional: 'caps' },
+          { label: 'Barriere/verre porte', qty: (c) => c.gates, keywords: ['barriere verre', '6 mm', 'cadre'] },
+          { label: 'Serrure de porte', qty: (c) => c.gates, keywords: ['serrure', 'clee'], optional: 'locks' }
+        ]
+      },
+      'maille-chain': {
+        title: 'Cloture maillee',
+        moduleM: 2.44,
+        pitch: 'Module ~2.44 m (8 pi) entre poteaux',
+        dimensionKeywords: ['broches galvanise', 'carreau'],
+        guideRefs: [
+          { label: 'Outils d installation', url: 'https://www.cloturesdirectes.ca/fr/clotures-produits/8/0/outils-installation-clotures' }
+        ],
+        components: [
+          { label: 'Rouleau / section de maille', qty: (c) => c.panels, keywords: ['broches', 'galvanise', 'carreau'] },
+          { label: 'Poteau rond en acier', qty: (c) => c.posts, keywords: ['poteau rond en acier'] },
+          { label: 'Barre de tension', qty: (c) => c.panels * 2, keywords: ['barre de tension'] },
+          { label: 'Bride de tension', qty: (c) => c.panels * 2, keywords: ['bride de tension'] },
+          { label: 'Loquet residentiel', qty: (c) => c.gates, keywords: ['loquet residentiel'], optional: 'locks' },
+          { label: 'Charniere residentielle', qty: (c) => c.gates * 2, keywords: ['charniere residentielle'], optional: 'locks' }
+        ]
+      },
+      'ornementale': {
+        title: 'Cloture ornementale en acier',
+        moduleM: 1.83,
+        pitch: 'Module ~1.83 m (6 pi) par section',
+        dimensionKeywords: ['section', 'ornementale', 'acier'],
+        guideRefs: [
+          { label: 'Sections ornementales en acier', url: 'https://www.cloturesdirectes.ca/fr/clotures-produits/0/2/produits-cloture-residentielle' }
+        ],
+        components: [
+          { label: 'Section ornementale', qty: (c) => c.panels, keywords: ['section', 'ornementale', 'acier'] },
+          { label: 'Poteau carree acier', qty: (c) => c.posts, keywords: ['poteau', 'carre', 'acier'] },
+          { label: 'Barriere ornementale', qty: (c) => c.gates, keywords: ['barriere', 'ornementale'] },
+          { label: 'Loquet residentiel ORNO', qty: (c) => c.gates, keywords: ['loquet residentiel orno'], optional: 'locks' },
+          { label: 'Charnon ajustable', qty: (c) => c.gates * 2, keywords: ['charnon ajustable'], optional: 'locks' }
+        ]
+      },
+      'composite': {
+        title: 'Cloture composite/aluminium',
+        moduleM: 1.8,
+        pitch: 'Module ~1.8 m par traversee',
+        dimensionKeywords: ['planche', 'composite'],
+        guideRefs: [
+          { label: 'Produits composite/aluminium', url: 'https://www.cloturesdirectes.ca/fr/clotures-produits/0/2/produits-cloture-residentielle' }
+        ],
+        components: [
+          { label: 'Planche composite', qty: (c) => c.panels * c.planksPerPanel, keywords: ['planche', 'composite'] },
+          { label: 'Traverse aluminium', qty: (c) => c.panels * 2, keywords: ['traverse', 'aluminium'] },
+          { label: 'Poteau aluminium', qty: (c) => c.posts, keywords: ['poteau', 'aluminium'] },
+          { label: 'Capuchon de poteau', qty: (c) => c.posts, keywords: ['capuchon', 'poteau'], optional: 'caps' },
+          { label: 'Barriere compatible', qty: (c) => c.gates, keywords: ['barriere', 'acier', 'composite'] }
+        ]
+      }
+    };
+
+    function normalize(value) {
+      return String(value || '').trim();
+    }
+
+    function foldText(value) {
+      return normalize(value)
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function searchKey(value) {
+      return foldText(value).replace(/[^a-z0-9]+/g, ' ');
+    }
+
+    function escapeHtml(value) {
+      return normalize(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function fmtPrice(value) {
+      if (value === null || value === undefined || value === '' || Number.isNaN(value)) return 'A valider';
+      const n = typeof value === 'number' ? value : parseFloat(String(value).replace(',', '.'));
+      if (Number.isNaN(n)) return 'A valider';
+      return new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 2 }).format(n);
+    }
+
+    function readNumber(el, fallback, min = 0) {
+      const value = parseFloat(String(el.value || '').replace(',', '.'));
+      if (Number.isNaN(value)) return fallback;
+      return Math.max(min, value);
+    }
+
+    function drawPlanPoints(segments) {
+      const points = [{ x: 0, y: 0 }];
+      let direction = 0;
+      let x = 0;
+      let y = 0;
+      for (const segment of segments) {
+        const length = Math.max(0.2, Number(segment.length) || 0);
+        x += Math.cos(direction) * length;
+        y += Math.sin(direction) * length;
+        points.push({ x, y });
+        if (segment.turn === 'left') direction += Math.PI / 2;
+        if (segment.turn === 'right') direction -= Math.PI / 2;
+      }
+      return points;
+    }
+
+    function renderSegmentEditor() {
+      const active = els.planMode.checked;
+      els.segmentEditor.hidden = !active;
+      els.addSegmentBtn.hidden = !active;
+      els.lengthInput.disabled = active;
+      els.cornerCountInput.disabled = active;
+
+      if (!active) return;
+
+      if (!state.segments.length) {
+        state.segments.push({ length: 6, turn: 'none' });
+      }
+
+      els.segmentEditor.innerHTML = state.segments.map((segment, index) => {
+        const canDelete = state.segments.length > 1;
+        return `
+          <div class="segment-row" data-index="${index}">
+            <span>Seg ${index + 1}</span>
+            <input type="number" min="0.2" step="0.1" value="${segment.length}" data-action="length" aria-label="Longueur segment ${index + 1}" />
+            <select data-action="turn" aria-label="Direction apres segment ${index + 1}">
+              <option value="none" ${segment.turn === 'none' ? 'selected' : ''}>Tout droit</option>
+              <option value="left" ${segment.turn === 'left' ? 'selected' : ''}>Coin gauche 90°</option>
+              <option value="right" ${segment.turn === 'right' ? 'selected' : ''}>Coin droit 90°</option>
+            </select>
+            <button type="button" data-action="delete" ${canDelete ? '' : 'disabled'}>Retirer</button>
+          </div>
+        `;
+      }).join('');
+
+      els.segmentEditor.querySelectorAll('.segment-row').forEach((row) => {
+        const index = Number(row.getAttribute('data-index'));
+        row.querySelector('[data-action="length"]').addEventListener('input', (event) => {
+          state.segments[index].length = readNumber(event.target, state.segments[index].length, 0.2);
+          renderPlan();
+        });
+        row.querySelector('[data-action="turn"]').addEventListener('change', (event) => {
+          state.segments[index].turn = event.target.value;
+          renderPlan();
+        });
+        row.querySelector('[data-action="delete"]').addEventListener('click', () => {
+          if (state.segments.length <= 1) return;
+          state.segments.splice(index, 1);
+          renderSegmentEditor();
+          renderPlan();
+        });
+      });
+    }
+
+    function includeBySource(product) {
+      const source = els.sourceFilter.value;
+      return source === 'all' || product.source === source;
+    }
+
+    function parseFractionalInches(raw) {
+      const value = normalize(raw).replace(',', '.');
+      const mixed = value.match(/(\d+)\s+(\d+)\/(\d+)/);
+      if (mixed) {
+        const whole = Number(mixed[1]);
+        const num = Number(mixed[2]);
+        const den = Number(mixed[3]) || 1;
+        return whole + (num / den);
+      }
+      const frac = value.match(/(\d+)\/(\d+)/);
+      if (frac) {
+        const num = Number(frac[1]);
+        const den = Number(frac[2]) || 1;
+        return num / den;
+      }
+      const num = value.match(/\d+(?:\.\d+)?/);
+      return num ? Number(num[0]) : null;
+    }
+
+    function parseLengthToMeters(raw) {
+      const value = normalize(raw).toLowerCase();
+      if (!value) return null;
+
+      if (value.includes('mm')) {
+        const mm = parseFractionalInches(value);
+        return mm ? mm / 1000 : null;
+      }
+      if (value.includes('cm')) {
+        const cm = parseFractionalInches(value);
+        return cm ? cm / 100 : null;
+      }
+      if (/\bm\b/.test(value)) {
+        const m = parseFractionalInches(value);
+        return m || null;
+      }
+      if (value.includes('"') || value.includes("''") || value.includes('po') || value.includes('in')) {
+        const inches = parseFractionalInches(value);
+        return inches ? inches * 0.0254 : null;
+      }
+
+      const plain = parseFractionalInches(value);
+      if (!plain) return null;
+      if (plain > 20) return plain * 0.0254;
+      return plain;
+    }
+
+    function variantPairs(variant) {
+      return [
+        [variant.option1_name, variant.option1_value],
+        [variant.option2_name, variant.option2_value],
+        [variant.option3_name, variant.option3_value],
+        [variant.option4_name, variant.option4_value]
+      ];
+    }
+
+    function extractDimensionOptions(product) {
+      const heightMap = new Map();
+      const spanMap = new Map();
+      if (!product || !Array.isArray(product.variants)) {
+        return { heights: [], spans: [] };
+      }
+
+      for (const variant of product.variants) {
+        for (const [nameRaw, valueRaw] of variantPairs(variant)) {
+          const name = normalize(nameRaw).toLowerCase();
+          const value = normalize(valueRaw);
+          if (!name || !value) continue;
+          const meters = parseLengthToMeters(value);
+          if (!meters) continue;
+
+          if (name.includes('hauteur') || name.includes('height')) {
+            if (!heightMap.has(value)) heightMap.set(value, meters);
+          }
+          if (name.includes('largeur') || name.includes('longueur') || name.includes('width') || name.includes('length')) {
+            if (!spanMap.has(value)) spanMap.set(value, meters);
+          }
+        }
+      }
+
+      const heights = [...heightMap.entries()].sort((a, b) => a[1] - b[1]).map(([label, meters]) => ({ label, meters }));
+      const spans = [...spanMap.entries()].sort((a, b) => a[1] - b[1]).map(([label, meters]) => ({ label, meters }));
+      return { heights, spans };
+    }
+
+    function extractVariantOptionGroups(product) {
+      const groups = new Map();
+      if (!product || !Array.isArray(product.variants)) return [];
+
+      for (const variant of product.variants) {
+        for (const [nameRaw, valueRaw] of variantPairs(variant)) {
+          const name = normalize(nameRaw);
+          const value = normalize(valueRaw);
+          if (!name || !value) continue;
+          if (!groups.has(name)) groups.set(name, new Set());
+          groups.get(name).add(value);
+        }
+      }
+
+      return [...groups.entries()]
+        .map(([name, set]) => ({ name, values: [...set].sort((a, b) => a.localeCompare(b, 'fr')) }))
+        .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+    }
+
+    function renderSupplierVariantOptionGrid(optionGroups) {
+      if (!optionGroups.length) {
+        els.supplierVariantGrid.innerHTML = '<div class="small-help">Aucune option fournisseur supplementaire pour ce type.</div>';
+        return;
+      }
+
+      els.supplierVariantGrid.innerHTML = optionGroups.map((group) => {
+        const selected = state.supplierSelection.variantOptions[group.name] || '';
+        const options = ['<option value="">Auto</option>']
+          .concat(group.values.map((value) => `<option value="${escapeHtml(value)}" ${selected === value ? 'selected' : ''}>${escapeHtml(value)}</option>`));
+        return `
+          <div class="field">
+            <label>${escapeHtml(group.name)}</label>
+            <select data-variant-option-name="${escapeHtml(group.name)}">${options.join('')}</select>
+          </div>
+        `;
+      }).join('');
+
+      els.supplierVariantGrid.querySelectorAll('select[data-variant-option-name]').forEach((selectEl) => {
+        const name = selectEl.getAttribute('data-variant-option-name') || '';
+        selectEl.addEventListener('change', () => {
+          state.supplierSelection.variantOptions[name] = selectEl.value;
+          if (!selectEl.value) delete state.supplierSelection.variantOptions[name];
+
+          const nameKey = foldText(name);
+          if (nameKey.includes('hauteur')) {
+            state.supplierSelection.height = selectEl.value;
+            els.supplierHeightOption.value = selectEl.value || '';
+          }
+          if (nameKey.includes('largeur') || nameKey.includes('longueur')) {
+            state.supplierSelection.span = selectEl.value;
+            els.supplierLengthOption.value = selectEl.value || '';
+          }
+          renderPlan();
+        });
+      });
+    }
+
+    function renderSupplierOptionControls(config) {
+      const product = findBestProduct(config.dimensionKeywords || config.components[0].keywords);
+      const dims = extractDimensionOptions(product);
+      const optionGroups = extractVariantOptionGroups(product);
+
+      const prevHeight = state.supplierSelection.height || '';
+      const prevSpan = state.supplierSelection.span || '';
+
+      const heightOptions = ['<option value="">Hauteur fournisseur (auto)</option>']
+        .concat(dims.heights.map((item) => `<option value="${escapeHtml(item.label)}">${escapeHtml(item.label)}</option>`));
+      const spanOptions = ['<option value="">Longueur/largeur fournisseur (auto)</option>']
+        .concat(dims.spans.map((item) => `<option value="${escapeHtml(item.label)}">${escapeHtml(item.label)}</option>`));
+
+      els.supplierHeightOption.innerHTML = heightOptions.join('');
+      els.supplierLengthOption.innerHTML = spanOptions.join('');
+
+      const validHeight = dims.heights.some((item) => item.label === prevHeight) ? prevHeight : '';
+      const validSpan = dims.spans.some((item) => item.label === prevSpan) ? prevSpan : '';
+      els.supplierHeightOption.value = validHeight;
+      els.supplierLengthOption.value = validSpan;
+
+      state.supplierSelection.height = validHeight;
+      state.supplierSelection.span = validSpan;
+
+      const validOptionMap = {};
+      for (const group of optionGroups) {
+        const prev = state.supplierSelection.variantOptions[group.name] || '';
+        if (prev && group.values.includes(prev)) validOptionMap[group.name] = prev;
+      }
+      if (validHeight) {
+        const hGroup = optionGroups.find((group) => foldText(group.name).includes('hauteur'));
+        if (hGroup) validOptionMap[hGroup.name] = validHeight;
+      }
+      if (validSpan) {
+        const sGroup = optionGroups.find((group) => foldText(group.name).includes('largeur') || foldText(group.name).includes('longueur'));
+        if (sGroup) validOptionMap[sGroup.name] = validSpan;
+      }
+      state.supplierSelection.variantOptions = validOptionMap;
+
+      renderSupplierVariantOptionGrid(optionGroups);
+
+      const heightMeters = dims.heights.find((item) => item.label === validHeight)?.meters || null;
+      const spanMeters = dims.spans.find((item) => item.label === validSpan)?.meters || null;
+
+      return {
+        product,
+        selectedVariantOptions: { ...state.supplierSelection.variantOptions },
+        selectedHeightLabel: validHeight,
+        selectedSpanLabel: validSpan,
+        selectedHeightMeters: heightMeters,
+        selectedSpanMeters: spanMeters
+      };
+    }
+
+    function productPrice(product) {
+      if (!product || !Array.isArray(product.variants) || !product.variants.length) return null;
+      const prices = product.variants
+        .map((v) => (typeof v.price === 'number' ? v.price : parseFloat(String(v.price).replace(',', '.'))))
+        .filter((v) => !Number.isNaN(v));
+      if (!prices.length) return null;
+      return Math.min(...prices);
+    }
+
+    function findBestProduct(keywords) {
+      const keys = keywords.map(searchKey).filter(Boolean);
+      if (!keys.length) return null;
+      let best = null;
+      let bestScore = -1;
+
+      for (const product of products) {
+        if (!includeBySource(product)) continue;
+        const nameHay = searchKey(product.product_name);
+        const noteHay = searchKey(product.note);
+        const descHay = searchKey(product.description);
+        let score = 0;
+        for (const key of keys) {
+          if (!key) continue;
+          if (nameHay === key) score += 90;
+          else if (nameHay.includes(key)) score += 55;
+
+          if (noteHay.includes(key)) score += 14;
+          if (descHay.includes(key)) score += 10;
+
+          const parts = key.split(' ').filter(Boolean);
+          for (const part of parts) {
+            if (part.length <= 2) continue;
+            if (nameHay.includes(part)) score += 7;
+            if (noteHay.includes(part)) score += 2;
+            if (descHay.includes(part)) score += 1;
+          }
+        }
+        if (score > bestScore) {
+          best = product;
+          bestScore = score;
+        }
+      }
+      return bestScore > 0 ? best : null;
+    }
+
+    function variantPrice(variant) {
+      if (!variant) return null;
+      const value = typeof variant.price === 'number' ? variant.price : parseFloat(String(variant.price).replace(',', '.'));
+      return Number.isNaN(value) ? null : value;
+    }
+
+    function variantOptionSummary(variant) {
+      if (!variant) return '';
+      const parts = [];
+      for (const [nameRaw, valueRaw] of variantPairs(variant)) {
+        const name = normalize(nameRaw);
+        const value = normalize(valueRaw);
+        if (name && value) parts.push(`${name}: ${value}`);
+      }
+      if (variant.sku) parts.push(`SKU: ${variant.sku}`);
+      return parts.join(' | ');
+    }
+
+    function isDimensionSensitiveComponent(component) {
+      return /panneau|section|rouleau|barriere|planche|traverse/i.test(foldText(component.label));
+    }
+
+    function variantDimensionScore(variant, ctx, component) {
+      if (!variant || !isDimensionSensitiveComponent(component)) return 0;
+      const rawValues = variantPairs(variant).flatMap(([n, v]) => [normalize(n), normalize(v)]).filter(Boolean);
+      const values = rawValues.map(foldText);
+      let score = 0;
+
+      const selectedOptions = ctx.selectedVariantOptions || {};
+      for (const [name, selectedValue] of Object.entries(selectedOptions)) {
+        const targetName = foldText(name);
+        const targetValue = foldText(selectedValue);
+        const matchingPairs = variantPairs(variant)
+          .map(([n, v]) => [foldText(n), foldText(v)])
+          .filter(([n]) => n === targetName);
+        if (!matchingPairs.length) continue;
+        if (matchingPairs.some(([, v]) => v === targetValue)) score += 95;
+        else score -= 120;
+      }
+
+      if (ctx.selectedHeightLabel) {
+        const target = foldText(ctx.selectedHeightLabel);
+        if (values.includes(target)) {
+          score += 80;
+        } else if (ctx.selectedHeightMeters) {
+          const distances = rawValues
+            .map((value) => parseLengthToMeters(value))
+            .filter((v) => v !== null)
+            .map((m) => Math.abs(m - ctx.selectedHeightMeters));
+          if (distances.length) {
+            const best = Math.min(...distances);
+            if (best <= 0.03) score += 60;
+            else if (best <= 0.08) score += 30;
+          }
+        }
+      }
+
+      if (ctx.selectedSpanLabel) {
+        const target = foldText(ctx.selectedSpanLabel);
+        if (values.includes(target)) {
+          score += 70;
+        } else if (ctx.selectedSpanMeters) {
+          const distances = rawValues
+            .map((value) => parseLengthToMeters(value))
+            .filter((v) => v !== null)
+            .map((m) => Math.abs(m - ctx.selectedSpanMeters));
+          if (distances.length) {
+            const best = Math.min(...distances);
+            if (best <= 0.03) score += 55;
+            else if (best <= 0.1) score += 25;
+          }
+        }
+      }
+
+      return score;
+    }
+
+    function pickVariantForComponent(product, component, ctx) {
+      const variants = product && Array.isArray(product.variants) ? product.variants : [];
+      if (!variants.length) return { variant: null, unitPrice: productPrice(product), matchedByOptions: false };
+
+      const sensitive = isDimensionSensitiveComponent(component);
+      const hasSupplierOptions = Boolean(ctx.selectedHeightLabel || ctx.selectedSpanLabel);
+      if (!sensitive) {
+        const cheapest = [...variants].sort((a, b) => {
+          const pa = variantPrice(a);
+          const pb = variantPrice(b);
+          const va = pa === null ? Number.POSITIVE_INFINITY : pa;
+          const vb = pb === null ? Number.POSITIVE_INFINITY : pb;
+          return va - vb;
+        })[0];
+        return { variant: cheapest, unitPrice: variantPrice(cheapest), matchedByOptions: true };
+      }
+
+      let bestVariant = variants[0];
+      let bestScore = -1;
+      let bestPrice = Number.POSITIVE_INFINITY;
+
+      for (const variant of variants) {
+        const optionScore = variantDimensionScore(variant, ctx, component);
+        const variantHay = searchKey([variant.sku, variant.couleurs, ...variantPairs(variant).flat()].join(' '));
+        const keywordScore = component.keywords
+          .map(searchKey)
+          .filter(Boolean)
+          .reduce((sum, key) => sum + (variantHay.includes(key) ? 4 : 0), 0);
+        const score = optionScore + keywordScore;
+        const price = variantPrice(variant);
+        const tiePrice = price === null ? Number.POSITIVE_INFINITY : price;
+
+        if (score > bestScore || (score === bestScore && tiePrice < bestPrice)) {
+          bestVariant = variant;
+          bestScore = score;
+          bestPrice = tiePrice;
+        }
+      }
+
+      return {
+        variant: bestVariant,
+        unitPrice: variantPrice(bestVariant),
+        matchedByOptions: hasSupplierOptions ? bestScore >= 40 : true
+      };
+    }
+
+    function plannerContext(config, supplierDims) {
+      const planMode = els.planMode.checked;
+      const segmentLengths = planMode ? state.segments.map((segment) => Math.max(0.2, Number(segment.length) || 0)) : [];
+      const lengthFromPlan = segmentLengths.reduce((sum, value) => sum + value, 0);
+      const cornersFromPlan = planMode ? state.segments.filter((segment) => segment.turn === 'left' || segment.turn === 'right').length : 0;
+
+      if (planMode) {
+        els.lengthInput.value = lengthFromPlan.toFixed(1);
+        els.cornerCountInput.value = String(cornersFromPlan);
+      }
+
+      const lengthM = planMode ? Math.max(1, lengthFromPlan) : readNumber(els.lengthInput, 12, 1);
+      const gateCount = Math.floor(readNumber(els.gateCountInput, 1, 0));
+      const gateWidthM = readNumber(els.gateWidthInput, 1.2, 0.9);
+      const corners = planMode ? cornersFromPlan : Math.floor(readNumber(els.cornerCountInput, 0, 0));
+      const selectedSpanM = supplierDims.selectedSpanMeters || config.moduleM;
+      const selectedHeightM = supplierDims.selectedHeightMeters;
+      const heightBand = selectedHeightM
+        ? (selectedHeightM >= 1.7 ? 'haut' : selectedHeightM >= 1.4 ? 'moyen' : 'bas')
+        : 'moyen';
+
+      const gateSpace = gateCount * gateWidthM;
+      const usefulLength = Math.max(0.5, lengthM - gateSpace);
+      const panels = Math.max(1, Math.ceil(usefulLength / selectedSpanM));
+      const sections = panels + gateCount;
+      const posts = Math.max(2, sections + 1 + corners);
+      const planksPerPanel = heightBand === 'haut' ? 12 : heightBand === 'moyen' ? 10 : 8;
+
+      return {
+        lengthM,
+        gateCount,
+        gates: gateCount,
+        gateWidthM,
+        corners,
+        heightBand,
+        selectedVariantOptions: supplierDims.selectedVariantOptions || {},
+        selectedHeightLabel: supplierDims.selectedHeightLabel,
+        selectedSpanLabel: supplierDims.selectedSpanLabel,
+        selectedHeightMeters: supplierDims.selectedHeightMeters,
+        selectedSpanMeters: supplierDims.selectedSpanMeters,
+        moduleM: selectedSpanM,
+        panels,
+        posts,
+        sections,
+        planksPerPanel,
+        planMode,
+        segmentCount: segmentLengths.length,
+        locks: els.includeLocks.checked,
+        caps: els.includeCaps.checked,
+        tools: els.includeTools.checked
+      };
+    }
+
+    function buildBom(config, ctx) {
+      const rows = [];
+      for (const component of config.components) {
+        if (component.optional === 'locks' && !ctx.locks) continue;
+        if (component.optional === 'caps' && !ctx.caps) continue;
+        const qty = Math.max(0, Math.ceil(component.qty(ctx)));
+        if (!qty) continue;
+        const product = findBestProduct(component.keywords);
+        const picked = pickVariantForComponent(product, component, ctx);
+        const unitPrice = picked.unitPrice;
+        rows.push({
+          component: component.label,
+          product,
+          variant: picked.variant,
+          optionMatched: picked.matchedByOptions,
+          qty,
+          unitPrice,
+          total: typeof unitPrice === 'number' ? unitPrice * qty : null
+        });
+      }
+
+      if (ctx.tools) {
+        const toolKeywords = [
+          ['pince', 'fil'],
+          ['tariere', 'main'],
+          ['outil', 'lier']
+        ];
+        for (const keys of toolKeywords) {
+          const product = findBestProduct(keys);
+          rows.push({
+            component: `Outil installation: ${keys.join(' ')}`,
+            product,
+            variant: (product && product.variants && product.variants[0]) || null,
+            optionMatched: true,
+            qty: 1,
+            unitPrice: productPrice(product),
+            total: typeof productPrice(product) === 'number' ? productPrice(product) : null
+          });
+        }
+      }
+
+      return rows;
+    }
+
+    function renderImage(product, ctx) {
+      if (ctx.planMode) {
+        const points = drawPlanPoints(state.segments);
+        const xs = points.map((point) => point.x);
+        const ys = points.map((point) => point.y);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+        const width = Math.max(1, maxX - minX);
+        const height = Math.max(1, maxY - minY);
+        const pad = 18;
+        const scale = Math.min((230 - pad * 2) / width, (210 - pad * 2) / height);
+
+        const polylinePoints = points
+          .map((point) => `${((point.x - minX) * scale + pad).toFixed(1)},${((point.y - minY) * scale + pad).toFixed(1)}`)
+          .join(' ');
+
+        els.productImageBox.innerHTML = `
+          <svg class="plan-svg" viewBox="0 0 230 210" role="img" aria-label="Apercu plan 2D">
+            <rect x="0" y="0" width="230" height="210" fill="#f9fcfb"></rect>
+            <polyline points="${polylinePoints}" fill="none" stroke="#0a6f63" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+            <circle cx="${polylinePoints.split(' ')[0].split(',')[0]}" cy="${polylinePoints.split(' ')[0].split(',')[1]}" r="4" fill="#f4b400"></circle>
+            <text x="10" y="198" font-size="11" fill="#60707a">Plan 2D (${state.segments.length} segments)</text>
+          </svg>
+        `;
+        return;
+      }
+
+      const image = product && (product.image || product.main_image);
+      if (!image) {
+        els.productImageBox.innerHTML = '<div class="image-placeholder">Image representative non disponible.</div>';
+        return;
+      }
+      els.productImageBox.innerHTML = `<img src="${image}" alt="Apercu" />`;
+    }
+
+    function renderGuideList(config) {
+      els.guideList.innerHTML = config.guideRefs
+        .map((g) => `<li><a href="${escapeHtml(g.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(g.label)}</a></li>`)
+        .join('');
+    }
+
+    function renderBomTable(rows) {
+      els.bomBody.innerHTML = rows.length
+        ? rows.map((row) => {
+          const name = row.product ? escapeHtml(row.product.product_name || '(sans nom)') : '<span class="result-bad">Aucun produit correspondant</span>';
+          const source = row.product ? ` • ${escapeHtml(row.product.source || '')}` : '';
+          const variantSummary = row.variant ? escapeHtml(variantOptionSummary(row.variant)) : '';
+          const variantHint = variantSummary
+            ? `<div class="small-help">${variantSummary}${row.optionMatched ? '' : ' • option guide non trouvee exactement'}</div>`
+            : '';
+          const link = row.product && row.product.product_url
+            ? `<a href="${escapeHtml(row.product.product_url)}" target="_blank" rel="noopener noreferrer">${name}${source}</a>${variantHint}`
+            : `${name}${source}${variantHint}`;
+          return `
+            <tr>
+              <td>${escapeHtml(row.component)}</td>
+              <td>${link}</td>
+              <td>${row.qty}</td>
+              <td>${fmtPrice(row.unitPrice)}</td>
+              <td>${fmtPrice(row.total)}</td>
+            </tr>
+          `;
+        }).join('')
+        : '<tr><td colspan="5">Aucun element calcule.</td></tr>';
+    }
+
+    function renderSummary(config, ctx, rows) {
+      const budget = rows.reduce((sum, row) => sum + (typeof row.total === 'number' ? row.total : 0), 0);
+      const unknown = rows.filter((row) => typeof row.total !== 'number').length;
+      const foundProducts = rows.filter((row) => !!row.product).length;
+
+      els.productName.textContent = config.title;
+      const optionMeta = [
+        ctx.selectedHeightLabel ? `Hauteur: ${ctx.selectedHeightLabel}` : '',
+        ctx.selectedSpanLabel ? `Longueur/largeur: ${ctx.selectedSpanLabel}` : ''
+      ].filter(Boolean).join(' • ');
+      els.productSubtitle.textContent = `${config.pitch} • Longueur ${ctx.lengthM.toFixed(1)} m • ${ctx.gateCount} porte(s)${optionMeta ? ` • ${optionMeta}` : ''}`;
+      els.priceValue.textContent = fmtPrice(budget);
+      els.priceNote.textContent = unknown
+        ? `${foundProducts}/${rows.length} produits associes • ${unknown} prix a valider`
+        : `${foundProducts}/${rows.length} produits associes • estimation complete`;
+
+      els.stats.textContent = `Travées: ${ctx.panels} • Poteaux/supports: ${ctx.posts} • ${ctx.planMode ? `Mode plan (${ctx.segmentCount} segments)` : 'Mode longueur globale'} • Source: ${els.sourceFilter.value === 'all' ? 'mixte' : els.sourceFilter.value}`;
+      els.resultMain.textContent = `${ctx.panels} travée(s), ${ctx.gateCount} porte(s), ${ctx.posts} ancrage(s) estimes`;
+      els.resultMeta.textContent = 'Calcul automatique base sur les modules standards et les fiches d installation associees.';
+
+      const list = [
+        `Longueur totale: ${ctx.lengthM.toFixed(1)} m`,
+        `Longueur reservee pour portes: ${(ctx.gateCount * ctx.gateWidthM).toFixed(1)} m`,
+        `Travées de cloture: ${ctx.panels}`,
+        `Poteaux/supports estimes: ${ctx.posts}`
+      ];
+      if (config.title.includes('composite')) {
+        list.push(`Planches par travée (${ctx.heightBand}): ${ctx.planksPerPanel}`);
+      }
+      if (ctx.selectedHeightLabel) list.push(`Option hauteur fournisseur: ${ctx.selectedHeightLabel}`);
+      if (ctx.selectedSpanLabel) list.push(`Option longueur/largeur fournisseur: ${ctx.selectedSpanLabel}`);
+      if (ctx.locks) list.push('Serrure/loquet inclus dans le calcul');
+      if (ctx.caps) list.push('Caps/cache plaques inclus');
+      if (ctx.tools) list.push('Outils d installation inclus');
+      if (ctx.planMode) list.push(`Plan par segments actif: ${ctx.segmentCount} segment(s)`);
+      els.assemblyList.innerHTML = list.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+
+      const assumptions = [
+        'Les quantites sont arrondies au superieur pour eviter les manques sur chantier.',
+        'Le calcul applique la tramee moyenne du type de cloture choisi.',
+        'Les prix sont pris sur la premiere variante disponible du produit associe.',
+        'Valider les entraxes exacts, ancrages et normes locales avant commande finale.'
+      ];
+      els.productInfo.innerHTML = assumptions.map((line) => `• ${escapeHtml(line)}`).join('<br>');
+    }
+
+    function renderPlan() {
+      const config = fenceConfigs[els.fenceType.value] || fenceConfigs['verre-spigot'];
+      const supplierDims = renderSupplierOptionControls(config);
+      const ctx = plannerContext(config, supplierDims);
+      const rows = buildBom(config, ctx);
+      const leadProduct = rows.find((row) => row.product)?.product || supplierDims.product || null;
+
+      renderImage(leadProduct, ctx);
+      renderSummary(config, ctx, rows);
+      renderGuideList(config);
+      renderBomTable(rows);
+    }
+
+    function bomAsText() {
+      const lines = [];
+      const tableRows = [...els.bomBody.querySelectorAll('tr')];
+      lines.push(`${els.productName.textContent}`);
+      lines.push(`${els.productSubtitle.textContent}`);
+      lines.push(`Budget estime: ${els.priceValue.textContent}`);
+      lines.push('');
+      lines.push('BOM:');
+      for (const tr of tableRows) {
+        const tds = [...tr.querySelectorAll('td')].map((td) => td.textContent.trim());
+        if (tds.length >= 5) {
+          lines.push(`- ${tds[0]} | ${tds[1]} | qte ${tds[2]} | unit ${tds[3]} | total ${tds[4]}`);
+        }
+      }
+      return lines.join('\n');
+    }
+
+    const autoInputs = [
+      els.fenceType,
+      els.lengthInput,
+      els.gateCountInput,
+      els.gateWidthInput,
+      els.cornerCountInput,
+      els.sourceFilter,
+      els.includeLocks,
+      els.includeCaps,
+      els.includeTools,
+      els.planMode
+    ];
+    autoInputs.forEach((el) => {
+      el.addEventListener('input', renderPlan);
+      el.addEventListener('change', renderPlan);
+    });
+
+    els.resetBtn.addEventListener('click', () => {
+      els.fenceType.value = 'verre-spigot';
+      els.lengthInput.value = '12';
+      els.gateCountInput.value = '1';
+      els.gateWidthInput.value = '1.2';
+      els.cornerCountInput.value = '0';
+      state.supplierSelection.height = '';
+      state.supplierSelection.span = '';
+      state.supplierSelection.variantOptions = {};
+      els.sourceFilter.value = 'all';
+      els.includeLocks.checked = true;
+      els.includeCaps.checked = true;
+      els.includeTools.checked = false;
+      els.planMode.checked = false;
+      state.segments = [
+        { length: 6, turn: 'none' },
+        { length: 6, turn: 'none' }
+      ];
+      renderSegmentEditor();
+      renderPlan();
+    });
+
+    els.planMode.addEventListener('change', () => {
+      renderSegmentEditor();
+      renderPlan();
+    });
+
+    els.addSegmentBtn.addEventListener('click', () => {
+      state.segments.push({ length: 4, turn: 'none' });
+      renderSegmentEditor();
+      renderPlan();
+    });
+
+    els.supplierHeightOption.addEventListener('change', () => {
+      state.supplierSelection.height = els.supplierHeightOption.value;
+      const entries = Object.entries(state.supplierSelection.variantOptions);
+      state.supplierSelection.variantOptions = Object.fromEntries(entries.filter(([name]) => !foldText(name).includes('hauteur')));
+      renderPlan();
+    });
+
+    els.supplierLengthOption.addEventListener('change', () => {
+      state.supplierSelection.span = els.supplierLengthOption.value;
+      const entries = Object.entries(state.supplierSelection.variantOptions);
+      state.supplierSelection.variantOptions = Object.fromEntries(entries.filter(([name]) => {
+        const key = foldText(name);
+        return !key.includes('largeur') && !key.includes('longueur');
+      }));
+      renderPlan();
+    });
+
+    els.copyProductBtn.addEventListener('click', async () => {
+      const text = bomAsText();
+      try {
+        await navigator.clipboard.writeText(text);
+        els.copyProductBtn.textContent = 'BOM copie';
+        setTimeout(() => { els.copyProductBtn.textContent = 'Copier le BOM'; }, 1200);
+      } catch {
+        alert(text);
+      }
+    });
+
+    renderSegmentEditor();
+    renderPlan();
+  </script>
+</body>
+</html>

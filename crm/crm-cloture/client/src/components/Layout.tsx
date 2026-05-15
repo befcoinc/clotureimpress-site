@@ -34,7 +34,8 @@ interface NavItem {
     | "nav.representativeApplications"
     | "nav.sectorsPlanning"
     | "nav.usersRoles"
-    | "nav.architecture";
+    | "nav.architecture"
+    | "nav.dormantAlerts";
   icon: any;
   perm?: Permission;
   roles?: Array<"admin" | "sales_director" | "install_director" | "sales_rep" | "installer">;
@@ -48,6 +49,7 @@ const NAV_SECTIONS: { labelKey: "nav.operations" | "nav.pilotage" | "nav.system"
       { href: "/", labelKey: "nav.dashboard", icon: LayoutDashboard, perm: "view_admin" },
       { href: "/leads", labelKey: "nav.leads", icon: Inbox, perm: "view_sales" },
       { href: "/dispatch-vendeur", labelKey: "nav.salesDispatch", icon: UserCheck, perm: "assign_sales" },
+      { href: "/alertes-dormantes", labelKey: "nav.dormantAlerts", icon: AlertTriangle, perm: "view_sales" },
       { href: "/soumissions", labelKey: "nav.quotes", icon: FileText, perm: "view_sales" },
       { href: "/calendrier", labelKey: "nav.sharedCalendar", icon: CalendarDays, badge: "team" },
       { href: "/dispatch-installation", labelKey: "nav.installDispatch", icon: Wrench, perm: "view_install" },
@@ -85,6 +87,12 @@ export function Layout({ children }: { children: ReactNode }) {
   const pendingAppsCount = useMemo(() => installerApps.filter((a) => a.status === "en_attente").length, [installerApps]);
   const { data: representativeApps = [] } = useQuery<RepresentativeApplication[]>({ queryKey: ["/api/representative-applications"], enabled: can("view_admin") });
   const pendingRepAppsCount = useMemo(() => representativeApps.filter((a) => a.status === "en_attente").length, [representativeApps]);
+  const { data: dormantAlerts } = useQuery<{ totals?: { total?: number } }>({
+    queryKey: ["/api/alerts/dormant"],
+    enabled: can("view_sales") || can("assign_sales"),
+    refetchInterval: 60_000,
+  });
+  const dormantCount = dormantAlerts?.totals?.total ?? 0;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -160,8 +168,11 @@ export function Layout({ children }: { children: ReactNode }) {
                               <span className="ml-auto rounded-full bg-sidebar-primary px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-primary-foreground">
                                 {unassignedLeadsCount}
                               </span>
-                            ) : item.href === "/applications-installateurs" && pendingAppsCount > 0 ? (
-                              <span className="ml-auto rounded-full bg-sidebar-primary px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-primary-foreground">
+                            ) : item.href === "/alertes-dormantes" && dormantCount > 0 ? (
+                              <span className="ml-auto rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-semibold text-destructive-foreground">
+                                {dormantCount}
+                              </span>
+                            ) : item.href === "/applications-installateurs" && pendingAppsCount > 0 ? (                              <span className="ml-auto rounded-full bg-sidebar-primary px-1.5 py-0.5 text-[10px] font-semibold text-sidebar-primary-foreground">
                                 {pendingAppsCount}
                               </span>
                             ) : item.href === "/applications-representants" && pendingRepAppsCount > 0 ? (

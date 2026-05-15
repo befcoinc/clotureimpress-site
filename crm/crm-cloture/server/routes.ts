@@ -2489,6 +2489,126 @@ export async function registerRoutes(
     res.json(await storage.createActivity(parsed.data));
   });
 
+  // -------- Dormant alerts --------
+  // Lead non contacté depuis 48h (rule 1) ou soumission envoyée sans réponse depuis 5 jours (rule 2)
+  app.get("/api/alerts/dormant", async (req, res) => {
+    const actor = req.user as any;
+    const [allLeads, allQuotes, allActivities, allUsers] = await Promise.all([
+      storage.getLeads(),
+      storage.getQuotes(),
+      storage.getActivities(),
+      storage.getUsers(),
+    ]);
+
+    const userById = new Map<number, any>(allUsers.map((u: any) => [u.id, u]));
+
+    // Activities arrive ordered by desc(id) → first occurrence per lead/quote = newest.
+    const lastActByLead = new Map<number, string>();
+    const lastActByQuote = new Map<number, string>();
+    for (const a of allActivities) {
+      if (a.leadId && !lastActByLead.has(a.leadId)) lastActByLead.set(a.leadId, a.createdAt);
+      if (a.quoteId && !lastActByQuote.has(a.quoteId)) lastActByQuote.set(a.quoteId, a.createdAt);
+    }
+
+    const now = Date.now();
+    const HOUR = 3_600_000;
+    const DAY = 86_400_000;
+    const LEAD_HOURS = 48;
+    const QUOTE_DAYS = 5;
+
+    const parseTs = (s: string | null | undefined): number | null => {
+      if (!s || s === "CURRENT_TIMESTAMP") return null;
+      const t = Date.parse(s);
+      return isNaN(t) ? null : t;
+    };
+    const repName = (id: number | null | undefined) => (id ? userById.get(id)?.name || null : null);
+
+    // Rule 1: leads still open + déjà assignés mais aucun contact en 48h
+    const openLeadStatuses = new Set(["nouveau", "a_qualifier", "assigne", "en_cours", "contacte"]);
+    const dormantLeads: any[] = [];
+    for (const l of allLeads) {
+      if (!openLeadStatuses.has(l.status)) continue;
+      if (!l.assignedSalesId) continue; // déjà visible côté Dispatch vendeur
+      if (actor?.role === "sales_rep" && l.assignedSalesId !== actor.id) continue;
+      const last = parseTs(lastActByLead.get(l.id)) ?? parseTs(l.createdAt);
+      const reference = last ?? now;
+      const hoursSince = (now - reference) / HOUR;
+      if (hoursSince >= LEAD_HOURS) {
+        dormantLeads.push({
+          id: l.id,
+          clientName: l.clientName,
+          city: l.city,
+          province: l.province,
+          phone: l.phone,
+          email: l.email,
+          status: l.status,
+          assignedSalesId: l.assignedSalesId,
+          assignedSalesName: repName(l.assignedSalesId),
+          lastActivityAt: last ? new Date(last).toISOString() : null,
+          createdAt: l.createdAt,
+          hoursSince: Math.round(hoursSince),
+        });
+      }
+    }
+    dormantLeads.sort((a, b) => b.hoursSince - a.hoursSince);
+
+    // Rule 2: soumissions envoyées sans signature depuis 5 jours
+    const dormantQuotes: any[] = [];
+    for (const q of allQuotes) {
+      const isSent = q.salesStatus === "envoyee" || q.status === "envoyee";
+      if (!isSent) continue;
+      if (q.signedDate) continue;
+      if (actor?.role === "sales_rep" && q.assignedSalesId !== actor.id) continue;
+
+      // sentAt: prefer timeline entry tagged "envoy*", else last activity, else createdAt
+      let sentAt: number | null = null;
+      if (q.timeline) {
+        try {
+          const arr = JSON.parse(q.timeline);
+          if (Array.isArray(arr)) {
+            const sentEntry = arr.find((e: any) => {
+              const step = typeof e?.step === "string" ? e.step : "";
+              const note = typeof e?.note === "string" ? e.note : "";
+              return /envoy|sent/i.test(step) || /envoy|sent/i.test(note);
+            });
+            if (sentEntry?.date) sentAt = parseTs(sentEntry.date);
+          }
+        } catch {}
+      }
+      if (!sentAt) sentAt = parseTs(lastActByQuote.get(q.id)) ?? parseTs(q.createdAt);
+      if (!sentAt) continue;
+      const daysSince = (now - sentAt) / DAY;
+      if (daysSince >= QUOTE_DAYS) {
+        dormantQuotes.push({
+          id: q.id,
+          leadId: q.leadId,
+          clientName: q.clientName,
+          city: q.city,
+          province: q.province,
+          salesStatus: q.salesStatus,
+          assignedSalesId: q.assignedSalesId,
+          assignedSalesName: repName(q.assignedSalesId),
+          sentAt: new Date(sentAt).toISOString(),
+          daysSince: Math.round(daysSince),
+          estimatedPrice: q.estimatedPrice,
+        });
+      }
+    }
+    dormantQuotes.sort((a, b) => b.daysSince - a.daysSince);
+
+    res.json({
+      thresholds: { leadHours: LEAD_HOURS, quoteDays: QUOTE_DAYS },
+      leads: dormantLeads,
+      quotes: dormantQuotes,
+      totals: {
+        leads: dormantLeads.length,
+        quotes: dormantQuotes.length,
+        total: dormantLeads.length + dormantQuotes.length,
+      },
+      generatedAt: new Date().toISOString(),
+    });
+  });
+
   // -------- Aggregated stats --------
   app.get("/api/stats", async (req, res) => {
     const cached = getCachedApiResponse<any>(req);

@@ -31,6 +31,7 @@ import { LanguageProvider, useLanguage } from "@/lib/language-context";
 import { InstallerOnboarding } from "@/pages/InstallerOnboarding";
 import { ApplicationsInstallateurs } from "@/pages/ApplicationsInstallateurs";
 import { ApplicationsRepresentants } from "@/pages/ApplicationsRepresentants";
+import { AlertesDormantes } from "@/pages/AlertesDormantes";
 
 function AppRouter({ canViewAdmin, isInstaller }: { canViewAdmin: boolean; isInstaller: boolean }) {
 
@@ -44,6 +45,7 @@ function AppRouter({ canViewAdmin, isInstaller }: { canViewAdmin: boolean; isIns
         <Route path="/intimura-receive" component={IntimuraReceive} />
         <Route path="/intimura" component={Intimura} />
         <Route path="/dispatch-vendeur" component={DispatchVendeur} />
+        <Route path="/alertes-dormantes" component={AlertesDormantes} />
         <Route path="/soumissions" component={Soumissions} />
         <Route path="/soumissions/:id" component={QuoteDetail} />
         <Route path="/calendrier" component={CalendrierPartage} />
