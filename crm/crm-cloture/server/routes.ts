@@ -3782,10 +3782,35 @@ Sois concret, direct, adapté au marché québécois.`;
 
   // ============= ANALYTICS =============
 
-  // -------- Geocoding serveur (cache en mémoire, Nominatim/OSM) --------
+  // -------- Geocoding serveur — Mapbox Geocoding API (précision Canada++) --------
+  const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN || "";
   const geocodeMemCache = new Map<string, [number, number] | null>();
   const geocodeQueue: string[] = [];
   let geocodeQueueRunning = false;
+
+  async function geocodeOneAddress(addr: string): Promise<[number, number] | null> {
+    if (!MAPBOX_TOKEN) return null;
+    try {
+      // Mapbox Geocoding API v5 — contexte Canada, langue française
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(addr)}.json`
+        + `?access_token=${MAPBOX_TOKEN}&country=CA&language=fr&limit=1&types=address,postcode,place,locality,neighborhood`;
+      const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!r.ok) return null;
+      const data = await r.json();
+      const feature = data?.features?.[0];
+      if (!feature) return null;
+      const [lng, lat] = feature.center as [number, number];
+      // Validation : rejeter si dans le fleuve Saint-Laurent (zone berge Québec)
+      if (lat >= 46.770 && lat <= 46.830 && lng >= -71.280 && lng <= -70.900) {
+        // Accepter seulement si le résultat est une adresse précise (address)
+        const placeType: string[] = feature.place_type || [];
+        if (!placeType.includes("address") && !placeType.includes("postcode")) return null;
+      }
+      return [lat, lng];
+    } catch {
+      return null;
+    }
+  }
 
   async function runGeocodeQueue() {
     if (geocodeQueueRunning) return;
@@ -3793,47 +3818,10 @@ Sois concret, direct, adapté au marché québécois.`;
     while (geocodeQueue.length > 0) {
       const addr = geocodeQueue.shift()!;
       if (geocodeMemCache.has(addr)) continue;
-      try {
-        // limit=3 pour pouvoir choisir le meilleur résultat sur terre
-        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=3&countrycodes=ca&q=${encodeURIComponent(addr)}`;
-        const r = await fetch(url, {
-          headers: { "Accept-Language": "fr,en", "User-Agent": "CRM-CloturImpress/1.0" },
-          signal: AbortSignal.timeout(8000),
-        });
-        if (r.ok) {
-          const data: any[] = await r.json();
-          // Rejeter les résultats qui tombent dans l'eau (waterway, water, river, lake, bay…)
-          const WATER_CLASSES = new Set(["waterway", "water"]);
-          const WATER_TYPES = new Set(["water", "river", "lake", "bay", "fjord", "stream",
-                                       "canal", "harbour", "estuary", "reservoir"]);
-          function isOnLand(item: any): boolean {
-            if (!item) return false;
-            const cls = (item.class || "").toLowerCase();
-            const typ = (item.type || "").toLowerCase();
-            if (WATER_CLASSES.has(cls)) return false;
-            if (cls === "natural" && WATER_TYPES.has(typ)) return false;
-            if (WATER_TYPES.has(typ)) return false;
-            // Protection supplémentaire pour le fleuve Saint-Laurent à Québec :
-            // entre lat 46.77–46.83 et lon -71.28 à -70.90 → probable fleuve
-            const lat = parseFloat(item.lat);
-            const lon = parseFloat(item.lon);
-            if (lat >= 46.770 && lat <= 46.830 && lon >= -71.280 && lon <= -70.900) {
-              // Accepter seulement si le type indique clairement une adresse bâtie
-              const SAFE = new Set(["house", "building", "residential", "apartments",
-                                    "place", "suburb", "neighbourhood", "postcode"]);
-              if (!SAFE.has(typ) && !SAFE.has(cls)) return false;
-            }
-            return true;
-          }
-          const best = data.find(isOnLand);
-          geocodeMemCache.set(addr, best ? [parseFloat(best.lat), parseFloat(best.lon)] : null);
-        } else {
-          geocodeMemCache.set(addr, null);
-        }
-      } catch {
-        geocodeMemCache.set(addr, null);
-      }
-      await new Promise(res => setTimeout(res, 1200));
+      const result = await geocodeOneAddress(addr);
+      geocodeMemCache.set(addr, result);
+      // Mapbox free tier: ~600 req/min → 100ms entre requêtes suffit
+      await new Promise(res => setTimeout(res, 120));
     }
     geocodeQueueRunning = false;
   }
@@ -3984,73 +3972,4 @@ Sois concret, direct, adapté au marché québécois.`;
         }
 
         await sendOverdueInstallAlert({
-          directors: directors.map((d: any) => ({ name: d.name, email: d.email })),
-          quote: {
-            id: sq.id,
-            clientName: sq.clientName,
-            city: sq.city,
-            scheduledDate: sq.scheduledDate,
-            installerName,
-            fenceType: sq.fenceType,
-          },
-        });
-
-        await storage.updateQuote(sq.id, { overdueAlertSentAt: new Date().toISOString() } as any);
-        console.log(`[jobs] Overdue alert sent for quote #${sq.id} (${sq.clientName})`);
-      }
-    } catch (err) {
-      console.error("[jobs] checkOverdueInstalls error:", err);
-    }
-  }
-
-  async function checkSatisfactionSms() {
-    try {
-      const allQuotes = await storage.getQuotes();
-      const allLeads = await storage.getLeads();
-      const now = Date.now();
-      const delay = 24 * 60 * 60 * 1000;
-
-      for (const q of allQuotes) {
-        const sq = q as any;
-        if (sq.installStatus !== "terminee") continue;
-        if (sq.satisfactionSmsSentAt) continue;
-        if (!sq.installedDate) continue;
-
-        const installedAt = new Date(sq.installedDate).getTime();
-        if (isNaN(installedAt) || now - installedAt < delay) continue;
-
-        let phone: string | null = null;
-        let clientName = sq.clientName || "Client";
-        if (sq.leadId) {
-          const lead = allLeads.find((l: any) => l.id === sq.leadId);
-          if (lead) {
-            phone = (lead as any).phone ?? null;
-            clientName = (lead as any).clientName || clientName;
-          }
-        }
-
-        if (!phone) {
-          console.log(`[jobs] No phone for quote #${sq.id} — marking skipped`);
-          await storage.updateQuote(sq.id, { satisfactionSmsSentAt: `no-phone-${new Date().toISOString()}` } as any);
-          continue;
-        }
-
-        const result = await sendSatisfactionSms(phone, clientName);
-        const sentAt = result.ok
-          ? new Date().toISOString()
-          : `error-${new Date().toISOString()}`;
-
-        await storage.updateQuote(sq.id, { satisfactionSmsSentAt: sentAt } as any);
-        console.log(`[jobs] Satisfaction SMS quote #${sq.id}: ok=${result.ok}`, result.sid || result.error || "");
-      }
-    } catch (err) {
-      console.error("[jobs] checkSatisfactionSms error:", err);
-    }
-  }
-
-  // Run on startup after 15s then every hour
-  setTimeout(() => { checkOverdueInstalls(); checkSatisfactionSms(); }, 15_000);
-  setInterval(() => { checkOverdueInstalls(); checkSatisfactionSms(); }, 60 * 60 * 1000);
-
-  return httpServer;
-}
+          directors: d
