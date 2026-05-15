@@ -506,6 +506,41 @@ export class DatabaseStorage implements IStorage {
     return deleted.length > 0;
   }
 
+  /**
+   * Merge a duplicate lead INTO the keeper: backfills missing fields on the
+   * keeper from the duplicate, repoints all child quotes/activities to the
+   * keeper, then deletes the duplicate row. Safe and idempotent.
+   */
+  async mergeLeadInto(dupId: number, keepId: number): Promise<boolean> {
+    if (dupId === keepId) return false;
+    const dup = await this.getLead(dupId);
+    const keep = await this.getLead(keepId);
+    if (!dup || !keep) return false;
+    const patch: Partial<InsertLead> = {};
+    if (!keep.intimuraId && dup.intimuraId) patch.intimuraId = dup.intimuraId;
+    if (!keep.email && dup.email) patch.email = dup.email;
+    if (!keep.phone && dup.phone) patch.phone = dup.phone;
+    if (!keep.assignedSalesId && dup.assignedSalesId) patch.assignedSalesId = dup.assignedSalesId;
+    if (!keep.city && dup.city) patch.city = dup.city;
+    if (!keep.province && dup.province) patch.province = dup.province;
+    if (!keep.address && dup.address) patch.address = dup.address;
+    if (!keep.postalCode && dup.postalCode) patch.postalCode = dup.postalCode;
+    if (!keep.estimatedValue && dup.estimatedValue) patch.estimatedValue = dup.estimatedValue;
+    if (!keep.estimatedLength && dup.estimatedLength) patch.estimatedLength = dup.estimatedLength;
+    // Promote a more advanced status if the duplicate was further in the funnel.
+    const order = ["nouveau","a_qualifier","assigne","en_cours","gagne","perdu","test"];
+    if (order.indexOf(String(dup.status)) > order.indexOf(String(keep.status)) && order.indexOf(String(dup.status)) >= 0) {
+      patch.status = dup.status as any;
+    }
+    if (Object.keys(patch).length) {
+      await db.update(leads).set(patch).where(eq(leads.id, keep.id));
+    }
+    await db.update(quotes).set({ leadId: keep.id }).where(eq(quotes.leadId, dup.id));
+    await db.update(activities).set({ leadId: keep.id }).where(eq(activities.leadId, dup.id));
+    await db.delete(leads).where(eq(leads.id, dup.id));
+    return true;
+  }
+
   async getQuotes() { return db.select().from(quotes).orderBy(desc(quotes.id)); }
   async getQuote(id: number) { return (await db.select().from(quotes).where(eq(quotes.id, id)))[0]; }
   async getQuoteByIntimuraId(intimuraId: string) { return (await db.select().from(quotes).where(eq(quotes.intimuraId, intimuraId)))[0]; }

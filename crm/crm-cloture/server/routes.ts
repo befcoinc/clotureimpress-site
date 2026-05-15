@@ -1940,11 +1940,14 @@ export async function registerRoutes(
       });
       if (!all.length) return undefined;
 
+      // Direct (phone/email) matches are STRONG signals — never gate on zone.
+      // Only fuzzy name-only matches require zone agreement to avoid false merges.
+      const directSet = new Set(direct.filter(Boolean).map((l) => l!.id));
       const scored = all
-        .filter((l) => sameZone(l, city, province))
+        .filter((l) => directSet.has(l.id) || sameZone(l, city, province))
         .sort((a, b) => {
-          const sa = (a.assignedSalesId ? 100 : 0) + (a.intimuraId ? 20 : 0) + (a.source !== "intimura" ? 10 : 0);
-          const sb = (b.assignedSalesId ? 100 : 0) + (b.intimuraId ? 20 : 0) + (b.source !== "intimura" ? 10 : 0);
+          const sa = (directSet.has(a.id) ? 1000 : 0) + (a.assignedSalesId ? 100 : 0) + (a.intimuraId ? 20 : 0) + (a.source !== "intimura" ? 10 : 0);
+          const sb = (directSet.has(b.id) ? 1000 : 0) + (b.assignedSalesId ? 100 : 0) + (b.intimuraId ? 20 : 0) + (b.source !== "intimura" ? 10 : 0);
           return sb - sa;
         });
       return scored[0] || all[0];
@@ -1998,7 +2001,7 @@ export async function registerRoutes(
       const lead = await storage.createLead({
         clientName: iq.customer_name || iq.title || "Client Intimura",
         phone: iq.customer_phone || null,
-        email: null,
+        email: iq.customer_email || null,
         address: null,
         city,
         province,
@@ -2063,7 +2066,104 @@ export async function registerRoutes(
       });
     }
 
-    return { fetched: intimuraQuotes.length, createdLeads, createdQuotes, skipped, syncedAt: new Date().toISOString() };
+    // SAFETY NET: even with the per-row dedup above, run a global dedup pass so any
+    // duplicates that slipped in (across syncs, manual edits, schema gaps) are merged.
+    let dedupedAfterImport = 0;
+    try {
+      const d = await dedupAllLeads();
+      dedupedAfterImport = d.mergedCount;
+    } catch (e) {
+      console.error("[intimura import] dedup pass failed", e);
+    }
+    return { fetched: intimuraQuotes.length, createdLeads, createdQuotes, skipped, dedupedAfterImport, syncedAt: new Date().toISOString() };
+  }
+
+  /**
+   * Global dedup pass over ALL leads. Walks rows in id-ascending order; the
+   * earliest lead wins. Strong matches (intimuraId / phone / email) merge
+   * unconditionally. Fuzzy person-key match merges only when both sides are
+   * Intimura-sourced AND the duplicate has no contact info to lose.
+   * Idempotent: re-running on a clean DB does nothing.
+   */
+  async function dedupAllLeads(): Promise<{ mergedCount: number; merged: Array<{ removed: number; into: number; reason: string }>; }> {
+    const allLeads = (await storage.getLeads()).slice().sort((a, b) => a.id - b.id);
+    const norm = (s: string) => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+    const personKey = (s: string) => {
+      const cleaned = norm(s).split(/\bx\b/)[0].trim();
+      const tokens = cleaned.split(" ").filter(Boolean);
+      if (!tokens.length) return "";
+      if (tokens.length === 1) return tokens[0];
+      return `${tokens[0]} ${tokens[tokens.length - 1]}`;
+    };
+    const phoneKey = (s: string) => {
+      const d = String(s || "").replace(/\D+/g, "");
+      const t = d.length === 11 && d.startsWith("1") ? d.slice(1) : d;
+      return t.length === 10 ? t : "";
+    };
+    const emailKey = (s: string) => String(s || "").trim().toLowerCase();
+
+    const keepers = new Map<string, number>(); // composite key -> keeper lead id
+    const canonical = new Map<number, number>(); // lead id -> current canonical id (after merges)
+    const canon = (id: number): number => {
+      let cur = id;
+      const seen = new Set<number>();
+      while (canonical.has(cur) && canonical.get(cur) !== cur && !seen.has(cur)) {
+        seen.add(cur);
+        cur = canonical.get(cur)!;
+      }
+      return cur;
+    };
+    const merged: Array<{ removed: number; into: number; reason: string }> = [];
+
+    for (const l of allLeads) {
+      const intK = l.intimuraId ? `int:${l.intimuraId}` : "";
+      const phK = phoneKey(l.phone || "");
+      const emK = emailKey(l.email || "");
+      const pkK = personKey(l.clientName || "");
+      const isIntSource = (l.source || "") === "intimura";
+
+      const keyChecks: Array<{ type: string; key: string }> = [];
+      if (intK) keyChecks.push({ type: "intimuraId", key: intK });
+      if (phK) keyChecks.push({ type: "phone", key: `ph:${phK}` });
+      if (emK) keyChecks.push({ type: "email", key: `em:${emK}` });
+      // Fuzzy person-key match only for unidentified Intimura rows (no phone, no email)
+      if (isIntSource && !phK && !emK && pkK) {
+        keyChecks.push({ type: "name+intimura", key: `pk:${pkK}` });
+      }
+
+      let target: number | undefined;
+      let reason = "";
+      for (const { type, key } of keyChecks) {
+        const existing = keepers.get(key);
+        if (existing != null && existing !== l.id) {
+          target = canon(existing);
+          reason = type;
+          break;
+        }
+      }
+
+      if (target != null && target !== l.id) {
+        try {
+          const ok = await storage.mergeLeadInto(l.id, target);
+          if (ok) {
+            canonical.set(l.id, target);
+            merged.push({ removed: l.id, into: target, reason });
+            // Re-register every key under the keeper so subsequent rows resolve to it.
+            for (const { key } of keyChecks) keepers.set(key, target);
+          }
+        } catch (e) {
+          console.error("[dedup] merge failed", l.id, "->", target, e);
+        }
+        continue;
+      }
+
+      // No duplicate yet — register all keys for this lead.
+      for (const { key } of keyChecks) {
+        if (!keepers.has(key)) keepers.set(key, l.id);
+      }
+    }
+
+    return { mergedCount: merged.length, merged };
   }
 
   function extractIntimuraQuotes(payload: any): any[] {
@@ -2188,6 +2288,20 @@ export async function registerRoutes(
       res.json(result);
     } catch (err: any) {
       console.error("[intimura/ingest] error", err);
+      res.status(500).json({ error: "SERVER_ERROR", message: err?.message || "Erreur serveur" });
+    }
+  });
+
+  // -------- Admin: manual dedup pass over all leads --------
+  // Safe to call any time; idempotent. Returns how many duplicates were merged.
+  app.post("/api/admin/dedup-leads", requireAuth, async (req, res) => {
+    const actor = req.user as any;
+    if (actor?.role !== "admin") return res.status(403).json({ error: "Acces admin requis" });
+    try {
+      const result = await dedupAllLeads();
+      res.json(result);
+    } catch (err: any) {
+      console.error("[admin/dedup-leads] error", err);
       res.status(500).json({ error: "SERVER_ERROR", message: err?.message || "Erreur serveur" });
     }
   });
@@ -2644,6 +2758,165 @@ export async function registerRoutes(
     };
     setCachedApiResponse(req, stats);
     res.json(stats);
+  });
+
+  // -------- Script d'appel IA --------
+  app.post("/api/quotes/:id/call-script", requireAuth, async (req, res, next) => {
+    try {
+      const id = Number(req.params.id);
+      if (!id) return res.status(400).json({ error: "ID invalide" });
+
+      const [quote, allLeads, allActivities, allUsers] = await Promise.all([
+        storage.getQuote(id),
+        storage.getLeads(),
+        storage.getActivities({ quoteId: id }),
+        storage.getUsers(),
+      ]);
+
+      if (!quote) return res.status(404).json({ error: "Soumission introuvable" });
+
+      const lead = allLeads.find((l: any) => l.id === quote.leadId) || null;
+      const rep = allUsers.find((u: any) => u.id === quote.assignedSalesId) || null;
+
+      // Parse Intimura data if present
+      let intimuraItems: any[] = [];
+      let intimuraMeta: any[] = [];
+      try {
+        if (quote.intimuraData) {
+          const d = JSON.parse(quote.intimuraData as any);
+          intimuraItems = Array.isArray(d?.items) ? d.items : [];
+          intimuraMeta = Array.isArray(d?.metadata) ? d.metadata : [];
+        }
+      } catch {}
+
+      // Build activity summary (last 5)
+      const recentActivities = (allActivities as any[]).slice(0, 5)
+        .map((a: any) => `- ${a.createdAt?.slice(0, 10) || "?"} | ${a.userName || "?"} : ${a.note || a.action}`)
+        .join("\n");
+
+      const itemsDesc = intimuraItems
+        .map((it: any) => `• ${it.description || "Article"} × ${it.qty} @ ${it.unit_price}$`)
+        .join("\n") || "Aucun article détaillé";
+
+      const metaDesc = intimuraMeta
+        .map((m: any) => `${m.label}: ${m.value}`)
+        .join(", ") || "Aucune spécification";
+
+      const prompt = `Tu es un coach de vente senior spécialisé dans les clôtures résidentielles et commerciales au Canada.
+
+Génère un script d'appel personnalisé en français pour ce vendeur de Cloture Impress.
+
+## Contexte du prospect
+- Nom : ${quote.clientName}
+- Ville : ${quote.city || "?"}, ${quote.province || "?"}
+- Type de clôture demandé : ${quote.fenceType || "Non précisé"}
+- Longueur estimée : ${quote.estimatedLength ? quote.estimatedLength + " pi" : "Non précisée"}
+- Prix estimé : ${quote.estimatedPrice ? quote.estimatedPrice + " $" : "Non précisé"}
+- Source du lead : ${lead?.source || "Non précisée"}
+- Message initial du prospect : ${lead?.message || "Aucun"}
+
+## Spécifications (Intimura)
+${metaDesc}
+
+## Articles soumis
+${itemsDesc}
+
+## Statut actuel
+- Étape vente : ${quote.salesStatus}
+- Étape installation : ${quote.installStatus}
+- Notes vente : ${quote.salesNotes || "Aucune"}
+
+## Historique récent
+${recentActivities || "Aucune activité enregistrée"}
+
+## Vendeur assigné
+${rep?.name || "Non assigné"} (${rep?.region || "région inconnue"})
+
+---
+
+Produis un script structuré avec exactement ces sections :
+
+**🎯 OBJECTIF DE L'APPEL**
+[1-2 phrases sur le but précis de cet appel selon l'étape actuelle]
+
+**👋 OUVERTURE (30 secondes)**
+[Script mot-à-mot pour démarrer l'appel naturellement]
+
+**❓ QUESTIONS CLÉS**
+[3-5 questions ciblées basées sur ce qu'on ne sait pas encore du prospect]
+
+**🚧 OBJECTIONS PROBABLES**
+[2-3 objections courantes pour ce type de projet et comment y répondre]
+
+**✅ PROCHAINE ÉTAPE**
+[Exactement quoi demander pour faire avancer le dossier]
+
+**📝 NOTE RAPIDE**
+[1 phrase de contexte unique sur ce prospect à garder en tête]
+
+Sois concret, direct, et adapté au marché québécois. Tutoyage ou vouvoiement selon le ton approprié.`;
+
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+
+      if (!apiKey) {
+        // Fallback sans IA : script template intelligent
+        const stageLabel: Record<string, string> = {
+          nouveau: "premier contact",
+          contacte: "suivi après premier contact",
+          rdv_mesure: "confirmation du rendez-vous mesure",
+          envoyee: "suivi de soumission envoyée",
+          suivi: "relance après suivi",
+          rendez_vous: "préparation du rendez-vous de signature",
+          signee: "confirmation post-signature",
+          perdue: "tentative de récupération",
+        };
+        const stagePurpose = stageLabel[quote.salesStatus] || "suivi";
+        return res.json({
+          script: `**🎯 OBJECTIF DE L'APPEL**\nCet appel a pour but : ${stagePurpose} avec ${quote.clientName}.
+
+**👋 OUVERTURE (30 secondes)**\n"Bonjour ${quote.clientName}, c'est [votre prénom] de Cloture Impress. Je vous appelle concernant votre projet de ${quote.fenceType || "clôture"} à ${quote.city || "votre domicile"}. Avez-vous quelques minutes ?"
+
+**❓ QUESTIONS CLÉS**\n• Avez-vous eu le temps de regarder notre soumission ?\n• Est-ce que le budget correspond à ce que vous aviez en tête ?\n• Y a-t-il des détails à ajuster sur le projet ?\n• Quelle est votre date idéale pour les travaux ?\n• Avez-vous d'autres soumissions en cours ?
+
+**🚧 OBJECTIONS PROBABLES**\n• "C'est trop cher" → Valorisez la qualité, proposez un ajustement de portée\n• "Je dois y penser" → Demandez ce qui bloque, proposez un rendez-vous en personne\n• "J'attends une autre soumission" → Mettez en avant votre garantie et délais
+
+**✅ PROCHAINE ÉTAPE**\n"Est-ce qu'on peut confirmer un rendez-vous pour cette semaine afin de finaliser les détails ?"
+
+**📝 NOTE RAPIDE**\n${quote.fenceType || "Projet clôture"} · ${quote.city || "?"} · ${quote.estimatedPrice ? quote.estimatedPrice + " $" : "prix à confirmer"}
+
+---
+*⚠️ Script généré sans IA (clé ANTHROPIC_API_KEY non configurée). Pour des scripts personnalisés, ajoutez votre clé dans les variables d'environnement Render.*`,
+          source: "template",
+        });
+      }
+
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 1024,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        console.error("Anthropic API error:", err);
+        return res.status(502).json({ error: "Erreur API Anthropic", detail: err });
+      }
+
+      const data = await response.json() as any;
+      const script = data?.content?.[0]?.text || "Impossible de générer le script.";
+
+      res.json({ script, source: "ai" });
+    } catch (err) {
+      next(err);
+    }
   });
 
   return httpServer;

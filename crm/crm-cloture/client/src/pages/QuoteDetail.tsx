@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { ArrowLeft, MapPin, Ruler, DollarSign, Calendar, Phone, Mail, User as UserIcon, Check } from "lucide-react";
+import { ArrowLeft, MapPin, Ruler, DollarSign, Calendar, Phone, Mail, User as UserIcon, Check, Sparkles, Copy, ChevronDown, ChevronUp } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -527,6 +527,10 @@ export function QuoteDetail() {
             </CardContent>
           </Card>
 
+          {(can("edit_sales") || can("edit_install")) && (
+            <CallScriptPanel quoteId={id} isEn={isEn} />
+          )}
+
           <Card>
             <CardHeader className="pb-3"><CardTitle className="text-base">{isEn ? "Activity" : "Activité"}</CardTitle></CardHeader>
             <CardContent className="px-3">
@@ -618,6 +622,157 @@ function EditableInfo({
         </button>
       )}
     </div>
+  );
+}
+
+// ─── Script d'appel ──────────────────────────────────────────────────────────
+function CallScriptPanel({ quoteId, isEn }: { quoteId: number; isEn: boolean }) {
+  const [script, setScript] = useState<string | null>(null);
+  const [source, setSource] = useState<"ai" | "template" | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+
+  const generate = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/quotes/${quoteId}/call-script`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || `Erreur ${res.status}`);
+      }
+      const data = await res.json();
+      setScript(data.script);
+      setSource(data.source);
+      setOpen(true);
+    } catch (e: any) {
+      setError(e.message || "Erreur inconnue");
+      toast({ title: isEn ? "Error generating script" : "Erreur lors de la génération", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    if (!script) return;
+    navigator.clipboard.writeText(script).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  // Format markdown-style bold (**text**) and bullet points
+  const formatScript = (text: string) => {
+    return text.split("\n").map((line, i) => {
+      // Section headers like **🎯 OBJECTIF**
+      if (/^\*\*.*\*\*$/.test(line.trim())) {
+        return (
+          <div key={i} className="mt-4 first:mt-0 text-[13px] font-semibold text-foreground">
+            {line.replace(/\*\*/g, "")}
+          </div>
+        );
+      }
+      // Bullet lines
+      if (/^[•\-]/.test(line.trim())) {
+        return (
+          <div key={i} className="text-[12px] text-muted-foreground pl-3 mt-0.5">
+            {line}
+          </div>
+        );
+      }
+      // Separator
+      if (/^---/.test(line.trim())) {
+        return <hr key={i} className="my-3 border-border" />;
+      }
+      // Small note
+      if (/^\*⚠️/.test(line.trim())) {
+        return <div key={i} className="text-[10px] text-muted-foreground italic mt-2">{line.replace(/\*/g, "")}</div>;
+      }
+      // Normal line
+      if (!line.trim()) return <div key={i} className="h-1" />;
+      return <div key={i} className="text-[12px] mt-0.5">{line}</div>;
+    });
+  };
+
+  return (
+    <Card className="border-primary/30 bg-primary/5">
+      <CardHeader className="pb-2 pt-4 px-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            {isEn ? "AI Call Script" : "Script d'appel IA"}
+          </CardTitle>
+          {script && (
+            <button
+              type="button"
+              onClick={() => setOpen(v => !v)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 space-y-3">
+        {!script && (
+          <p className="text-[12px] text-muted-foreground">
+            {isEn
+              ? "Claude analyzes this prospect's history and generates a personalized call script."
+              : "Claude analyse l'historique de ce prospect et génère un script d'appel personnalisé."}
+          </p>
+        )}
+
+        {error && (
+          <p className="text-[12px] text-destructive">{error}</p>
+        )}
+
+        <Button
+          size="sm"
+          className="w-full gap-2"
+          onClick={generate}
+          disabled={loading}
+          data-testid="button-generate-call-script"
+        >
+          <Sparkles className="h-3.5 w-3.5" />
+          {loading
+            ? (isEn ? "Generating…" : "Génération en cours…")
+            : script
+              ? (isEn ? "Regenerate script" : "Régénérer le script")
+              : (isEn ? "Generate call script" : "Générer le script d'appel")}
+        </Button>
+
+        {script && open && (
+          <div className="space-y-1">
+            <div className="flex items-center justify-between mb-2">
+              {source === "ai" && (
+                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                  {isEn ? "Powered by Claude AI" : "Généré par Claude IA"}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={copyToClipboard}
+                className="ml-auto flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                title={isEn ? "Copy to clipboard" : "Copier"}
+              >
+                <Copy className="h-3 w-3" />
+                {copied ? (isEn ? "Copied!" : "Copié !") : (isEn ? "Copy" : "Copier")}
+              </button>
+            </div>
+            <div className="bg-card rounded-lg border p-3 max-h-[500px] overflow-y-auto">
+              {formatScript(script)}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
