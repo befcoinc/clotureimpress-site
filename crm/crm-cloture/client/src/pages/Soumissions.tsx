@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Crew, Quote, User } from "@shared/schema";
 import { FENCE_TYPES, INSTALL_STATUSES, PROVINCES, SALES_STATUSES } from "@shared/schema";
 import { Pencil, Plus, Trash2 } from "lucide-react";
+import { getWinProbability, getProbabilityBadgeColor } from "@/lib/win-probability";
 
 type QuoteDialogState = { mode: "create" | "edit"; quote?: Quote } | null;
 
@@ -191,6 +192,8 @@ export function Soumissions() {
                 <div className="space-y-2">
                   {items.map(q => {
                     const rep = users.find(u => u.id === q.assignedSalesId);
+                    const probability = getWinProbability(q.salesStatus);
+                    const probColor = getProbabilityBadgeColor(probability);
                     return (
                       <div key={q.id} className="rounded-md bg-card border border-card-border p-2.5 hover-elevate" data-testid={`quote-card-${q.id}`}>
                         <Link href={`/soumissions/${q.id}`}>
@@ -198,7 +201,8 @@ export function Soumissions() {
                             <div className="font-semibold text-[12px] truncate">{q.clientName}</div>
                             <div className="text-[10px] text-muted-foreground truncate">{q.city}, {q.province}</div>
                             <div className="flex items-center justify-between mt-2 gap-1">
-                              <Badge variant="outline" className="text-[9px] truncate max-w-[120px]">{q.fenceType}</Badge>
+                              <Badge variant="outline" className="text-[9px] truncate max-w-[80px]">{q.fenceType}</Badge>
+                              <Badge className={`text-[9px] font-semibold ${probColor}`}>{probability}%</Badge>
                               <span className="text-[11px] font-bold tabular">{q.estimatedPrice ? moneyFmt.format(q.estimatedPrice) : "—"}</span>
                             </div>
                             {rep && <div className="text-[10px] text-muted-foreground mt-1 truncate">👤 {rep.name}</div>}

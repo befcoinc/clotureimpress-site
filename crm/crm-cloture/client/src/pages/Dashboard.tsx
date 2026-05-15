@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Inbox, FileText, CheckCircle2, Calendar, AlertTriangle, DollarSign, Users, MapPin } from "lucide-react";
+import { Inbox, FileText, CheckCircle2, Calendar, AlertTriangle, DollarSign, Users, MapPin, TrendingUp } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { KpiCard } from "@/components/KpiCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/language-context";
 import type { Lead, Quote, User, Activity } from "@shared/schema";
 import { LEAD_STATUSES, SALES_STATUSES } from "@shared/schema";
+import { computeWeightedPipeline } from "@/lib/win-probability";
 
 interface Stats {
   leadsCount: number; newLeads: number; quotesInProgress: number; quotesWon: number;
@@ -27,6 +28,10 @@ export function Dashboard() {
   const isEn = language === "en";
   const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
   const activeLeads = leads.filter(l => l.status !== "test");
+  
+  // Calculate weighted pipeline
+  const inProgressQuotes = quotes.filter(q => !["signee", "perdue"].includes(q.salesStatus));
+  const weightedValue = computeWeightedPipeline(inProgressQuotes);
 
   // Pipeline groups
   const pipelineGroups: Array<{ key: string; label: string; items: Quote[] }> = [
@@ -75,6 +80,9 @@ export function Dashboard() {
           <KpiCard testId="kpi-won" label={isEn ? "Won quotes" : "Soumissions gagnées"} value={stats?.quotesWon ?? "—"} icon={<CheckCircle2 className="h-4 w-4" />} accent="success" href="/soumissions?filter=signee" />
           <KpiCard testId="kpi-installs" label={isEn ? "Scheduled installations" : "Installations planifiées"} value={stats?.installsPlanned ?? "—"} icon={<Calendar className="h-4 w-4" />} href="/calendrier" />
           <KpiCard testId="kpi-late" label={isEn ? "Delays" : "Retards"} value={stats?.installsLate ?? 0} icon={<AlertTriangle className="h-4 w-4" />} accent={stats && stats.installsLate > 0 ? "danger" : "default"} href="/dispatch-installation?filter=retards" />
+          <KpiCard testId="kpi-weighted-value" label={isEn ? "Weighted pipeline" : "Pipeline pondéré"} value={moneyFmt.format(weightedValue)} hint={isEn ? "adjusted by win %" : "ajusté par prob."} icon={<TrendingUp className="h-4 w-4" />} accent="success" href="/tableau-ventes" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <KpiCard testId="kpi-value" label={isEn ? "Estimated value" : "Valeur estimée"} value={stats ? moneyFmt.format(stats.estimatedValue) : "—"} icon={<DollarSign className="h-4 w-4" />} accent="success" href="/tableau-ventes" />
         </div>
 

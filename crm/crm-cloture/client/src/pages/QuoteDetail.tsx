@@ -16,6 +16,7 @@ import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
 import type { Quote, User, Activity, Crew, Lead } from "@shared/schema";
 import { SALES_STATUSES, INSTALL_STATUSES } from "@shared/schema";
+import { getWinProbability, getProbabilityBadgeColor } from "@/lib/win-probability";
 
 const TIMELINE_STEPS = [
   { label: "Lead reçu", labelEn: "Lead received", aliases: ["Lead reçu", "Lead créé"], team: "sales" },
@@ -385,7 +386,12 @@ export function QuoteDetail() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">{isEn ? "Sales" : "Vente"}</div>
-                  <div className="flex items-center gap-2 mb-2"><StatusBadge status={quote.salesStatus} /></div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <StatusBadge status={quote.salesStatus} />
+                    <Badge className={`text-[11px] font-semibold ${getProbabilityBadgeColor(getWinProbability(quote.salesStatus))}`}>
+                      {getWinProbability(quote.salesStatus)}% {isEn ? "win" : "probabilité"}
+                    </Badge>
+                  </div>
                   {canEditSales && (
                     <Select value={quote.salesStatus} onValueChange={(v) => updateMut.mutate({ salesStatus: v, _timelineStep: SALES_STATUSES[v as keyof typeof SALES_STATUSES] })}>
                       <SelectTrigger className="w-full" data-testid="select-sales-status"><SelectValue /></SelectTrigger>
