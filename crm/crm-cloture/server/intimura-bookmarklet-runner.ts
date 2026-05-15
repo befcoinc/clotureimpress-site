@@ -7,15 +7,20 @@ export function buildBookmarkletLoaderHref(apiBase: string, token: string): stri
 
 import { INTIMURA_SYNC_CUTOFF } from "./intimura-sync-cutoff";
 
+/** Nombre max de lignes lues sur crm.intimura.com/app/quotes par clic favori. */
+export const INTIMURA_BOOKMARKLET_MAX_ROWS = 100;
+
 /** Script injecté sur crm.intimura.com (chargé via /api/intimura/bookmarklet.js). */
 export function buildIntimuraBookmarkletRunner(apiBase: string, token: string): string {
   const api = JSON.stringify(apiBase);
   const tok = JSON.stringify(token);
   const cutoff = JSON.stringify(INTIMURA_SYNC_CUTOFF);
+  const maxRows = String(INTIMURA_BOOKMARKLET_MAX_ROWS);
   return `(function(){
 var API_BASE=${api};
 var TOKEN=${tok};
 var CUTOFF=${cutoff};
+var MAX_ROWS=${maxRows};
 function parseD(raw){
   if(raw==null)return null;
   var s=String(raw).trim();
@@ -87,7 +92,7 @@ try{
   rows.forEach(function(o){if(o._id&&allIds.indexOf(o._id)<0)allIds.push(o._id);});
   var skippedOld=before-rows.length;
   if(!rows.length){fail(skippedOld?'Aucune soumission du '+CUTOFF+' ou apres sur cette page.':'Aucune soumission trouvee.');return;}
-  if(rows.length>40){fail('Max 40 lignes. Filtre la liste.');return;}
+  if(rows.length>MAX_ROWS){fail('Max '+MAX_ROWS+' lignes. Filtre la liste.');return;}
   status('Envoi '+rows.length+' ligne(s) (>= '+CUTOFF+')...');
   var ingestUrl=API_BASE+'/api/intimura/ingest?token='+encodeURIComponent(TOKEN);
   var detailsUrl=API_BASE+'/api/intimura/ingest-details?token='+encodeURIComponent(TOKEN);

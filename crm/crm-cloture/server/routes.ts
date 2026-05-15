@@ -10,7 +10,11 @@ import { storage, detectSector, seed, hashPassword, verifyPassword } from "./sto
 import { sendInviteEmail, sendInstallerProfileReminderEmail, sendInstallerFicheLinkEmail, sendRepresentativeFicheLinkEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail, sendOverdueInstallAlert } from "./email";
 import { sendInviteSms, sendInstallerProfileReminderSms, sendSatisfactionSms } from "./sms";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema, insertInstallerApplicationSchema, insertRepresentativeApplicationSchema } from "@shared/schema";
-import { buildBookmarkletLoaderHref, buildIntimuraBookmarkletRunner } from "./intimura-bookmarklet-runner";
+import {
+  buildBookmarkletLoaderHref,
+  buildIntimuraBookmarkletRunner,
+  INTIMURA_BOOKMARKLET_MAX_ROWS,
+} from "./intimura-bookmarklet-runner";
 import {
   INTIMURA_SYNC_CUTOFF,
   isDecodedIntimuraQuoteOnOrAfterCutoff,
@@ -2789,7 +2793,7 @@ export async function registerRoutes(
   <p><strong>Glisse</strong> le bouton vert ci-dessous dans ta barre de favoris (barre du haut du navigateur).</p>
   <a class="btn" href="${safeHref}" draggable="true">⇩ Sync Intimura → ClôturePro</a>
   <p>Puis sur <a href="https://crm.intimura.com/app/quotes">crm.intimura.com/app/quotes</a>, clique ce favori une fois.</p>
-  <p style="font-size:.85rem;color:#666">Seules les soumissions du <strong>${INTIMURA_SYNC_CUTOFF}</strong> ou apres sont importees. Boite verte = progression.</p>
+  <p style="font-size:.85rem;color:#666">Seules les soumissions du <strong>${INTIMURA_SYNC_CUTOFF}</strong> ou apres sont importees (max ${INTIMURA_BOOKMARKLET_MAX_ROWS} lignes visibles). Boite verte = progression.</p>
 </body>
 </html>`);
   });

@@ -286,7 +286,7 @@ export function IntimuraBookmarklet() {
                       crm.intimura.com/app/quotes
                       <ExternalLink className="h-3 w-3" />
                     </a>
-                    {isEn ? " (the list, max 40 visible rows)." : " (la liste, max 40 lignes visibles)."}
+                    {isEn ? " (the list, max 100 visible rows)." : " (la liste, max 100 lignes visibles)."}
                   </li>
                   <li>
                     {isEn ? "Click the bookmark once. Wait for the summary alert, then check " : "Clique le favori une fois. Attends le message de fin, puis va dans "}
