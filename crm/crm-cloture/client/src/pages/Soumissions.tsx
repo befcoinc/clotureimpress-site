@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { type DragEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { PageHeader } from "@/components/PageHeader";
@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ROLE_NAMES } from "@/lib/role-constants";
 import type { Crew, Lead, Quote, User } from "@shared/schema";
 import { FENCE_TYPES, INSTALL_STATUSES, PROVINCES, SALES_STATUSES } from "@shared/schema";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { getWinProbability, getProbabilityBadgeColor } from "@/lib/win-probability";
 
 type QuoteDialogState = { mode: "create" | "edit"; quote?: Quote } | null;
@@ -51,6 +51,9 @@ export function Soumissions() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("");
   const [provinceFilter, setProvinceFilter] = useState<string>("");
+  const [draggingQuoteId, setDraggingQuoteId] = useState<number | null>(null);
+  const [dropColumnKey, setDropColumnKey] = useState<string | null>(null);
+  const suppressCardNavRef = useRef(false);
 
   const syncUrl = (nextStatus: string, nextCity: string, nextProvince: string) => {
     const params = new URLSearchParams();
@@ -155,6 +158,77 @@ export function Soumissions() {
     },
   });
 
+  const moveQuote = useMutation({
+    mutationFn: async ({ id, salesStatus }: { id: number; salesStatus: string }) => {
+      const stepLabel = (SALES_STATUSES as Record<string, string>)[salesStatus] || salesStatus;
+      return apiRequest("PATCH", `/api/quotes/${id}`, {
+        salesStatus,
+        status: salesStatus === "signee" ? "signee" : salesStatus === "perdue" ? "perdue" : "envoyee",
+        _userId: currentUser?.id,
+        _userName: currentUser?.name,
+        _userRole: currentUser?.role,
+        _timelineStep: stepLabel,
+        _note: isEn ? `Moved to ${stepLabel}` : `Déplacé vers ${stepLabel}`,
+      });
+    },
+    onMutate: async ({ id, salesStatus }) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/quotes"] });
+      const previous = queryClient.getQueryData<Quote[]>(["/api/quotes"]);
+      queryClient.setQueryData<Quote[]>(["/api/quotes"], (old = []) =>
+        old.map((q) =>
+          q.id === id
+            ? {
+                ...q,
+                salesStatus,
+                status: salesStatus === "signee" ? "signee" : salesStatus === "perdue" ? "perdue" : "envoyee",
+              }
+            : q,
+        ),
+      );
+      return { previous };
+    },
+    onSuccess: (_data, { salesStatus }) => {
+      const stepLabel = (SALES_STATUSES as Record<string, string>)[salesStatus] || salesStatus;
+      toast({ title: isEn ? `Moved to ${stepLabel}` : `Déplacé vers ${stepLabel}` });
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(["/api/quotes"], context.previous);
+      toast({
+        title: isEn ? "Move failed" : "Déplacement échoué",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+    },
+  });
+
+  const handleDropOnColumn = (quoteId: number, targetStatus: string) => {
+    const quote = quotes.find((q) => q.id === quoteId);
+    if (!quote || quote.salesStatus === targetStatus) return;
+    moveQuote.mutate({ id: quoteId, salesStatus: targetStatus });
+  };
+
+  const columnDragHandlers = (columnKey: string) => ({
+    onDragOver: (e: DragEvent) => {
+      if (!canManageQuotes || draggingQuoteId == null) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (dropColumnKey !== columnKey) setDropColumnKey(columnKey);
+    },
+    onDrop: (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDropColumnKey(null);
+      setDraggingQuoteId(null);
+      if (!canManageQuotes) return;
+      const quoteId = Number(e.dataTransfer.getData("text/plain"));
+      if (quoteId) handleDropOnColumn(quoteId, columnKey);
+    },
+  });
+
   const columns = Object.entries(SALES_STATUSES).filter(([k]) => k !== "perdue");
   const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
 
@@ -162,7 +236,7 @@ export function Soumissions() {
     <>
       <PageHeader
         title={isEn ? "Quotes" : "Soumissions"}
-        description={isEn ? "Full quote pipeline with manual create, update and delete." : "Pipeline complet de chaque soumission, avec création, modification et suppression manuelle."}
+        description={isEn ? "Drag cards between columns to update the sales stage." : "Glissez les cartes entre les colonnes pour changer l'étape de vente."}
         action={canManageQuotes && (
           <Button size="sm" className="gap-1.5" onClick={() => setQuoteDialog({ mode: "create" })} data-testid="button-create-quote">
             <Plus className="h-4 w-4" /> {isEn ? "New quote" : "Nouvelle soumission"}
@@ -186,29 +260,86 @@ export function Soumissions() {
               <span aria-hidden>×</span>
             </Badge>
           )}
-          <div className="ml-auto text-xs text-muted-foreground">{visible.length} {isEn ? "quote(s)" : "soumission(s)"}</div>
+          <div className="ml-auto text-xs text-muted-foreground">
+            {visible.length} {isEn ? "quote(s)" : "soumission(s)"}
+            {canManageQuotes && (
+              <span className="hidden sm:inline text-muted-foreground/80">
+                {" "}
+                · {isEn ? "drag cards to change stage" : "glissez les cartes pour changer l'étape"}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {columns.map(([key, label]) => {
-            const items = visible.filter(q => q.salesStatus === key);
+            const items = visible.filter((q) => q.salesStatus === key);
             const value = items.reduce((s, q) => s + (q.estimatedPrice || 0), 0);
+            const isDropTarget = dropColumnKey === key && draggingQuoteId != null;
             return (
-              <div key={key} className="rounded-lg border border-card-border bg-muted/30 p-2.5 min-h-[300px]">
+              <div
+                key={key}
+                className={`rounded-lg border p-2.5 min-h-[300px] transition-colors ${
+                  isDropTarget
+                    ? "border-primary bg-primary/10 ring-2 ring-primary/40"
+                    : "border-card-border bg-muted/30"
+                }`}
+                {...columnDragHandlers(key)}
+                onDragLeave={(e) => {
+                  if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                  setDropColumnKey((prev) => (prev === key ? null : prev));
+                }}
+              >
                 <div className="flex items-baseline justify-between mb-2 px-1">
                   <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">{label}</div>
                   <div className="text-sm font-bold tabular">{items.length}</div>
                 </div>
                 <div className="text-[10px] text-muted-foreground tabular mb-2 px-1">{moneyFmt.format(value)}</div>
-                <div className="space-y-2">
-                  {items.map(q => {
+                <div className="space-y-2 min-h-[120px]">
+                  {items.map((q) => {
                     const rep = users.find(u => u.id === q.assignedSalesId);
                     const probability = getWinProbability(q.salesStatus);
                     const probColor = getProbabilityBadgeColor(probability);
+                    const isDragging = draggingQuoteId === q.id;
                     return (
-                      <div key={q.id} className="rounded-md bg-card border border-card-border p-2.5 hover-elevate" data-testid={`quote-card-${q.id}`}>
-                        <Link href={`/soumissions/${q.id}`}>
-                          <div className="cursor-pointer">
+                      <div
+                        key={q.id}
+                        draggable={canManageQuotes}
+                        {...(canManageQuotes ? columnDragHandlers(key) : {})}
+                        onDragStart={(e) => {
+                          if (!canManageQuotes) return;
+                          suppressCardNavRef.current = true;
+                          e.dataTransfer.setData("text/plain", String(q.id));
+                          e.dataTransfer.effectAllowed = "move";
+                          setDraggingQuoteId(q.id);
+                        }}
+                        onDragEnd={() => {
+                          setDraggingQuoteId(null);
+                          setDropColumnKey(null);
+                          window.setTimeout(() => {
+                            suppressCardNavRef.current = false;
+                          }, 100);
+                        }}
+                        className={`rounded-md bg-card border border-card-border p-2.5 hover-elevate transition-opacity ${
+                          isDragging ? "opacity-40" : ""
+                        } ${canManageQuotes ? "cursor-grab active:cursor-grabbing" : ""}`}
+                        data-testid={`quote-card-${q.id}`}
+                        title={canManageQuotes ? (isEn ? "Drag to another column" : "Glisser vers une autre colonne") : undefined}
+                      >
+                        <div className="flex gap-1.5">
+                          {canManageQuotes && (
+                            <div className="flex-shrink-0 text-muted-foreground pt-0.5 pointer-events-none" aria-hidden>
+                              <GripVertical className="h-4 w-4" />
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <Link
+                              href={`/soumissions/${q.id}`}
+                              onClick={(e) => {
+                                if (suppressCardNavRef.current) e.preventDefault();
+                              }}
+                            >
+                          <div className="cursor-pointer select-none">
                             <div className="font-semibold text-[12px] truncate">{q.clientName}</div>
                             <div className="text-[10px] text-muted-foreground truncate">{q.city}, {q.province}</div>
                             <div className="flex items-center justify-between mt-2 gap-1">
@@ -242,10 +373,20 @@ export function Soumissions() {
                             )}
                           </div>
                         )}
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
-                  {items.length === 0 && <div className="text-[10px] text-muted-foreground text-center py-4">{isEn ? "Empty" : "Vide"}</div>}
+                  {items.length === 0 && (
+                    <div
+                      className={`text-[10px] text-center py-4 rounded border border-dashed ${
+                        isDropTarget ? "border-primary text-primary" : "border-transparent text-muted-foreground"
+                      }`}
+                    >
+                      {isDropTarget ? (isEn ? "Drop here" : "Déposer ici") : isEn ? "Empty" : "Vide"}
+                    </div>
+                  )}
                 </div>
               </div>
             );
