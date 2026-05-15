@@ -3749,14 +3749,39 @@ Sois concret, direct, adapté au marché québécois.`;
       const addr = geocodeQueue.shift()!;
       if (geocodeMemCache.has(addr)) continue;
       try {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ca&q=${encodeURIComponent(addr)}`;
+        // limit=3 pour pouvoir choisir le meilleur résultat sur terre
+        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=3&countrycodes=ca&q=${encodeURIComponent(addr)}`;
         const r = await fetch(url, {
           headers: { "Accept-Language": "fr,en", "User-Agent": "CRM-CloturImpress/1.0" },
           signal: AbortSignal.timeout(8000),
         });
         if (r.ok) {
-          const data = await r.json();
-          geocodeMemCache.set(addr, data?.[0] ? [parseFloat(data[0].lat), parseFloat(data[0].lon)] : null);
+          const data: any[] = await r.json();
+          // Rejeter les résultats qui tombent dans l'eau (waterway, water, river, lake, bay…)
+          const WATER_CLASSES = new Set(["waterway", "water"]);
+          const WATER_TYPES = new Set(["water", "river", "lake", "bay", "fjord", "stream",
+                                       "canal", "harbour", "estuary", "reservoir"]);
+          function isOnLand(item: any): boolean {
+            if (!item) return false;
+            const cls = (item.class || "").toLowerCase();
+            const typ = (item.type || "").toLowerCase();
+            if (WATER_CLASSES.has(cls)) return false;
+            if (cls === "natural" && WATER_TYPES.has(typ)) return false;
+            if (WATER_TYPES.has(typ)) return false;
+            // Protection supplémentaire pour le fleuve Saint-Laurent à Québec :
+            // entre lat 46.77–46.83 et lon -71.28 à -70.90 → probable fleuve
+            const lat = parseFloat(item.lat);
+            const lon = parseFloat(item.lon);
+            if (lat >= 46.770 && lat <= 46.830 && lon >= -71.280 && lon <= -70.900) {
+              // Accepter seulement si le type indique clairement une adresse bâtie
+              const SAFE = new Set(["house", "building", "residential", "apartments",
+                                    "place", "suburb", "neighbourhood", "postcode"]);
+              if (!SAFE.has(typ) && !SAFE.has(cls)) return false;
+            }
+            return true;
+          }
+          const best = data.find(isOnLand);
+          geocodeMemCache.set(addr, best ? [parseFloat(best.lat), parseFloat(best.lon)] : null);
         } else {
           geocodeMemCache.set(addr, null);
         }
@@ -3943,44 +3968,4 @@ Sois concret, direct, adapté au marché québécois.`;
       for (const q of allQuotes) {
         const sq = q as any;
         if (sq.installStatus !== "terminee") continue;
-        if (sq.satisfactionSmsSentAt) continue;
-        if (!sq.installedDate) continue;
-
-        const installedAt = new Date(sq.installedDate).getTime();
-        if (isNaN(installedAt) || now - installedAt < delay) continue;
-
-        let phone: string | null = null;
-        let clientName = sq.clientName || "Client";
-        if (sq.leadId) {
-          const lead = allLeads.find((l: any) => l.id === sq.leadId);
-          if (lead) {
-            phone = (lead as any).phone ?? null;
-            clientName = (lead as any).clientName || clientName;
-          }
-        }
-
-        if (!phone) {
-          console.log(`[jobs] No phone for quote #${sq.id} — marking skipped`);
-          await storage.updateQuote(sq.id, { satisfactionSmsSentAt: `no-phone-${new Date().toISOString()}` } as any);
-          continue;
-        }
-
-        const result = await sendSatisfactionSms(phone, clientName);
-        const sentAt = result.ok
-          ? new Date().toISOString()
-          : `error-${new Date().toISOString()}`;
-
-        await storage.updateQuote(sq.id, { satisfactionSmsSentAt: sentAt } as any);
-        console.log(`[jobs] Satisfaction SMS quote #${sq.id}: ok=${result.ok}`, result.sid || result.error || "");
-      }
-    } catch (err) {
-      console.error("[jobs] checkSatisfactionSms error:", err);
-    }
-  }
-
-  // Run on startup after 15s then every hour
-  setTimeout(() => { checkOverdueInstalls(); checkSatisfactionSms(); }, 15_000);
-  setInterval(() => { checkOverdueInstalls(); checkSatisfactionSms(); }, 60 * 60 * 1000);
-
-  return httpServer;
-}
+        if

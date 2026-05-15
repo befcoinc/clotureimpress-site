@@ -156,8 +156,15 @@ const CITY_COORDS: Record<string, [number, number]> = {
   "windsor": [45.5662, -72.0044], "bromptonville": [45.4800, -71.9517],
   "danville": [45.7817, -72.0108],
 
-  // Québec (région)
-  "quebec": [46.8139, -71.208], "québec": [46.8139, -71.208],
+  // Québec (région) — coordonnées validées sur terre (jamais dans le fleuve)
+  "quebec": [46.8466, -71.2155], "québec": [46.8466, -71.2155],
+  "ville de quebec": [46.8466, -71.2155], "ville de québec": [46.8466, -71.2155],
+  "vieux-quebec": [46.8123, -71.2042], "vieux-québec": [46.8123, -71.2042],
+  "haute-ville": [46.8123, -71.2042], "basse-ville": [46.8178, -71.2236],
+  "saint-roch": [46.8178, -71.2236], "saint roch": [46.8178, -71.2236],
+  "limoilou": [46.8400, -71.2100], "vieux-limoilou": [46.8400, -71.2100],
+  "maizerets": [46.8470, -71.1830], "lairet": [46.8500, -71.2300],
+  "montcalm": [46.8020, -71.2350],
   "levis": [46.7382, -71.2465], "lévis": [46.7382, -71.2465],
   "sainte-foy": [46.7752, -71.2827], "charlesbourg": [46.8689, -71.2614],
   "beauport": [46.8662, -71.1876], "ancienne-lorette": [46.7890, -71.3560],
@@ -283,8 +290,14 @@ const FSA_COORDS: Record<string, [number, number]> = {
   "H4": [45.47, -73.61], "H5": [45.46, -73.56], "H6": [45.44, -73.62],
   "H7": [45.60, -73.73], "H8": [45.50, -73.83], "H9": [45.44, -73.87],
   // Québec/Saguenay/Côte-Nord (G)
-  "G0": [47.50, -70.50], "G1": [46.82, -71.21], "G2": [46.86, -71.35],
-  "G3": [46.89, -71.15], "G4": [48.46, -71.07], "G5": [46.49, -72.49],
+  // G1 = Québec-Centre/Limoilou (46.85 = sur la falaise / plateau, loin du fleuve)
+  // G2 = Sainte-Foy/Sillery/Cap-Rouge
+  // G3 = Charlesbourg/Beauport-nord
+  "G0": [47.50, -70.50],
+  "G1": [46.855, -71.235], // Québec plateau — loin de la berge
+  "G2": [46.795, -71.305], // Sainte-Foy — sur terre
+  "G3": [46.890, -71.195], // Charlesbourg / Beauport nord
+  "G4": [48.46, -71.07], "G5": [46.49, -72.49],
   "G6": [46.74, -71.27], "G7": [48.42, -71.07], "G8": [48.45, -68.53],
   "G9": [46.35, -72.55],
   // Montérégie / Laurentides / Lanaudière / Outaouais / Abitibi (J)
@@ -1012,22 +1025,4 @@ export function Heatmap() {
                   </tbody>
                   <tfoot>
                     <tr className="border-t font-semibold text-sm">
-                      <td colSpan={3} className="pt-2 text-muted-foreground">{isEn ? "Total" : "Total"}</td>
-                      <td className="text-right pt-2 text-emerald-600">{hotspots.reduce((s, h) => s + h.signed, 0)}</td>
-                      <td className="text-right pt-2 text-xs">
-                        {hotspots.reduce((s, h) => s + h.count, 0) > 0
-                          ? `${Math.round(hotspots.reduce((s, h) => s + h.signed, 0) / hotspots.reduce((s, h) => s + h.count, 0) * 100)}%` : "—"}
-                      </td>
-                      <td className="text-right pt-2">{moneyFmt.format(hotspots.reduce((s, h) => s + h.signedRevenue, 0))}</td>
-                      <td />
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </>
-  );
-}
+                      <td colSpan={3} className="pt-2 text-mut
