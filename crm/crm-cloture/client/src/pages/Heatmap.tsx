@@ -312,9 +312,46 @@ function normalize(value?: string | null) {
 function prettyCity(v?: string | null) {
   return (v || "Ville inconnue").replace(/quÉbec/gi, "Québec").trim();
 }
+// Extrait les meilleures coordonnées disponibles depuis les colonnes + intimuraData JSON
+function extractBestLocation(q: any): { address: string | null; city: string | null; province: string | null; postalCode: string | null } {
+  let address = q.address || null;
+  let city = q.city || null;
+  let province = q.province || null;
+  let postalCode = q.postalCode || null;
+  // Lire le blob intimuraData pour récupérer postal/adresse si manquants dans les colonnes principales
+  if (q.intimuraData && (!address || !postalCode)) {
+    try {
+      const d = typeof q.intimuraData === "string" ? JSON.parse(q.intimuraData) : q.intimuraData;
+      const c = d?.customer;
+      if (c) {
+        address = address || c.service_address_resolved || c.address || c.billing_address_resolved || null;
+        postalCode = postalCode || c.postal_code || c.postal || c.zip || c.postcode || null;
+        city = city || c.city || c.service_city || null;
+        province = province || c.state || c.province || null;
+      }
+      // Parfois directement dans d.quote
+      const qObj = d?.quote;
+      if (qObj) {
+        postalCode = postalCode || qObj.postal_code || qObj.customer_postal_code || null;
+        city = city || qObj.city || null;
+      }
+    } catch {}
+  }
+  return { address, city, province, postalCode };
+}
+
 function buildAddressKey(q: { address?: string | null; city?: string | null; province?: string | null; postalCode?: string | null }) {
-  if (!q.address || !q.city) return null;
-  return [q.address, q.city, q.province || "QC", q.postalCode || "", "Canada"].filter(Boolean).join(", ");
+  const city = (q.city || "").trim();
+  if (!city || city === "Ville inconnue") return null;
+  // Adresse complète (meilleure précision)
+  if (q.address?.trim()) {
+    return [q.address, city, q.province || "QC", q.postalCode || "", "Canada"].filter(Boolean).join(", ");
+  }
+  // Code postal + ville (assez précis pour Nominatim)
+  if (q.postalCode?.trim()) {
+    return [city, q.province || "QC", q.postalCode, "Canada"].join(", ");
+  }
+  return null; // Ville seulement → CITY_COORDS direct, pas besoin de géocodage
 }
 function postalToCoords(pc: string, cityFallback?: string): [number, number] | null {
   if (!pc) return null;
@@ -593,8 +630,16 @@ export function Heatmap() {
   // Collect all addresses for server geocoding
   const addressesToGeocode = useMemo(() => {
     const set = new Set<string>();
-    for (const q of quotes) { const k = buildAddressKey(q); if (k) set.add(k); }
-    for (const l of activeLeads) { const k = buildAddressKey(l); if (k) set.add(k); }
+    for (const q of quotes) {
+      const loc = extractBestLocation(q);
+      const k = buildAddressKey(loc);
+      if (k) set.add(k);
+    }
+    for (const l of activeLeads) {
+      const loc = extractBestLocation(l);
+      const k = buildAddressKey(loc);
+      if (k) set.add(k);
+    }
     return Array.from(set);
   }, [quotes, activeLeads]);
 
@@ -617,17 +662,21 @@ export function Heatmap() {
       leadId: l.id, createdAt: l.createdAt,
     } as unknown as Quote));
 
+    // Toutes les soumissions (Intimura ET manuelles)
+    // Les leads sans soumission sont ajoutés comme soumission synthétique
+    const leadsWithQuote = new Set(quotes.filter(q => q.leadId).map(q => q.leadId));
     const combined: Quote[] = [
-      ...quotes.filter(q => q.intimuraId),
-      ...leadAsQuotes,
+      ...quotes,
+      ...leadAsQuotes.filter(lq => !leadsWithQuote.has(lq.leadId)),
     ];
 
     return combined.map(q => {
-      const city = prettyCity(q.city);
+      const loc = extractBestLocation(q);
+      const city = prettyCity(loc.city || q.city);
       const normKey = normalize(city);
-      const addrKey = buildAddressKey(q);
+      const addrKey = buildAddressKey(loc);
       const geo = addrKey ? geocodeMap[addrKey] : null;
-      const fsa = postalToCoords(q.postalCode || "", city);
+      const fsa = postalToCoords(loc.postalCode || q.postalCode || "", city);
       let lat: number, lng: number;
       if (geo) {
         [lat, lng] = geo;
@@ -695,9 +744,10 @@ export function Heatmap() {
     hotspots.map(h => {
       const ordered = optimizeRoute(h.quotes).slice(0, 10);
       const stops = ordered.map(q => {
-        const addrKey = buildAddressKey(q);
+        const qloc = extractBestLocation(q);
+        const addrKey = buildAddressKey(qloc);
         const geo = addrKey ? geocodeMap[addrKey] : null;
-        if (q.address && q.city) return [q.address, q.city, q.province, q.postalCode].filter(Boolean).join(", ");
+        if (qloc.address && qloc.city) return [qloc.address, qloc.city, qloc.province, qloc.postalCode].filter(Boolean).join(", ");
         if (geo) return `${geo[0]},${geo[1]}`;
         return `${q.lat.toFixed(5)},${q.lng.toFixed(5)}`;
       });
