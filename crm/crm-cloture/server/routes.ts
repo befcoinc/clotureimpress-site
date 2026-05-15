@@ -10,6 +10,7 @@ import { storage, detectSector, seed, hashPassword, verifyPassword } from "./sto
 import { sendInviteEmail, sendInstallerProfileReminderEmail, sendInstallerFicheLinkEmail, sendRepresentativeFicheLinkEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail, sendOverdueInstallAlert } from "./email";
 import { sendInviteSms, sendInstallerProfileReminderSms, sendSatisfactionSms } from "./sms";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema, insertInstallerApplicationSchema, insertRepresentativeApplicationSchema } from "@shared/schema";
+import { buildIntimuraBookmarkletRunner } from "./intimura-bookmarklet-runner";
 
 function decodeSvelteData(data: any[]) {
   // Cycle/depth-protected resolver. Some Svelte payloads contain self-referential
@@ -516,7 +517,13 @@ export async function registerRoutes(
     // Intimura bookmarklet endpoints have their own per-token auth and are
     // called from crm.intimura.com (cross-origin), so they must bypass the
     // session-cookie auth gate.
-    if (req.path === "/intimura/ingest" || req.path === "/intimura/ingest-details") return next();
+    if (
+      req.path === "/intimura/ingest" ||
+      req.path === "/intimura/ingest-details" ||
+      req.path === "/intimura/bookmarklet.js"
+    ) {
+      return next();
+    }
     if (req.method === "OPTIONS") return next();
     return requireAuth(req, res, next);
   });
@@ -2603,6 +2610,21 @@ export async function registerRoutes(
       return res.status(result.error === "INTIMURA_CREDENTIALS_MISSING" ? 400 : 502).json(result);
     }
     res.json(result);
+  });
+
+  // -------- Intimura bookmarklet runner (short loader → this script) --------
+  app.get("/api/intimura/bookmarklet.js", (req, res) => {
+    const provided = String(req.query.token || "");
+    const expected = ensureBookmarkletToken();
+    if (!provided || provided !== expected) {
+      res
+        .status(401)
+        .type("application/javascript")
+        .send("alert('Token invalide. Reinstalle le favori depuis CloturePro (#/intimura-bookmarklet).');");
+      return;
+    }
+    const apiBase = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+    res.type("application/javascript").send(buildIntimuraBookmarkletRunner(apiBase, provided));
   });
 
   // -------- Intimura ingest (called by browser bookmarklet on intimura.com) --------
