@@ -70,11 +70,18 @@ function inferProvince(city = "") {
   return "QC";
 }
 
+/** Statut Intimura informatif seulement — les imports entrent toujours en « Lead reçu ». */
 function mapIntimuraStatus(status = "") {
   if (status === "approved") return "signee";
   if (status === "snoozed") return "suivi";
   if (status === "sent") return "envoyee";
   return "nouveau";
+}
+
+const INCOMING_QUOTE_SALES_STATUS = "nouveau";
+
+function canMoveSalesPipeline(role: string | undefined | null) {
+  return role === "admin" || role === "sales_director" || role === "sales_rep";
 }
 
 type ApiCacheEntry = {
@@ -1180,15 +1187,43 @@ export async function registerRoutes(
         estimatedValue: null,
         estimatedLength: null,
       });
+      const quote = await storage.createQuote({
+        leadId: lead.id,
+        intimuraId: null,
+        clientName: lead.clientName,
+        address: lead.address,
+        city: lead.city,
+        province: lead.province,
+        sector: lead.sector,
+        status: "envoyee",
+        salesStatus: INCOMING_QUOTE_SALES_STATUS,
+        installStatus: "a_planifier",
+        assignedSalesId: null,
+        assignedInstallerId: null,
+        fenceType: lead.fenceType || "À confirmer",
+        estimatedLength: lead.estimatedLength,
+        estimatedPrice: lead.estimatedValue,
+        finalPrice: null,
+        salesNotes: message ? `Demande site web:\n${message}` : "Lead reçu depuis le site web.",
+        installNotes: null,
+        scheduledDate: null,
+        signedDate: null,
+        installedDate: null,
+        paidDate: null,
+        timeline: JSON.stringify([
+          { step: "Lead reçu", date: new Date().toISOString(), note: "Formulaire site web" },
+        ]),
+      });
       await storage.createActivity({
         leadId: lead.id,
+        quoteId: quote.id,
         userId: null,
         userName: "Site web",
         userRole: "system",
         action: "create",
-        note: `Lead créé depuis le formulaire du site — secteur ${lead.sector}`,
+        note: `Lead et soumission créés depuis le formulaire du site — secteur ${lead.sector}`,
       });
-      res.json({ ok: true, id: lead.id });
+      res.json({ ok: true, id: lead.id, quoteId: quote.id });
     } catch (err) {
       console.error("[public/lead] error", err);
       res.status(500).json({ error: "Erreur serveur" });
@@ -1999,7 +2034,7 @@ export async function registerRoutes(
   async function createQuoteFromIntimuraRow(lead: any, iq: any) {
     const city = extractCity(iq.title || "") || lead.city;
     const province = inferProvince(city || String(lead.province || ""));
-    const salesStatus = mapIntimuraStatus(iq.status);
+    const intimuraStage = mapIntimuraStatus(iq.status);
     const url = intimuraQuoteUrl(iq.id);
     return storage.createQuote({
       leadId: lead.id,
@@ -2009,8 +2044,8 @@ export async function registerRoutes(
       city,
       province,
       sector: lead.sector,
-      status: salesStatus === "signee" ? "signee" : "envoyee",
-      salesStatus,
+      status: "envoyee",
+      salesStatus: INCOMING_QUOTE_SALES_STATUS,
       installStatus: "a_planifier",
       assignedSalesId: lead.assignedSalesId ?? null,
       assignedInstallerId: null,
@@ -2018,10 +2053,10 @@ export async function registerRoutes(
       estimatedLength: lead.estimatedLength,
       estimatedPrice: Number(iq.subtotal || lead.estimatedValue || 0),
       finalPrice: null,
-      salesNotes: `Import Intimura ${iq.id}.\nLien fiche: ${url}`,
+      salesNotes: `Import Intimura ${iq.id}.\nLien fiche: ${url}${intimuraStage !== INCOMING_QUOTE_SALES_STATUS ? `\nStatut Intimura: ${iq.status || intimuraStage}` : ""}`,
       installNotes: iq.with_installation ? "Installation demandée dans Intimura." : null,
       scheduledDate: iq.target_date || null,
-      signedDate: salesStatus === "signee" ? iq.issued_at || null : null,
+      signedDate: null,
       installedDate: null,
       paidDate: iq.first_payment_paid_at || null,
       timeline: JSON.stringify([
@@ -2246,7 +2281,6 @@ export async function registerRoutes(
         skipped++;
         continue;
       }
-      const salesStatus = mapIntimuraStatus(iq.status);
       const intimuraUrl = intimuraQuoteUrl(iq.id);
       const lead = await storage.createLead({
         clientName: iq.customer_name || iq.title || "Client Intimura",
@@ -2261,7 +2295,7 @@ export async function registerRoutes(
         message: `Synchronisé depuis Intimura. Titre: ${iq.title || ""}. Statut Intimura: ${iq.status || ""}. Assigné: ${iq.assigned_user_name || ""}.`,
         source: "intimura",
         intimuraId: iq.id,
-        status: salesStatus === "signee" ? "gagne" : "en_cours",
+        status: "en_cours",
         assignedSalesId: null,
         estimatedValue: Number(iq.subtotal || 0),
         estimatedLength: null,
@@ -2284,8 +2318,8 @@ export async function registerRoutes(
         city,
         province,
         sector: lead.sector,
-        status: salesStatus === "signee" ? "signee" : "envoyee",
-        salesStatus,
+        status: "envoyee",
+        salesStatus: INCOMING_QUOTE_SALES_STATUS,
         installStatus: "a_planifier",
         assignedSalesId: null,
         assignedInstallerId: null,
@@ -2293,10 +2327,10 @@ export async function registerRoutes(
         estimatedLength: null,
         estimatedPrice: Number(iq.subtotal || 0),
         finalPrice: null,
-        salesNotes: `Import Intimura ${iq.id}.\nLien fiche: ${intimuraUrl}\nPremier paiement: ${iq.first_payment_amount || "n/d"}.`,
+        salesNotes: `Import Intimura ${iq.id}.\nLien fiche: ${intimuraUrl}\nPremier paiement: ${iq.first_payment_amount || "n/d"}.${iq.status ? `\nStatut Intimura: ${iq.status}` : ""}`,
         installNotes: iq.with_installation ? "Installation demandée dans Intimura." : null,
         scheduledDate: iq.target_date || null,
-        signedDate: salesStatus === "signee" ? iq.issued_at || null : null,
+        signedDate: null,
         installedDate: null,
         paidDate: iq.first_payment_paid_at || null,
         timeline: JSON.stringify([
@@ -3021,7 +3055,6 @@ export async function registerRoutes(
       const clientName = c.name || c.full_name || q.customer_name || title || "Client Intimura";
       const city = c.city || extractCity(title) || "";
       const province = c.state || c.province || inferProvince(city);
-      const salesStatus = mapIntimuraStatus(String(q.status || ""));
       const lead = await storage.createLead({
         clientName: String(clientName),
         phone: c.phone || c.mobile || null,
@@ -3035,7 +3068,7 @@ export async function registerRoutes(
         message: `Import fiche Intimura ${intimuraId}.`,
         source: "intimura",
         intimuraId,
-        status: salesStatus === "signee" ? "gagne" : "en_cours",
+        status: "en_cours",
         assignedSalesId: null,
         estimatedValue: Number(q.total ?? q.subtotal ?? 0) || null,
         estimatedLength: intimuraLengthFromItems(details.items || []),
@@ -3108,13 +3141,7 @@ export async function registerRoutes(
     if (estLength) updates.estimatedLength = estLength;
     if (fenceType) updates.fenceType = fenceType;
 
-    if (q.status) {
-      const salesStatus = mapIntimuraStatus(String(q.status));
-      updates.salesStatus = salesStatus;
-      if (salesStatus === "signee") updates.status = "signee";
-    }
     if (q.target_date || q.scheduled_date) updates.scheduledDate = q.target_date || q.scheduled_date;
-    if (q.status === "approved" && q.issued_at) updates.signedDate = q.issued_at;
 
     const wantsInstall = q.with_installation === true || q.with_installation === 1 || q.withInstallation;
     if (wantsInstall) {
@@ -3313,7 +3340,25 @@ export async function registerRoutes(
     const id = Number(req.params.id);
     const existing = await storage.getQuote(id);
     if (!existing) return res.status(404).json({ error: "Not found" });
+    const actor = req.user as any;
     const { _userId, _userName, _userRole, _timelineStep, _note, ...payload } = req.body;
+
+    if (payload.salesStatus != null && payload.salesStatus !== existing.salesStatus) {
+      if (!canMoveSalesPipeline(actor?.role)) {
+        return res.status(403).json({
+          error: "Seuls un administrateur, un directeur des ventes ou un vendeur peuvent changer l'étape du pipeline.",
+        });
+      }
+      if (actor?.role === "sales_rep") {
+        const linkedLead = existing.leadId ? await storage.getLead(existing.leadId) : null;
+        const canActOnQuote =
+          existing.assignedSalesId === actor.id ||
+          (linkedLead != null && linkedLead.assignedSalesId === actor.id);
+        if (!canActOnQuote) {
+          return res.status(403).json({ error: "Cette soumission n'est pas assignée à votre compte." });
+        }
+      }
+    }
 
     if (_timelineStep) {
       const timeline = existing.timeline ? JSON.parse(existing.timeline) : [];
@@ -3968,4 +4013,44 @@ Sois concret, direct, adapté au marché québécois.`;
       for (const q of allQuotes) {
         const sq = q as any;
         if (sq.installStatus !== "terminee") continue;
-        if
+        if (sq.satisfactionSmsSentAt) continue;
+        if (!sq.installedDate) continue;
+
+        const installedAt = new Date(sq.installedDate).getTime();
+        if (isNaN(installedAt) || now - installedAt < delay) continue;
+
+        let phone: string | null = null;
+        let clientName = sq.clientName || "Client";
+        if (sq.leadId) {
+          const lead = allLeads.find((l: any) => l.id === sq.leadId);
+          if (lead) {
+            phone = (lead as any).phone ?? null;
+            clientName = (lead as any).clientName || clientName;
+          }
+        }
+
+        if (!phone) {
+          console.log(`[jobs] No phone for quote #${sq.id} — marking skipped`);
+          await storage.updateQuote(sq.id, { satisfactionSmsSentAt: `no-phone-${new Date().toISOString()}` } as any);
+          continue;
+        }
+
+        const result = await sendSatisfactionSms(phone, clientName);
+        const sentAt = result.ok
+          ? new Date().toISOString()
+          : `error-${new Date().toISOString()}`;
+
+        await storage.updateQuote(sq.id, { satisfactionSmsSentAt: sentAt } as any);
+        console.log(`[jobs] Satisfaction SMS quote #${sq.id}: ok=${result.ok}`, result.sid || result.error || "");
+      }
+    } catch (err) {
+      console.error("[jobs] checkSatisfactionSms error:", err);
+    }
+  }
+
+  // Run on startup after 15s then every hour
+  setTimeout(() => { checkOverdueInstalls(); checkSatisfactionSms(); }, 15_000);
+  setInterval(() => { checkOverdueInstalls(); checkSatisfactionSms(); }, 60 * 60 * 1000);
+
+  return httpServer;
+}

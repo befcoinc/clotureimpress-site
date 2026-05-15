@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { canMoveSalesPipeline } from "@/lib/role-constants";
 import { useRole } from "@/lib/role-context";
 import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
@@ -143,10 +144,18 @@ export function QuoteDetail() {
 
   const timeline: Array<{ step: string; date?: string; note?: string }> = quote.timeline ? JSON.parse(quote.timeline) : [];
   const isDirector = role === "admin" || role === "sales_director" || role === "install_director";
-  const canEditSales = (can("edit_sales") || isDirector) && (role !== "sales_rep" || quote.assignedSalesId === currentUser?.id);
+  const canChangeSalesStage =
+    canMoveSalesPipeline(role) &&
+    (role !== "sales_rep" ||
+      quote.assignedSalesId === currentUser?.id ||
+      (lead != null && lead.assignedSalesId === currentUser?.id));
+  const canEditSales =
+    (can("edit_sales") || role === "admin" || role === "sales_director") &&
+    (role !== "sales_rep" || quote.assignedSalesId === currentUser?.id || (lead != null && lead.assignedSalesId === currentUser?.id));
   const canEditInstall = (can("edit_install") || isDirector) && (role !== "installer" || quote.assignedInstallerId === currentUser?.id);
   const canEditClient = can("edit_sales") || can("edit_lead") || isDirector;
-  const canMarkStep = (team: string) => canEditSales || (team === "install" && canEditInstall);
+  const canMarkStep = (team: string) =>
+    (team === "sales" && canChangeSalesStage) || (team === "install" && canEditInstall);
   const stepKey = (label: string) => label.replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
   const markStep = (step: typeof TIMELINE_STEPS[number]) => updateMut.mutate({
     ...(step.payload || {}),
@@ -474,7 +483,7 @@ export function QuoteDetail() {
                       {getWinProbability(quote.salesStatus)}% {isEn ? "win" : "probabilité"}
                     </Badge>
                   </div>
-                  {canEditSales && (
+                  {canChangeSalesStage && (
                     <Select value={quote.salesStatus} onValueChange={(v) => updateMut.mutate({ salesStatus: v, _timelineStep: SALES_STATUSES[v as keyof typeof SALES_STATUSES] })}>
                       <SelectTrigger className="w-full" data-testid="select-sales-status"><SelectValue /></SelectTrigger>
                       <SelectContent>

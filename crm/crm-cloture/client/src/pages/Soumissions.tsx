@@ -13,7 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useRole } from "@/lib/role-context";
 import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
-import { ROLE_NAMES } from "@/lib/role-constants";
+import { canMoveSalesPipeline, ROLE_NAMES } from "@/lib/role-constants";
 import type { Crew, Lead, Quote, User } from "@shared/schema";
 import { FENCE_TYPES, INSTALL_STATUSES, PROVINCES, SALES_STATUSES } from "@shared/schema";
 import { GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
@@ -76,8 +76,12 @@ export function Soumissions() {
   }, []);
 
   const isDirector = can("view_all_quotes");
-  const canManageQuotes = can("edit_sales") || isDirector;
-  const canDeleteQuotes = isDirector;
+  const canMoveQuotes = canMoveSalesPipeline(role);
+  const canManageQuotes =
+    role === ROLE_NAMES.ADMIN ||
+    role === ROLE_NAMES.SALES_DIRECTOR ||
+    role === ROLE_NAMES.SALES_REP;
+  const canDeleteQuotes = role === ROLE_NAMES.ADMIN || role === ROLE_NAMES.SALES_DIRECTOR;
 
   const visible = useMemo(() => {
     let list = quotes;
@@ -213,7 +217,7 @@ export function Soumissions() {
 
   const columnDragHandlers = (columnKey: string) => ({
     onDragOver: (e: DragEvent) => {
-      if (!canManageQuotes || draggingQuoteId == null) return;
+      if (!canMoveQuotes || draggingQuoteId == null) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
       if (dropColumnKey !== columnKey) setDropColumnKey(columnKey);
@@ -223,7 +227,7 @@ export function Soumissions() {
       e.stopPropagation();
       setDropColumnKey(null);
       setDraggingQuoteId(null);
-      if (!canManageQuotes) return;
+      if (!canMoveQuotes) return;
       const quoteId = Number(e.dataTransfer.getData("text/plain"));
       if (quoteId) handleDropOnColumn(quoteId, columnKey);
     },
@@ -262,7 +266,7 @@ export function Soumissions() {
           )}
           <div className="ml-auto text-xs text-muted-foreground">
             {visible.length} {isEn ? "quote(s)" : "soumission(s)"}
-            {canManageQuotes && (
+            {canMoveQuotes && (
               <span className="hidden sm:inline text-muted-foreground/80">
                 {" "}
                 · {isEn ? "drag cards to change stage" : "glissez les cartes pour changer l'étape"}
@@ -304,10 +308,10 @@ export function Soumissions() {
                     return (
                       <div
                         key={q.id}
-                        draggable={canManageQuotes}
-                        {...(canManageQuotes ? columnDragHandlers(key) : {})}
+                        draggable={canMoveQuotes}
+                        {...(canMoveQuotes ? columnDragHandlers(key) : {})}
                         onDragStart={(e) => {
-                          if (!canManageQuotes) return;
+                          if (!canMoveQuotes) return;
                           suppressCardNavRef.current = true;
                           e.dataTransfer.setData("text/plain", String(q.id));
                           e.dataTransfer.effectAllowed = "move";
@@ -322,12 +326,12 @@ export function Soumissions() {
                         }}
                         className={`rounded-md bg-card border border-card-border p-2.5 hover-elevate transition-opacity ${
                           isDragging ? "opacity-40" : ""
-                        } ${canManageQuotes ? "cursor-grab active:cursor-grabbing" : ""}`}
+                        } ${canMoveQuotes ? "cursor-grab active:cursor-grabbing" : ""}`}
                         data-testid={`quote-card-${q.id}`}
-                        title={canManageQuotes ? (isEn ? "Drag to another column" : "Glisser vers une autre colonne") : undefined}
+                        title={canMoveQuotes ? (isEn ? "Drag to another column" : "Glisser vers une autre colonne") : undefined}
                       >
                         <div className="flex gap-1.5">
-                          {canManageQuotes && (
+                          {canMoveQuotes && (
                             <div className="flex-shrink-0 text-muted-foreground pt-0.5 pointer-events-none" aria-hidden>
                               <GripVertical className="h-4 w-4" />
                             </div>
