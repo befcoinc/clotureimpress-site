@@ -5,13 +5,36 @@ export function buildBookmarkletLoaderHref(apiBase: string, token: string): stri
   return `javascript:(function(){var b=${b};var t=${t};var o=document.getElementById('ci-sync-status');if(o)o.remove();var s=document.createElement('script');s.src=b+'/api/intimura/bookmarklet.js?token='+encodeURIComponent(t);s.onerror=function(){alert('Script sync non charge. Ouvre '+b+'/sync-intimura-install');};document.head.appendChild(s);})();`;
 }
 
+import { INTIMURA_SYNC_CUTOFF } from "./intimura-sync-cutoff";
+
 /** Script injecté sur crm.intimura.com (chargé via /api/intimura/bookmarklet.js). */
 export function buildIntimuraBookmarkletRunner(apiBase: string, token: string): string {
   const api = JSON.stringify(apiBase);
   const tok = JSON.stringify(token);
+  const cutoff = JSON.stringify(INTIMURA_SYNC_CUTOFF);
   return `(function(){
 var API_BASE=${api};
 var TOKEN=${tok};
+var CUTOFF=${cutoff};
+function parseD(raw){
+  if(raw==null)return null;
+  var s=String(raw).trim();
+  if(!s)return null;
+  var iso=s.match(/(\\d{4}-\\d{2}-\\d{2})/);
+  if(iso)return iso[1];
+  var dmy=s.match(/(\\d{1,2})[\\/\\-.](\\d{1,2})[\\/\\-.](\\d{4})/);
+  if(dmy){var dd=dmy[1].length<2?'0'+dmy[1]:dmy[1];var mm=dmy[2].length<2?'0'+dmy[2]:dmy[2];return dmy[3]+'-'+mm+'-'+dd;}
+  var t=Date.parse(s);
+  return isNaN(t)?null:new Date(t).toISOString().slice(0,10);
+}
+function rowDate(o){
+  var vals=[];
+  for(var k in o){if(!Object.prototype.hasOwnProperty.call(o,k))continue;var lk=k.toLowerCase();
+    if(/date|created|issued|emis|émise|créé|cree|valid/.test(lk))vals.push(o[k]);}
+  for(var i=0;i<vals.length;i++){var d=parseD(vals[i]);if(d)return d;}
+  return null;
+}
+function rowOk(o){var d=rowDate(o);return !!(d&&d>=CUTOFF);}
 function status(msg){
   var el=document.getElementById('ci-sync-status');
   if(!el){
@@ -58,9 +81,14 @@ try{
       }
     });
   }
-  if(!rows.length){fail('Aucune soumission trouvee sur la page.');return;}
+  var before=rows.length;
+  rows=rows.filter(rowOk);
+  allIds=[];
+  rows.forEach(function(o){if(o._id&&allIds.indexOf(o._id)<0)allIds.push(o._id);});
+  var skippedOld=before-rows.length;
+  if(!rows.length){fail(skippedOld?'Aucune soumission du '+CUTOFF+' ou apres sur cette page.':'Aucune soumission trouvee.');return;}
   if(rows.length>40){fail('Max 40 lignes. Filtre la liste.');return;}
-  status('Envoi '+rows.length+' ligne(s) vers CloturePro...');
+  status('Envoi '+rows.length+' ligne(s) (>= '+CUTOFF+')...');
   var ingestUrl=API_BASE+'/api/intimura/ingest?token='+encodeURIComponent(TOKEN);
   var detailsUrl=API_BASE+'/api/intimura/ingest-details?token='+encodeURIComponent(TOKEN);
   fetch(ingestUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:rows})})
@@ -92,7 +120,8 @@ try{
     var du=(d.updated!=null?d.updated:(d.results||[]).filter(function(x){return x.ok;}).length);
     var skip=(d.results||[]).filter(function(x){return x.reason==='ALREADY_SYNCED';}).length;
     status('Termine! '+du+' fiche(s) importee(s).');
-    alert('Sync terminee\\n'+(s.createdLeads||0)+' nouveau(x) lead(s)\\n'+(s.createdQuotes||0)+' soumission(s)\\n'+du+' fiche(s) complete(s)\\n'+skip+' deja a jour\\n'+(s.skipped||0)+' ignore(s)');
+    var oldN=(s.skippedBeforeCutoff||0)+skippedOld;
+    alert('Sync terminee\\n'+(s.createdLeads||0)+' nouveau(x) lead(s)\\n'+(s.createdQuotes||0)+' soumission(s)\\n'+du+' fiche(s) complete(s)\\n'+skip+' deja a jour\\n'+(s.skipped||0)+' deja dans le CRM\\n'+oldN+' avant '+CUTOFF+' (non transferees)');
     window.open(API_BASE+'/#/soumissions','_blank');
   })
   .catch(function(e){fail(e&&e.message?e.message:String(e));});

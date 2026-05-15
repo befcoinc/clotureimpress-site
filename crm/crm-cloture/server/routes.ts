@@ -11,6 +11,11 @@ import { sendInviteEmail, sendInstallerProfileReminderEmail, sendInstallerFicheL
 import { sendInviteSms, sendInstallerProfileReminderSms, sendSatisfactionSms } from "./sms";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema, insertInstallerApplicationSchema, insertRepresentativeApplicationSchema } from "@shared/schema";
 import { buildBookmarkletLoaderHref, buildIntimuraBookmarkletRunner } from "./intimura-bookmarklet-runner";
+import {
+  INTIMURA_SYNC_CUTOFF,
+  isDecodedIntimuraQuoteOnOrAfterCutoff,
+  isIntimuraQuoteOnOrAfterCutoff,
+} from "./intimura-sync-cutoff";
 
 function decodeSvelteData(data: any[]) {
   // Cycle/depth-protected resolver. Some Svelte payloads contain self-referential
@@ -1940,6 +1945,7 @@ export async function registerRoutes(
     let createdLeads = 0;
     let createdQuotes = 0;
     let skipped = 0;
+    let skippedBeforeCutoff = 0;
     const createdIntimuraIds: string[] = [];
     const detailIntimuraIds: string[] = [];
 
@@ -2037,12 +2043,10 @@ export async function registerRoutes(
       return scored[0] || all[0];
     };
 
-    const LEAD_CUTOFF = '2026-05-01';
     for (const iq of intimuraQuotes) {
       if (!iq?.id) continue;
-      // Ignorer les leads Intimura antérieurs au 2026-05-01
-      if (iq.created_at && String(iq.created_at).slice(0, 10) < LEAD_CUTOFF) {
-        skipped++;
+      if (!isIntimuraQuoteOnOrAfterCutoff(iq)) {
+        skippedBeforeCutoff++;
         continue;
       }
       const existingLead = await storage.getLeadByIntimuraId(iq.id);
@@ -2214,6 +2218,8 @@ export async function registerRoutes(
       skipped,
       createdIntimuraIds,
       detailIntimuraIds,
+      skippedBeforeCutoff,
+      cutoffDate: INTIMURA_SYNC_CUTOFF,
       dedupedAfterImport,
       dedupedQuotesAfterImport,
       syncedAt: new Date().toISOString(),
@@ -2374,7 +2380,9 @@ export async function registerRoutes(
         target_date: date || null,
         created_at: date || null,
       };
-    }).filter((q: any) => q && q.id);
+    })
+      .filter((q: any) => q && q.id)
+      .filter((q: any) => isIntimuraQuoteOnOrAfterCutoff(q));
   }
 
   /**
@@ -2644,7 +2652,7 @@ export async function registerRoutes(
   <p><strong>Glisse</strong> le bouton vert ci-dessous dans ta barre de favoris (barre du haut du navigateur).</p>
   <a class="btn" href="${safeHref}" draggable="true">⇩ Sync Intimura → ClôturePro</a>
   <p>Puis sur <a href="https://crm.intimura.com/app/quotes">crm.intimura.com/app/quotes</a>, clique ce favori une fois.</p>
-  <p style="font-size:.85rem;color:#666">Une boite verte en haut a droite confirme que ca fonctionne.</p>
+  <p style="font-size:.85rem;color:#666">Seules les soumissions du <strong>${INTIMURA_SYNC_CUTOFF}</strong> ou apres sont importees. Boite verte = progression.</p>
 </body>
 </html>`);
   });
@@ -2834,6 +2842,9 @@ export async function registerRoutes(
   }
 
   async function applyIntimuraDetails(intimuraId: string, decoded: any) {
+    if (!isDecodedIntimuraQuoteOnOrAfterCutoff(decoded)) {
+      return { ok: false, reason: "BEFORE_CUTOFF", cutoff: INTIMURA_SYNC_CUTOFF };
+    }
     const details = pickIntimuraDetails(decoded, intimuraId);
     if (!details || !intimuraId) return { ok: false, reason: "EMPTY" };
     let quote = await storage.getQuoteByIntimuraId(intimuraId);

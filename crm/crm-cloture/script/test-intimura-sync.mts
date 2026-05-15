@@ -4,6 +4,12 @@
  * Optional: INTIMURA_BOOKMARKLET_TOKEN=... for live ingest on Render
  */
 
+import {
+  INTIMURA_SYNC_CUTOFF,
+  isIntimuraQuoteOnOrAfterCutoff,
+  parseIntimuraDate,
+} from "../server/intimura-sync-cutoff.ts";
+
 const API_BASE = process.env.CRM_API_BASE || "https://cloture-crm.onrender.com";
 const TOKEN = process.env.INTIMURA_BOOKMARKLET_TOKEN || "";
 
@@ -133,6 +139,14 @@ async function runUnitTests() {
   }
   const mergedIds = mergeDetailIds(["new-1"], ["new-1", "existing-no-data"]);
   assert(mergedIds.length === 2 && mergedIds.includes("existing-no-data"), "detailIntimuraIds union");
+
+  assert(parseIntimuraDate("15/04/2025") === "2025-04-15", "parse FR date");
+  assert(parseIntimuraDate("2026-05-01") === "2026-05-01", "parse ISO date");
+  assert(!isIntimuraQuoteOnOrAfterCutoff({ id: "x", created_at: "2025-12-01" }), "avant cutoff");
+  assert(isIntimuraQuoteOnOrAfterCutoff({ id: "y", created_at: "2026-05-01" }), "egal cutoff OK");
+  assert(isIntimuraQuoteOnOrAfterCutoff({ id: "z", issued_at: "2026-06-10" }), "apres cutoff OK");
+  assert(!isIntimuraQuoteOnOrAfterCutoff({ id: "w" }), "sans date = refuse");
+  assert(INTIMURA_SYNC_CUTOFF === "2026-05-01", "cutoff constant");
 
   console.log("  OK extractIntimuraQuotes (scrape)");
   console.log("  OK nouveaux leads seulement");

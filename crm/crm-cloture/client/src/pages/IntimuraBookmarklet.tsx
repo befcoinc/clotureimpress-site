@@ -100,8 +100,8 @@ export function IntimuraBookmarklet() {
         title={isEn ? "Intimura sync" : "Synchronisation Intimura"}
         description={
           isEn
-            ? "One bookmark on the quotes list: imports leads and full submission sheets into ClôturePro."
-            : "Un seul favori sur la liste des soumissions : importe les leads et les fiches complètes dans ClôturePro."
+            ? "One bookmark on the quotes list: imports leads and full sheets from 2026-05-01 onward only."
+            : "Un seul favori sur la liste : importe leads et fiches complètes à partir du 2026-05-01 seulement."
         }
       />
 
@@ -170,8 +170,8 @@ export function IntimuraBookmarklet() {
                 </Button>
                 <p className="text-sm text-muted-foreground">
                   {isEn
-                    ? "On crm.intimura.com/app/quotes, click once: each visible row becomes a lead + full submission in ClôturePro (same data as opening each quote)."
-                    : "Sur crm.intimura.com/app/quotes, un clic : chaque ligne visible devient un lead + une soumission complète dans ClôturePro (mêmes données que si tu cliquais sur chaque nom)."}
+                    ? "On crm.intimura.com/app/quotes, click once. Only submissions dated 2026-05-01 or later are transferred."
+                    : "Sur crm.intimura.com/app/quotes, un clic. Seules les soumissions du 2026-05-01 ou après sont transférées (les plus anciennes sont ignorées)."}
                 </p>
                 <div className="flex gap-2 items-start flex-wrap">
                   <a
