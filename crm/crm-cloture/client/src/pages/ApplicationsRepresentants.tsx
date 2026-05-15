@@ -29,6 +29,16 @@ function formatDate(dateStr: string) {
   }
 }
 
+function parseJsonObject(value?: string | null): Record<string, any> | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 export function ApplicationsRepresentants() {
   const { language } = useLanguage();
   const { toast } = useToast();
@@ -43,6 +53,69 @@ export function ApplicationsRepresentants() {
   const [isSendingFiche, setIsSendingFiche] = useState(false);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+
+  const ficheData = parseJsonObject(selected?.ficheData);
+  const boolLabel = (v: unknown) => {
+    const checked = v === true || v === "true" || v === "yes";
+    return checked ? (isFr ? "Oui" : "Yes") : (isFr ? "Non" : "No");
+  };
+
+  const ficheSections = ficheData ? [
+    {
+      title: isFr ? "Informations personnelles" : "Personal information",
+      fields: [
+        { label: isFr ? "Nom légal complet / raison sociale" : "Full legal name / Business name", value: ficheData.companyLegalName },
+        { label: isFr ? "Nom du représentant" : "Representative name", value: ficheData.contactName },
+        { label: isFr ? "Adresse complète" : "Full address", value: ficheData.address },
+        { label: isFr ? "Ville / Province" : "City / Province", value: ficheData.cityProvince },
+        { label: isFr ? "Code postal" : "Postal code", value: ficheData.postalCode },
+        { label: isFr ? "Téléphone cellulaire" : "Mobile phone", value: ficheData.phonePrimary },
+        { label: "Email", value: ficheData.email },
+        { label: isFr ? "Date de naissance" : "Date of birth", value: ficheData.dateOfBirth },
+        { label: isFr ? "Numéro d'assurance sociale" : "Social Insurance Number", value: ficheData.sin },
+        { label: isFr ? "Nom du contact d'urgence" : "Emergency contact name", value: ficheData.emergencyContactName },
+        { label: isFr ? "Lien avec le contact d'urgence" : "Emergency contact relationship", value: ficheData.emergencyContactRelationship },
+        { label: isFr ? "Téléphone du contact d'urgence" : "Emergency contact phone", value: ficheData.emergencyContactPhone },
+        { label: isFr ? "Marque / modèle / année du véhicule" : "Vehicle make / model / year", value: ficheData.vehicle },
+        { label: isFr ? "Plaque du véhicule" : "Vehicle plate", value: ficheData.vehiclePlate },
+        { label: isFr ? "Institution bancaire" : "Banking institution", value: ficheData.bankInstitution },
+        { label: isFr ? "Spécimen de chèque fourni" : "Void cheque provided", value: ficheData.voidChequeAttached || "" },
+        { label: isFr ? "Régions desservies" : "Served regions", value: ficheData.regions },
+        { label: isFr ? "Années d'expérience" : "Years of experience", value: ficheData.yearsExperience },
+        { label: isFr ? "Expérience en vente" : "Sales experience", value: ficheData.salesExperience },
+        { label: isFr ? "Spécialités / type de clientèle" : "Specialties / customer type", value: ficheData.specialties },
+      ],
+    },
+    {
+      title: isFr ? "Commission et engagement" : "Commission and commitment",
+      fields: [
+        { label: isFr ? "Nom du représentant" : "Representative name", value: ficheData.repName },
+        { label: isFr ? "Signature du représentant" : "Representative signature", value: ficheData.repSignature },
+        { label: isFr ? "Signature direction" : "Management signature", value: ficheData.managementSignature },
+        { label: isFr ? "Date" : "Date", value: ficheData.signatureDate },
+        { label: isFr ? "Engagement confirmé" : "Commitment confirmed", value: boolLabel(ficheData.commitmentAccepted) },
+      ],
+    },
+    {
+      title: isFr ? "Liste de vérification administrative" : "Administrative checklist",
+      fields: [
+        { label: isFr ? "Formulaire personnel complété" : "Personal form completed", value: boolLabel(ficheData.cl_personalForm) },
+        { label: isFr ? "NAS conservé de façon sécurisée" : "SIN stored securely", value: boolLabel(ficheData.cl_sinSecure) },
+        { label: isFr ? "Spécimen de chèque reçu" : "Void cheque received", value: boolLabel(ficheData.cl_voidCheque) },
+        { label: isFr ? "Contact d'urgence complet" : "Emergency contact complete", value: boolLabel(ficheData.cl_emergencyContact) },
+        { label: isFr ? "Plaque du véhicule inscrite" : "Vehicle plate recorded", value: boolLabel(ficheData.cl_vehiclePlate) },
+        { label: isFr ? "Permis de conduire vérifié" : "Driver license verified", value: boolLabel(ficheData.cl_driverLicense) },
+        { label: isFr ? "Assurance véhicule vérifiée" : "Vehicle insurance verified", value: boolLabel(ficheData.cl_vehicleInsurance) },
+        { label: isFr ? "Politique de commission signée" : "Commission policy signed", value: boolLabel(ficheData.cl_commissionPolicy) },
+        { label: isFr ? "Accusé de réception signé" : "Acknowledgment signed", value: boolLabel(ficheData.cl_ackSigned) },
+        { label: isFr ? "Formation produit complétée" : "Product training completed", value: boolLabel(ficheData.cl_productTraining) },
+        { label: isFr ? "Formation script complétée" : "Script training completed", value: boolLabel(ficheData.cl_scriptTraining) },
+        { label: isFr ? "Accès CRM attribué" : "CRM access assigned", value: boolLabel(ficheData.cl_crmAccess) },
+        { label: isFr ? "Commentaires" : "Comments", value: ficheData.comments },
+        { label: isFr ? "Langue de la fiche" : "Form language", value: String(ficheData.lang || "").toUpperCase() },
+      ],
+    },
+  ] : [];
 
   const { data: applications = [], isLoading } = useQuery<RepresentativeApplication[]>({
     queryKey: ["/api/representative-applications", showArchived ? "archived" : "active"],
@@ -203,7 +276,27 @@ export function ApplicationsRepresentants() {
               {selected.ficheData && (
                 <div className="rounded-md border p-3">
                   <Button variant="ghost" size="sm" onClick={() => setShowFicheData(v => !v)}><FileText size={13} className="mr-1" />{showFicheData ? (isFr ? "Masquer" : "Hide") : (isFr ? "Voir la fiche" : "View form")}</Button>
-                  {showFicheData && <pre className="mt-2 max-h-72 overflow-auto rounded bg-white p-2 text-xs whitespace-pre-wrap break-all">{(() => { try { return JSON.stringify(JSON.parse(selected.ficheData || "{}"), null, 2); } catch { return selected.ficheData || ""; } })()}</pre>}
+                  {showFicheData && (
+                    ficheData ? (
+                      <div className="mt-3 space-y-3 max-h-72 overflow-auto pr-1">
+                        {ficheSections.map((section) => (
+                          <div key={section.title} className="rounded-md border bg-muted/20 p-3">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{section.title}</p>
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                              {section.fields.map((field) => (
+                                <div key={field.label} className="rounded border bg-white p-2">
+                                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{field.label}</p>
+                                  <p className="text-sm font-medium break-words">{field.value ? String(field.value) : "—"}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <pre className="mt-2 max-h-72 overflow-auto rounded bg-white p-2 text-xs whitespace-pre-wrap break-all">{selected.ficheData || ""}</pre>
+                    )
+                  )}
                 </div>
               )}
               <div className="space-y-2">
