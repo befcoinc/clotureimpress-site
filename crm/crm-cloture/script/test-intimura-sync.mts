@@ -9,6 +9,12 @@ import {
   isIntimuraQuoteOnOrAfterCutoff,
   parseIntimuraDate,
 } from "../server/intimura-sync-cutoff.ts";
+import {
+  groupIntimuraBatchDuplicates,
+  intimuraRowsMatch,
+  intimuraRowKeys,
+  planLinkIntimuraToPrimary,
+} from "../server/intimura-duplicate-merge.ts";
 
 const API_BASE = process.env.CRM_API_BASE || "https://cloture-crm.onrender.com";
 const TOKEN = process.env.INTIMURA_BOOKMARKLET_TOKEN || "";
@@ -173,6 +179,26 @@ async function runUnitTests() {
   ]);
   assert(merged.length === 2 && merged.some((q) => q.id === "b"), "merge quotes+board dedupe");
   console.log("  OK merge liste quotes + board");
+
+  const { groups } = groupIntimuraBatchDuplicates([
+    { id: "q1", customer_name: "Jean Dupont", customer_email: "jean@test.ca" },
+    { id: "q2", customer_name: "Jean Dupont", customer_email: "jean@test.ca" },
+    { id: "q3", customer_name: "Autre Client", customer_phone: "5145559999" },
+  ]);
+  const grouped = [...groups.values()].find((ids) => ids.length === 2);
+  assert(!!grouped && grouped.includes("q1") && grouped.includes("q2"), "batch groupe par email");
+
+  const k1 = intimuraRowKeys({ customer_name: "Marie", customer_phone: "4185551212" });
+  const k2 = intimuraRowKeys({ customer_name: "Marie Tremblay", customer_phone: "4185551212" });
+  assert(intimuraRowsMatch(k1, k2), "match telephone");
+
+  const plan = planLinkIntimuraToPrimary(
+    { intimuraId: "primary-1", linkedIntimuraQuotes: null, salesNotes: null },
+    { id: "secondary-2", title: "Deuxieme soumission", subtotal: 1000 },
+    (id) => `https://crm.intimura.com/app/quotes/${id}`,
+  );
+  assert(plan != null && plan.intimuraCount === 2, "plan link 2 soumissions");
+  console.log("  OK regroupement doublons Intimura (batch + link)");
 }
 
 async function runApiTests() {

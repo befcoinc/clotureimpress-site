@@ -52,6 +52,13 @@ export function QuoteDetail() {
   // Parse the Intimura submission blob attached to this quote (if any).
   let intimura: any = null;
   try { intimura = quote?.intimuraData ? JSON.parse(quote.intimuraData as any) : null; } catch { intimura = null; }
+  let linkedIntimuraQuotes: { intimuraId: string; title?: string; url?: string; status?: string }[] = [];
+  try {
+    linkedIntimuraQuotes = quote?.linkedIntimuraQuotes ? JSON.parse(quote.linkedIntimuraQuotes as string) : [];
+  } catch {
+    linkedIntimuraQuotes = [];
+  }
+  const intimuraSubmissionCount = (quote?.intimuraId ? 1 : 0) + linkedIntimuraQuotes.length;
   const intimuraCustomer = intimura?.customer || null;
   const intimuraQuote = intimura?.quote || null;
   const intimuraPayments = Array.isArray(intimura?.payments) ? intimura.payments : [];
@@ -252,6 +259,39 @@ export function QuoteDetail() {
               <Info icon={<UserIcon className="h-3.5 w-3.5" />} label={isEn ? "Installer" : "Installateur"} value={installer?.name || (isEn ? "Unassigned" : "Non assigné")} />
             </CardContent>
           </Card>
+
+          {intimuraSubmissionCount > 1 && (
+            <Card className="border-amber-500/40 bg-amber-500/5">
+              <CardContent className="py-3 text-sm">
+                <p className="font-semibold text-amber-900 dark:text-amber-100">
+                  {isEn
+                    ? `${intimuraSubmissionCount} Intimura quotes are linked to this record.`
+                    : `${intimuraSubmissionCount} soumissions Intimura sont liées à cette fiche.`}
+                </p>
+                <ul className="mt-2 space-y-1 text-[12px] text-muted-foreground">
+                  {quote?.intimuraId && (
+                    <li>
+                      <a
+                        href={`https://crm.intimura.com/app/quotes/${quote.intimuraId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {isEn ? "Primary quote" : "Soumission principale"} — {quote.intimuraId}
+                      </a>
+                    </li>
+                  )}
+                  {linkedIntimuraQuotes.map((l) => (
+                    <li key={l.intimuraId}>
+                      <a href={l.url || `https://crm.intimura.com/app/quotes/${l.intimuraId}`} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                        {l.title || l.intimuraId}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Intimura submission (if synced) */}
           {intimura && (

@@ -16,6 +16,19 @@ import {
   isDecodedIntimuraQuoteOnOrAfterCutoff,
   isIntimuraQuoteOnOrAfterCutoff,
 } from "./intimura-sync-cutoff";
+import {
+  allIntimuraIdsOnQuote,
+  groupIntimuraBatchDuplicates,
+  intimuraRowKeys,
+  multiIntimuraNotice,
+  normAddress,
+  normEmail,
+  normPhone,
+  nameKey,
+  parseLinkedIntimuraQuotes,
+  personKey,
+  planLinkIntimuraToPrimary,
+} from "./intimura-duplicate-merge";
 
 function decodeSvelteData(data: any[]) {
   // Cycle/depth-protected resolver. Some Svelte payloads contain self-referential
@@ -1904,6 +1917,85 @@ export async function registerRoutes(
     return `https://crm.intimura.com/app/quotes/${intimuraId}`;
   }
 
+  async function findQuoteByIntimuraIdAny(intimuraId: string) {
+    const direct = await storage.getQuoteByIntimuraId(intimuraId);
+    if (direct) return { quote: direct, isLinkedId: direct.intimuraId !== intimuraId };
+    const all = await storage.getQuotes();
+    for (const row of all) {
+      const linked = parseLinkedIntimuraQuotes(row.linkedIntimuraQuotes);
+      if (linked.some((l) => l.intimuraId === intimuraId)) {
+        return { quote: row, isLinkedId: true };
+      }
+    }
+    return null;
+  }
+
+  async function linkIntimuraQuoteToPrimary(primaryQuote: any, dupeLead: any, iq: any) {
+    const plan = planLinkIntimuraToPrimary(primaryQuote, iq, intimuraQuoteUrl);
+    if (!plan) return primaryQuote;
+    const updated = await storage.updateQuote(primaryQuote.id, {
+      linkedIntimuraQuotes: plan.linkedIntimuraQuotes,
+      salesNotes: plan.salesNotes,
+    } as any);
+    const notice = multiIntimuraNotice(plan.intimuraCount);
+    if (notice && dupeLead) {
+      const leadMsg = String(dupeLead.message || "");
+      if (!leadMsg.includes("soumissions Intimura")) {
+        await storage.updateLead(dupeLead.id, {
+          message: leadMsg ? `${leadMsg}\n\n${notice}` : notice,
+        } as any);
+      }
+    }
+    await storage.createActivity({
+      leadId: dupeLead?.id ?? primaryQuote.leadId ?? null,
+      quoteId: primaryQuote.id,
+      userId: null,
+      userName: "Sync Intimura",
+      userRole: "system",
+      action: "intimura_sync",
+      note: `Soumission Intimura ${iq.id} regroupée sur la fiche #${primaryQuote.id} (${plan.intimuraCount} soumissions liées).`,
+    });
+    return updated || { ...primaryQuote, linkedIntimuraQuotes: plan.linkedIntimuraQuotes, salesNotes: plan.salesNotes };
+  }
+
+  /** Fusionne les soumissions Intimura multiples (IDs différents) d'un même lead en une fiche. */
+  async function consolidateIntimuraQuotesOnSameLead() {
+    const all = await storage.getQuotes();
+    const byLead = new Map<number, (typeof all)[number][]>();
+    for (const q of all) {
+      if (q.leadId == null) continue;
+      const arr = byLead.get(q.leadId) || [];
+      arr.push(q);
+      byLead.set(q.leadId, arr);
+    }
+    let merged = 0;
+    for (const [, arr] of byLead) {
+      if (arr.length < 2) continue;
+      const distinct = new Set(arr.map((q) => q.intimuraId).filter(Boolean));
+      if (distinct.size < 2) continue;
+      arr.sort((a, b) => a.id - b.id);
+      const keeper = arr[0];
+      const lead = keeper.leadId ? await storage.getLead(keeper.leadId) : null;
+      for (let i = 1; i < arr.length; i++) {
+        const dup = arr[i];
+        if (!dup.intimuraId || dup.intimuraId === keeper.intimuraId) continue;
+        try {
+          await linkIntimuraQuoteToPrimary(keeper, lead, {
+            id: dup.intimuraId,
+            title: dup.clientName,
+            status: dup.salesStatus,
+            subtotal: dup.estimatedPrice,
+          });
+          const ok = await (storage as any).mergeQuoteInto(dup.id, keeper.id);
+          if (ok) merged++;
+        } catch (e) {
+          console.error("[intimura consolidate] merge failed", dup.id, "->", keeper.id, e);
+        }
+      }
+    }
+    return merged;
+  }
+
   async function createQuoteFromIntimuraRow(lead: any, iq: any) {
     const city = extractCity(iq.title || "") || lead.city;
     const province = inferProvince(city || String(lead.province || ""));
@@ -1940,7 +2032,10 @@ export async function registerRoutes(
   }
 
   function queueIntimuraDetailFetch(queue: string[], intimuraId: string, quote: any | undefined | null) {
-    if (!intimuraId || !quote || quote.intimuraData) return;
+    if (!intimuraId || !quote) return;
+    if (quote.intimuraId === intimuraId && quote.intimuraData) return;
+    const linked = parseLinkedIntimuraQuotes(quote.linkedIntimuraQuotes);
+    if (linked.some((l) => l.intimuraId === intimuraId && l.intimuraData)) return;
     if (!queue.includes(intimuraId)) queue.push(intimuraId);
   }
 
@@ -1962,6 +2057,9 @@ export async function registerRoutes(
     const quotesByLeadId = new Map<number, (typeof allQuotes)[number][]>();
     for (const q of allQuotes) {
       if (q.intimuraId) quoteByIntimuraId.set(q.intimuraId, q);
+      for (const linked of parseLinkedIntimuraQuotes(q.linkedIntimuraQuotes)) {
+        if (linked.intimuraId) quoteByIntimuraId.set(linked.intimuraId, q);
+      }
       if (q.leadId != null) {
         const arr = quotesByLeadId.get(q.leadId) || [];
         arr.push(q);
@@ -1969,29 +2067,26 @@ export async function registerRoutes(
       }
     }
 
+    const { groups: batchGroups } = groupIntimuraBatchDuplicates(
+      intimuraQuotes.filter((row) => row?.id && isIntimuraQuoteOnOrAfterCutoff(row)),
+    );
+    const batchPrimaryById = new Map<string, string>();
+    for (const ids of batchGroups.values()) {
+      if (ids.length < 2) continue;
+      const sorted = [...ids].sort();
+      const primary = sorted[0];
+      for (const id of ids) batchPrimaryById.set(id, primary);
+    }
+    const sortedIntimuraQuotes = [...intimuraQuotes].sort((a, b) => {
+      const pa = batchPrimaryById.get(a?.id) || a?.id || "";
+      const pb = batchPrimaryById.get(b?.id) || b?.id || "";
+      if (pa !== pb) return pa.localeCompare(pb);
+      return String(a?.id).localeCompare(String(b?.id));
+    });
+
     // Pre-load all leads once to enable robust secondary dedup when the
     // Intimura quote id differs (bookmarklet row vs API row).
     const allLeads = await storage.getLeads();
-    const normName = (s: string) =>
-      String(s || "")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9 ]+/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-    const normPhone = (s: string) => String(s || "").replace(/\D+/g, "").slice(-10);
-    const normEmail = (s: string) => String(s || "").trim().toLowerCase();
-    // First two tokens + first/last token key to absorb variants like
-    // "RICHARD BOUTIN x Saint-Pamphile" vs "RICHARD BOUTIN".
-    const nameKey = (s: string) => normName(s).split(" ").slice(0, 2).join(" ");
-    const personKey = (s: string) => {
-      const cleaned = normName(s).split(/\bx\b/)[0].trim();
-      const tokens = cleaned.split(" ").filter(Boolean);
-      if (!tokens.length) return "";
-      if (tokens.length === 1) return tokens[0];
-      return `${tokens[0]} ${tokens[tokens.length - 1]}`;
-    };
     const sameZone = (a: any, city: string, province: string) => {
       const aCity = String(a?.city || "").trim().toLowerCase();
       const cCity = String(city || "").trim().toLowerCase();
@@ -2006,6 +2101,7 @@ export async function registerRoutes(
     const byPersonKey = new Map<string, Array<typeof allLeads[number]>>();
     const byPhone = new Map<string, Array<typeof allLeads[number]>>();
     const byEmail = new Map<string, Array<typeof allLeads[number]>>();
+    const byAddress = new Map<string, Array<typeof allLeads[number]>>();
     const pushMap = <T>(m: Map<string, T[]>, k: string, v: T) => {
       if (!k) return;
       const arr = m.get(k);
@@ -2019,12 +2115,22 @@ export async function registerRoutes(
       if (p && p.length >= 10) pushMap(byPhone, p, l);
       const e = normEmail(l.email || "");
       if (e) pushMap(byEmail, e, l);
+      const addr = normAddress(l.address || "");
+      if (addr.length >= 8) pushMap(byAddress, addr, l);
     }
 
-    const pickBestDuplicate = (candName: string, candPhoneKey: string, candEmailKey: string, city: string, province: string) => {
+    const pickBestDuplicate = (
+      candName: string,
+      candPhoneKey: string,
+      candEmailKey: string,
+      candAddressKey: string,
+      city: string,
+      province: string,
+    ) => {
       const direct = [
         ...(candPhoneKey && candPhoneKey.length >= 10 ? (byPhone.get(candPhoneKey) || []) : []),
         ...(candEmailKey ? (byEmail.get(candEmailKey) || []) : []),
+        ...(candAddressKey ? (byAddress.get(candAddressKey) || []) : []),
       ];
       const seen = new Set<number>();
       const fuzzy = [
@@ -2051,7 +2157,7 @@ export async function registerRoutes(
       return scored[0] || all[0];
     };
 
-    for (const iq of intimuraQuotes) {
+    for (const iq of sortedIntimuraQuotes) {
       if (!iq?.id) continue;
       if (!isIntimuraQuoteOnOrAfterCutoff(iq)) {
         skippedBeforeCutoff++;
@@ -2084,16 +2190,26 @@ export async function registerRoutes(
       const candName = iq.customer_name || iq.title || "";
       const candPhoneKey = normPhone(iq.customer_phone || "");
       const candEmailKey = normEmail(iq.customer_email || "");
-      const dupe = pickBestDuplicate(candName, candPhoneKey, candEmailKey, city, province);
+      const candAddressKey = normAddress(iq.customer_address || iq.address || "");
+      const batchPrimaryId = batchPrimaryById.get(iq.id);
+      if (batchPrimaryId && batchPrimaryId !== iq.id) {
+        const primaryQuote = quoteByIntimuraId.get(batchPrimaryId);
+        if (primaryQuote) {
+          const batchLead = primaryQuote.leadId ? await storage.getLead(primaryQuote.leadId) : null;
+          const linked = await linkIntimuraQuoteToPrimary(primaryQuote, batchLead, iq);
+          quoteByIntimuraId.set(iq.id, linked);
+          queueIntimuraDetailFetch(detailIntimuraIds, iq.id, linked);
+          skipped++;
+          continue;
+        }
+      }
+
+      const dupe = pickBestDuplicate(candName, candPhoneKey, candEmailKey, candAddressKey, city, province);
       if (dupe) {
-        // Backfill intimuraId on the existing lead so future syncs match by id directly.
         if (!dupe.intimuraId) {
           try { await storage.updateLead(dupe.id, { intimuraId: iq.id }); } catch {}
         }
 
-        // If there are stale unassigned duplicates for the same person,
-        // copy the known seller assignment so they stop reappearing in
-        // "Leads à assigner".
         if (dupe.assignedSalesId) {
           const pk = personKey(candName);
           const stale = byPersonKey.get(pk) || [];
@@ -2111,18 +2227,21 @@ export async function registerRoutes(
           }
         }
 
+        const leadQuotes = (quotesByLeadId.get(dupe.id) || []).slice().sort((a, b) => a.id - b.id);
         let linkedQuote =
           quoteByIntimuraId.get(iq.id) ||
-          (quotesByLeadId.get(dupe.id) || []).find((q) => q.intimuraId === iq.id) ||
-          (quotesByLeadId.get(dupe.id) || [])[0];
-        if (!linkedQuote) {
+          leadQuotes.find((q) => q.intimuraId === iq.id) ||
+          leadQuotes[0];
+        if (linkedQuote && linkedQuote.intimuraId !== iq.id && !allIntimuraIdsOnQuote(linkedQuote).has(iq.id)) {
+          linkedQuote = await linkIntimuraQuoteToPrimary(linkedQuote, dupe, iq);
+        } else if (!linkedQuote) {
           linkedQuote = await createQuoteFromIntimuraRow(dupe, iq);
           createdQuotes++;
-          quoteByIntimuraId.set(iq.id, linkedQuote);
-          const lq = quotesByLeadId.get(dupe.id) || [];
-          lq.push(linkedQuote);
-          quotesByLeadId.set(dupe.id, lq);
         }
+        quoteByIntimuraId.set(iq.id, linkedQuote);
+        const lq = quotesByLeadId.get(dupe.id) || [];
+        if (!lq.some((q) => q.id === linkedQuote.id)) lq.push(linkedQuote);
+        quotesByLeadId.set(dupe.id, lq);
         queueIntimuraDetailFetch(detailIntimuraIds, iq.id, linkedQuote);
         skipped++;
         continue;
@@ -2202,6 +2321,13 @@ export async function registerRoutes(
       });
     }
 
+    let consolidatedQuotes = 0;
+    try {
+      consolidatedQuotes = await consolidateIntimuraQuotesOnSameLead();
+    } catch (e) {
+      console.error("[intimura import] consolidate multi-intimura failed", e);
+    }
+
     // Optional post-import dedup (server cron / admin sync only — bookmarklet skips this).
     let dedupedAfterImport = 0;
     let dedupedQuotesAfterImport = 0;
@@ -2230,6 +2356,7 @@ export async function registerRoutes(
       cutoffDate: INTIMURA_SYNC_CUTOFF,
       dedupedAfterImport,
       dedupedQuotesAfterImport,
+      consolidatedQuotes,
       syncedAt: new Date().toISOString(),
     };
   }
@@ -2411,6 +2538,8 @@ export async function registerRoutes(
     const merged: Array<{ removed: number; into: number }> = [];
     for (const [, arr] of byLead) {
       if (arr.length < 2) continue;
+      const distinctIntimura = new Set(arr.map((q) => q.intimuraId).filter(Boolean));
+      if (distinctIntimura.size >= 2) continue;
       // Keep highest id (newest). Sort desc.
       arr.sort((a, b) => b.id - a.id);
       const keeper = arr[0];
@@ -2745,6 +2874,20 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/consolidate-intimura-quotes", requireAuth, async (req, res) => {
+    const actor = req.user as any;
+    if (actor?.role !== "admin" && actor?.role !== "sales_director") {
+      return res.status(403).json({ error: "Acces reserve aux administrateurs et directeurs" });
+    }
+    try {
+      const merged = await consolidateIntimuraQuotesOnSameLead();
+      res.json({ ok: true, consolidatedQuotes: merged });
+    } catch (err: any) {
+      console.error("[admin/consolidate-intimura-quotes] error", err);
+      res.status(500).json({ error: "SERVER_ERROR", message: err?.message || "Erreur serveur" });
+    }
+  });
+
   // -------- Intimura quote DETAILS (per-submission) --------
   function intimuraFormatAddress(c: any, preferService = true): string | null {
     if (!c || typeof c !== "object") return null;
@@ -2855,7 +2998,8 @@ export async function registerRoutes(
     }
     const details = pickIntimuraDetails(decoded, intimuraId);
     if (!details || !intimuraId) return { ok: false, reason: "EMPTY" };
-    let quote = await storage.getQuoteByIntimuraId(intimuraId);
+    let found = await findQuoteByIntimuraIdAny(intimuraId);
+    let quote = found?.quote;
     if (!quote && intimuraId.length >= 8) {
       const prefix = intimuraId.split("-")[0];
       quote = await storage.getQuoteByIntimuraId(prefix);
@@ -2867,6 +3011,7 @@ export async function registerRoutes(
             await storage.updateLead(lead.id, { intimuraId } as any);
           }
         }
+        found = { quote, isLinkedId: false };
       }
     }
     if (!quote) {
@@ -2906,6 +3051,35 @@ export async function registerRoutes(
         first_payment_paid_at: q.first_payment_paid_at,
       });
     }
+    const isLinkedSubmission = found?.isLinkedId || (quote.intimuraId && quote.intimuraId !== intimuraId);
+    if (isLinkedSubmission) {
+      const linked = parseLinkedIntimuraQuotes(quote.linkedIntimuraQuotes);
+      const idx = linked.findIndex((l) => l.intimuraId === intimuraId);
+      if (idx >= 0 && linked[idx].intimuraData) return { ok: false, reason: "ALREADY_SYNCED" };
+      const entry = {
+        intimuraId,
+        title: details.quote?.title || details.quote?.name,
+        status: details.quote?.status,
+        subtotal: Number(details.quote?.subtotal ?? details.quote?.total ?? 0) || undefined,
+        url: intimuraQuoteUrl(intimuraId),
+        syncedAt: new Date().toISOString(),
+        intimuraData: details,
+      };
+      if (idx >= 0) linked[idx] = { ...linked[idx], ...entry };
+      else linked.push(entry);
+      await storage.updateQuote(quote.id, { linkedIntimuraQuotes: JSON.stringify(linked) } as any);
+      if (quote.leadId) {
+        const lead = await storage.getLead(quote.leadId);
+        const notice = multiIntimuraNotice(linked.length + (quote.intimuraId ? 1 : 0));
+        if (lead && notice && !String(lead.message || "").includes("soumissions Intimura")) {
+          await storage.updateLead(lead.id, {
+            message: lead.message ? `${lead.message}\n\n${notice}` : notice,
+          } as any);
+        }
+      }
+      return { ok: true, quoteId: quote.id, linked: true };
+    }
+
     // Ne pas réécrire les soumissions déjà synchronisées (sync = nouveaux leads seulement).
     if (quote.intimuraData) return { ok: false, reason: "ALREADY_SYNCED" };
 

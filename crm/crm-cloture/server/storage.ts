@@ -12,6 +12,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { eq, desc, sql } from "drizzle-orm";
 import { scryptSync, randomBytes, timingSafeEqual } from "crypto";
+import { buildLinkedEntry, parseLinkedIntimuraQuotes } from "./intimura-duplicate-merge";
 
 // Render PostgreSQL requires SSL. Enable it whenever the URL points at Render
 // (both internal `dpg-...` and external `*.render.com` hostnames support TLS).
@@ -237,6 +238,7 @@ async function migrate() {
   await db.execute(sql`ALTER TABLE representative_applications ADD COLUMN IF NOT EXISTS archived_at TEXT`);
   // Intimura full submission blob on quotes
   await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS intimura_data TEXT`);
+  await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS linked_intimura_quotes TEXT`);
   // Photos de fin de chantier
   await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS completion_photos TEXT`);
   // Alertes retard + SMS satisfaction
@@ -591,6 +593,17 @@ export class DatabaseStorage implements IStorage {
     if (!keep.estimatedLength && dup.estimatedLength) patch.estimatedLength = dup.estimatedLength;
     if (!keep.salesNotes && dup.salesNotes) patch.salesNotes = dup.salesNotes;
     if (!keep.installNotes && dup.installNotes) patch.installNotes = dup.installNotes;
+    const seenLinked = new Set<string>();
+    const mergedLinked = [...parseLinkedIntimuraQuotes(keep.linkedIntimuraQuotes), ...parseLinkedIntimuraQuotes(dup.linkedIntimuraQuotes)].filter((l) => {
+      if (seenLinked.has(l.intimuraId) || l.intimuraId === keep.intimuraId) return false;
+      seenLinked.add(l.intimuraId);
+      return true;
+    });
+    if (dup.intimuraId && dup.intimuraId !== keep.intimuraId && !seenLinked.has(dup.intimuraId)) {
+      mergedLinked.push(buildLinkedEntry({ id: dup.intimuraId, subtotal: dup.estimatedPrice ?? undefined }, `https://crm.intimura.com/app/quotes/${dup.intimuraId}`));
+    }
+    const linkedMerged = mergedLinked.length ? JSON.stringify(mergedLinked) : undefined;
+    if (linkedMerged) patch.linkedIntimuraQuotes = linkedMerged;
     if (Object.keys(patch).length) {
       await db.update(quotes).set(patch).where(eq(quotes.id, keep.id));
     }

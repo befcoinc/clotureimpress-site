@@ -81,6 +81,7 @@ export const quotes = pgTable("quotes", {
   paidDate: text("paid_date"),
   timeline: text("timeline"), // JSON array of {step, date, userId, note}
   intimuraData: text("intimura_data"), // JSON blob: full Intimura submission (customer, items, taxes, payments, metadata)
+  linkedIntimuraQuotes: text("linked_intimura_quotes"), // JSON: autres soumissions Intimura regroupees sur cette fiche
   completionPhotos: text("completion_photos"), // JSON array: [{url, uploadedAt, uploadedBy}]
   satisfactionSmsSentAt: text("satisfaction_sms_sent_at"), // ISO timestamp when satisfaction SMS was sent
   overdueAlertSentAt: text("overdue_alert_sent_at"),     // ISO timestamp when overdue alert email was sent
