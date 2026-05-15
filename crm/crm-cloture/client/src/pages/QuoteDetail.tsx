@@ -54,6 +54,21 @@ export function QuoteDetail() {
   try { intimura = quote?.intimuraData ? JSON.parse(quote.intimuraData as any) : null; } catch { intimura = null; }
   const intimuraCustomer = intimura?.customer || null;
   const intimuraQuote = intimura?.quote || null;
+  const intimuraPayments = Array.isArray(intimura?.payments) ? intimura.payments : [];
+  const intimuraDocuments = Array.isArray(intimura?.documents) ? intimura.documents : [];
+  const serviceAddress =
+    intimuraCustomer?.service_address_resolved ||
+    intimuraCustomer?.service_address ||
+    intimuraCustomer?.serviceAddress ||
+    null;
+  const billingAddress =
+    intimuraCustomer?.billing_address_resolved ||
+    intimuraCustomer?.billing_address ||
+    intimuraCustomer?.billingAddress ||
+    null;
+  const displayPhone = lead?.phone || intimuraCustomer?.phone || intimuraCustomer?.mobile || "";
+  const displayEmail = lead?.email || intimuraCustomer?.email || "";
+  const displayAddress = quote?.address || serviceAddress || intimuraCustomer?.address || "";
   const initialItems = Array.isArray(intimura?.items) ? intimura.items : [];
   const [itemsDraft, setItemsDraft] = useState<any[] | null>(null);
   const items = itemsDraft ?? initialItems;
@@ -168,12 +183,19 @@ export function QuoteDetail() {
               />
               <EditableInfo
                 icon={<MapPin className="h-3.5 w-3.5" />}
-                label={isEn ? "Address" : "Adresse"}
-                value={quote.address || ""}
+                label={isEn ? "Service address" : "Adresse de service"}
+                value={displayAddress}
                 editable={canEditClient}
                 onSave={(v) => updateMut.mutate({ address: v })}
                 placeholder="—"
               />
+              {billingAddress && billingAddress !== displayAddress && (
+                <Info
+                  icon={<MapPin className="h-3.5 w-3.5" />}
+                  label={isEn ? "Billing address" : "Adresse de facturation"}
+                  value={billingAddress}
+                />
+              )}
               <EditableInfo
                 icon={<MapPin className="h-3.5 w-3.5" />}
                 label={isEn ? "City" : "Ville"}
@@ -193,7 +215,7 @@ export function QuoteDetail() {
               <EditableInfo
                 icon={<Phone className="h-3.5 w-3.5" />}
                 label={isEn ? "Phone" : "Téléphone"}
-                value={lead?.phone || ""}
+                value={displayPhone}
                 editable={canEditClient && !!quote.leadId}
                 onSave={(v) => leadUpdateMut.mutate({ phone: v })}
                 placeholder="—"
@@ -201,7 +223,7 @@ export function QuoteDetail() {
               <EditableInfo
                 icon={<Mail className="h-3.5 w-3.5" />}
                 label={isEn ? "Email" : "Courriel"}
-                value={lead?.email || ""}
+                value={displayEmail}
                 editable={canEditClient && !!quote.leadId}
                 onSave={(v) => leadUpdateMut.mutate({ email: v })}
                 placeholder="—"
@@ -252,6 +274,25 @@ export function QuoteDetail() {
                     <Info icon={<Calendar className="h-3.5 w-3.5" />} label={isEn ? "Valid until" : "Valide jusqu'au"} value={intimuraQuote.valid_until || "—"} />
                     <Info icon={<DollarSign className="h-3.5 w-3.5" />} label={isEn ? "First payment" : "1er paiement"} value={intimuraQuote.first_payment_amount ? `$${intimuraQuote.first_payment_amount}` : "—"} />
                     <Info icon={<UserIcon className="h-3.5 w-3.5" />} label={isEn ? "Assigned" : "Assigné à"} value={intimuraQuote.assigned_user_name || "—"} />
+                  </div>
+                )}
+
+                {intimuraPayments.length > 0 && (
+                  <div>
+                    <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-1.5">
+                      {isEn ? "Payments" : "Paiements"}
+                    </div>
+                    <div className="space-y-1.5">
+                      {intimuraPayments.map((p: any, i: number) => (
+                        <div key={p.id || i} className="text-[12px] flex justify-between gap-2 border-b border-border/50 pb-1">
+                          <span>{p.label || p.type || p.description || (isEn ? "Payment" : "Paiement")}</span>
+                          <span className="font-medium tabular-nums">
+                            {p.amount != null ? `$${p.amount}` : p.value != null ? `$${p.value}` : "—"}
+                            {p.status ? ` · ${p.status}` : ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 

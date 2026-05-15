@@ -125,7 +125,13 @@ export function Intimura() {
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
       toast({
         title: isEn ? "Intimura sync completed" : "Synchronisation Intimura terminée",
-        description: isEn ? `${data.createdLeads} new lead(s), ${data.skipped} duplicate(s) skipped.` : `${data.createdLeads} nouveau(x) lead(s), ${data.skipped} doublon(s) ignoré(s).`,
+        description: isEn
+          ? (data.createdLeads > 0
+            ? `${data.createdLeads} new lead(s). ${data.skipped} already in CRM.`
+            : `No new leads. ${data.skipped} already in CRM.`)
+          : (data.createdLeads > 0
+            ? `${data.createdLeads} nouveau(x) lead(s). ${data.skipped} déjà dans le CRM.`
+            : `Aucun nouveau lead. ${data.skipped} déjà dans le CRM.`),
       });
     },
     onError: (err: any) => {

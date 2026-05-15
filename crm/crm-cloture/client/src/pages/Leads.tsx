@@ -16,6 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
 import { useRole } from "@/lib/role-context";
 import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
@@ -222,8 +223,12 @@ export function Leads() {
       toast({
         title: isEn ? "Sync complete" : "Synchronisation terminée",
         description: isEn
-          ? `${created} new lead(s), ${skipped} duplicate(s) skipped.`
-          : `${created} nouveau(x) lead(s), ${skipped} doublon(s) ignoré(s).`,
+          ? created > 0
+            ? `${created} new lead(s) added. ${skipped} already in CRM (skipped).`
+            : `No new leads. ${skipped} already in CRM.`
+          : created > 0
+            ? `${created} nouveau(x) lead(s) ajouté(s). ${skipped} déjà dans le CRM (ignoré(s)).`
+            : `Aucun nouveau lead. ${skipped} déjà dans le CRM.`,
       });
     },
     onError: (err: any) => {
@@ -374,9 +379,17 @@ export function Leads() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {filtered.map((lead) => {
             const rep = salesReps.find(r => r.id === lead.assignedSalesId);
+            const isAssigned = !!lead.assignedSalesId;
             const linkedQuote = quoteByLeadId.get(lead.id);
             return (
-              <Card key={lead.id} className="hover-elevate" data-testid={`card-lead-${lead.id}`}>
+              <Card
+                key={lead.id}
+                className={cn(
+                  "hover-elevate border-2",
+                  isAssigned ? "border-emerald-500" : "border-red-500",
+                )}
+                data-testid={`card-lead-${lead.id}`}
+              >
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">

@@ -13,6 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useRole } from "@/lib/role-context";
 import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
+import { ROLE_NAMES } from "@/lib/role-constants";
 import type { Crew, Lead, Quote, User } from "@shared/schema";
 import { FENCE_TYPES, INSTALL_STATUSES, PROVINCES, SALES_STATUSES } from "@shared/schema";
 import { Pencil, Plus, Trash2 } from "lucide-react";
@@ -71,20 +72,22 @@ export function Soumissions() {
     if (province) setProvinceFilter(province);
   }, []);
 
-  const isDirector = role === "admin" || role === "sales_director" || role === "install_director";
+  const isDirector = can("view_all_quotes");
   const canManageQuotes = can("edit_sales") || isDirector;
   const canDeleteQuotes = isDirector;
 
   const visible = useMemo(() => {
     let list = quotes;
-    if (role === "sales_rep") {
-      // Mirror server-side logic: include quotes assigned directly to this rep
-      // OR linked to a lead assigned to this rep (Intimura quotes often have
-      // assignedSalesId=null on the quote itself but a properly-assigned lead).
+    if (isDirector) {
+      // Directors see all quotes
+    } else if (role === ROLE_NAMES.SALES_REP) {
+      // Include quotes assigned directly to this rep OR linked to a lead assigned to this rep.
+      // Intimura quotes often have assignedSalesId=null on the quote itself but a properly-assigned lead.
       const myLeadIds = new Set(leads.filter(l => l.assignedSalesId === currentUser?.id).map(l => l.id));
       list = list.filter(q => q.assignedSalesId === currentUser?.id || (q.leadId != null && myLeadIds.has(q.leadId)));
+    } else if (role === ROLE_NAMES.INSTALLER) {
+      list = list.filter(q => q.assignedInstallerId === currentUser?.id);
     }
-    if (role === "installer") list = list.filter(q => q.assignedInstallerId === currentUser?.id);
     if (cityFilter) {
       const cityNorm = normalizeForSearch(cityFilter);
       const provinceNorm = normalizeForSearch(provinceFilter);
@@ -110,7 +113,7 @@ export function Soumissions() {
       );
     }
     return list;
-  }, [quotes, leads, role, currentUser, search, statusFilter, cityFilter, provinceFilter]);
+  }, [quotes, leads, role, currentUser, isDirector, search, statusFilter, cityFilter, provinceFilter]);
 
   const createQuote = useMutation({
     mutationFn: async (payload: any) => apiRequest("POST", "/api/quotes", {

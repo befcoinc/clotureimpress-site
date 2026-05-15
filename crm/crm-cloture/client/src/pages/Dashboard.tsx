@@ -7,7 +7,11 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useState, useMemo } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import { useRole } from "@/lib/role-context";
+import { DIRECTOR_ROLES } from "@/lib/role-constants";
 import type { Lead, Quote, User, Activity } from "@shared/schema";
 import { LEAD_STATUSES, SALES_STATUSES } from "@shared/schema";
 import { computeWeightedPipeline } from "@/lib/win-probability";
@@ -19,11 +23,12 @@ interface Stats {
 
 export function Dashboard() {
   const { language } = useLanguage();
+  const { can } = useRole();
   const { data: stats } = useQuery<Stats>({ queryKey: ["/api/stats"] });
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const { data: quotes = [] } = useQuery<Quote[]>({ queryKey: ["/api/quotes"] });
-  const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const { data: activities = [] } = useQuery<Activity[]>({ queryKey: ["/api/activities"] });
+  const [openSector, setOpenSector] = useState<string | null>(null);
 
   const isEn = language === "en";
   const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
@@ -54,6 +59,16 @@ export function Dashboard() {
   const topSectors = Array.from(sectorMap.entries())
     .sort((a, b) => b[1].count - a[1].count)
     .slice(0, 8);
+
+  // Precompute sector-to-quotes mapping
+  const sectorQuotesMap = useMemo(() => {
+    const map = new Map<string, Quote[]>();
+    for (const [sector] of topSectors) {
+      const sectorLeadIds = new Set(activeLeads.filter(l => l.sector === sector).map(l => l.id));
+      map.set(sector, quotes.filter(q => q.leadId && sectorLeadIds.has(q.leadId)));
+    }
+    return map;
+  }, [topSectors, activeLeads, quotes]);
 
   // Urgent actions
   const urgent: Array<{ label: string; href: string; tone: "danger" | "warning" | "info" }> = [];
@@ -176,16 +191,38 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              {topSectors.map(([sector, info]) => (
-                <div key={sector} className="rounded-md border border-card-border bg-card p-3 hover-elevate">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <Badge variant="outline" className="text-[10px] font-semibold">{info.province}</Badge>
-                    <span className="text-lg font-bold tabular">{info.count}</span>
+              {topSectors.map(([sector, info]) => {
+                const sectorQuotes = sectorQuotesMap.get(sector) || [];
+                return (
+                  <div key={sector} className="rounded-md border border-card-border bg-card p-3 hover-elevate">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <Badge variant="outline" className="text-[10px] font-semibold">{info.province}</Badge>
+                      <span className="text-lg font-bold tabular">{info.count}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="text-[12px] font-medium truncate" title={sector}>{sector}</div>
+                      {can("view_all_quotes") && (
+                        <Button size="sm" variant="ghost" className="p-1 h-6" onClick={() => setOpenSector(openSector === sector ? null : sector)}>
+                          {openSector === sector ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </Button>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground tabular mt-0.5">{moneyFmt.format(info.value)}</div>
+                    {can("view_all_quotes") && openSector === sector && (
+                      <div className="mt-2 border rounded bg-muted/50 max-h-48 overflow-y-auto">
+                        {sectorQuotes.length === 0 && <div className="text-xs p-2 text-muted-foreground">{isEn ? "No quotes" : "Aucune soumission"}</div>}
+                        {sectorQuotes.map(q => (
+                          <Link key={q.id} href={`/soumissions/${q.id}`}
+                            className="block px-3 py-1 text-xs hover:bg-accent/60 cursor-pointer border-b last:border-b-0">
+                            <span className="font-semibold">{q.clientName}</span>
+                            {q.status ? <span className="ml-2 text-muted-foreground">({q.status})</span> : null}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="text-[12px] font-medium truncate" title={sector}>{sector}</div>
-                  <div className="text-[11px] text-muted-foreground tabular mt-0.5">{moneyFmt.format(info.value)}</div>
-                </div>
-              ))}
+                );
+              })}
               {topSectors.length === 0 && <p className="text-sm text-muted-foreground">{isEn ? "No sector." : "Aucun secteur."}</p>}
             </div>
           </CardContent>
