@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Copy, ExternalLink, AlertCircle, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
 import { useRole } from "@/lib/role-context";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export function IntimuraBookmarklet() {
   const { language } = useLanguage();
@@ -19,6 +20,7 @@ export function IntimuraBookmarklet() {
 
   const { data: credsStatus, isLoading, isError } = useQuery<{
     bookmarkletToken: string;
+    hasServerCredentials?: boolean;
     hasCookie?: boolean;
     hasCfServiceToken?: boolean;
   }>({
@@ -37,6 +39,28 @@ export function IntimuraBookmarklet() {
     queryKey: ["/api/intimura/auto-sync/status"],
     enabled: !!currentUser && canSync,
     refetchInterval: 60_000,
+  });
+
+  const serverSyncMut = useMutation({
+    mutationFn: async () => apiRequest("POST", "/api/intimura/sync", {}),
+    onSuccess: (data: { createdLeads?: number; skipped?: number; detailsUpdated?: number; fetchedFromIntimura?: number }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/intimura/auto-sync/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/leads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      toast({
+        title: isEn ? "Server sync complete" : "Sync serveur terminée",
+        description: isEn
+          ? `${data.createdLeads ?? 0} new, ${data.skipped ?? 0} skipped, ${data.detailsUpdated ?? 0} detailed (${data.fetchedFromIntimura ?? "?"} from Intimura).`
+          : `${data.createdLeads ?? 0} nouveau(x), ${data.skipped ?? 0} ignoré(s), ${data.detailsUpdated ?? 0} fiche(s) détaillée(s) (${data.fetchedFromIntimura ?? "?"} depuis Intimura).`,
+      });
+    },
+    onError: (err: Error) => {
+      toast({
+        title: isEn ? "Sync failed" : "Échec de la sync",
+        description: err?.message || String(err),
+        variant: "destructive",
+      });
+    },
   });
 
   const apiBase = typeof window !== "undefined" ? window.location.origin : "";
@@ -150,6 +174,16 @@ export function IntimuraBookmarklet() {
                         )}
                       </p>
                     )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      disabled={serverSyncMut.isPending}
+                      onClick={() => serverSyncMut.mutate()}
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 mr-2 ${serverSyncMut.isPending ? "animate-spin" : ""}`} />
+                      {isEn ? "Run sync now" : "Lancer la sync maintenant"}
+                    </Button>
                   </>
                 ) : (
                   <p className="text-muted-foreground text-xs">

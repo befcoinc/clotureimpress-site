@@ -132,6 +132,27 @@ async function runUnitTests() {
   console.log("  OK nouveaux leads seulement");
   console.log("  OK skip par intimuraId existant");
   console.log("  OK skip par doublon telephone");
+
+  function mergeQuoteLists(
+    lists: { id: string; title?: string }[][],
+  ): { id: string; title?: string }[] {
+    const byId = new Map<string, { id: string; title?: string }>();
+    for (const list of lists) {
+      for (const q of list) {
+        if (q?.id && !byId.has(q.id)) byId.set(q.id, q);
+      }
+    }
+    return [...byId.values()];
+  }
+  const merged = mergeQuoteLists([
+    [{ id: "a", title: "Board A" }],
+    [
+      { id: "a", title: "Quotes A dup" },
+      { id: "b", title: "Quotes B" },
+    ],
+  ]);
+  assert(merged.length === 2 && merged.some((q) => q.id === "b"), "merge quotes+board dedupe");
+  console.log("  OK merge liste quotes + board");
 }
 
 async function runApiTests() {

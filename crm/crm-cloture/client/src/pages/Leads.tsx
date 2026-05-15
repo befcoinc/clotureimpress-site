@@ -55,9 +55,15 @@ export function Leads() {
   const { data: leads = [] } = useQuery<Lead[]>({ queryKey: ["/api/leads"] });
   const { data: users = [] } = useQuery<User[]>({ queryKey: ["/api/users"] });
   const { data: quotes = [] } = useQuery<any[]>({ queryKey: ["/api/quotes"] });
-  const { data: intimuraCreds } = useQuery<{ hasCookie?: boolean; hasCfServiceToken?: boolean }>({
+  const canSyncIntimuraRole =
+    currentUser?.role === "admin" || currentUser?.role === "sales_director";
+  const { data: intimuraCreds } = useQuery<{
+    hasServerCredentials?: boolean;
+    hasCookie?: boolean;
+    hasCfServiceToken?: boolean;
+  }>({
     queryKey: ["/api/intimura/credentials"],
-    enabled: currentUser?.role === "admin",
+    enabled: canSyncIntimuraRole,
   });
   const quoteByLeadId = useMemo(() => {
     const m = new Map<number, any>();
@@ -185,8 +191,8 @@ export function Leads() {
   };
 
   const isAdmin = currentUser?.role === "admin";
-  const canSyncIntimura = currentUser?.role === "admin" || currentUser?.role === "sales_director";
-  const canServerSyncIntimura = !!(intimuraCreds?.hasCookie || intimuraCreds?.hasCfServiceToken);
+  const canSyncIntimura = canSyncIntimuraRole;
+  const canServerSyncIntimura = !!intimuraCreds?.hasServerCredentials;
 
   // Handler pour aller à la page de setup du bookmarklet
   const handleGoToBookmarkletSetup = () => {
@@ -218,6 +224,7 @@ export function Leads() {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/intimura/auto-sync/status"] });
       const created = data?.createdLeads ?? 0;
       const skipped = data?.skipped ?? 0;
       toast({
@@ -269,7 +276,7 @@ export function Leads() {
                 {isEn ? "Sync from Intimura" : "Synchroniser depuis Intimura"}
               </Button>
             )}
-            {isAdmin && canServerSyncIntimura ? (
+            {canSyncIntimura && canServerSyncIntimura ? (
               <Button
                 data-testid="button-intimura-server-sync"
                 variant="outline"

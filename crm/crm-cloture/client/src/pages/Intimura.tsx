@@ -85,11 +85,13 @@ export function Intimura() {
   const [raw, setRaw] = useState(sample);
   const parsed = useMemo(() => parseIntimuraExport(raw), [raw]);
   const isAdmin = currentUser?.role === "admin";
-  const { data: intimuraCreds } = useQuery<{ hasCookie?: boolean; hasCfServiceToken?: boolean }>({
+  const canSyncIntimura =
+    currentUser?.role === "admin" || currentUser?.role === "sales_director";
+  const { data: intimuraCreds } = useQuery<{ hasServerCredentials?: boolean }>({
     queryKey: ["/api/intimura/credentials"],
-    enabled: isAdmin,
+    enabled: canSyncIntimura,
   });
-  const hasServerCreds = !!(intimuraCreds?.hasCookie || intimuraCreds?.hasCfServiceToken);
+  const hasServerCreds = !!intimuraCreds?.hasServerCredentials;
 
   const goToBookmarkletSetup = () => {
     if (typeof window !== "undefined") window.location.hash = "#/intimura-bookmarklet";
