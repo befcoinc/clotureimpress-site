@@ -1217,14 +1217,3 @@ function CompletionPhotosPanel({
     </>
   );
 }
-
-          {canUpload && photos.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center pb-1">
-              {isEn ? "No photos yet. Tap above to capture." : "Aucune photo. Appuyez pour prendre une photo."}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </>
-  );
-}

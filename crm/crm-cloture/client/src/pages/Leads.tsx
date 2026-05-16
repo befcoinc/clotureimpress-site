@@ -837,29 +837,3 @@ export function Leads() {
     </>
   );
 }
-                  <FormItem className="col-span-2"><FormLabel>{isEn ? "Fence type" : "Type de clôture"}</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value ?? "Bois traité"}>
-                      <FormControl><SelectTrigger data-testid="edit-select-fenceType"><SelectValue /></SelectTrigger></FormControl>
-                      <SelectContent>{FENCE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </FormItem>
-                )}/>
-              </div>
-              <FormField control={editForm.control} name="message" render={({ field }) => (
-                <FormItem><FormLabel>{isEn ? "Message / notes" : "Message / notes"}</FormLabel><FormControl><Textarea rows={3} data-testid="edit-input-message" {...field} value={field.value ?? ""} /></FormControl></FormItem>
-              )}/>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setEditingLead(null)}>
-                  {isEn ? "Cancel" : "Annuler"}
-                </Button>
-                <Button type="submit" disabled={updateLeadMut.isPending} data-testid="button-save-edit-lead">
-                  {updateLeadMut.isPending ? (isEn ? "Saving..." : "Enregistrement...") : (isEn ? "Save" : "Enregistrer")}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}

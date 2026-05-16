@@ -169,6 +169,54 @@
   .tabular { font-variant-numeric: tabular-nums; }
 }
 
+@layer components {
+  @media (min-width: 768px) {
+    .app-sidebar {
+      --app-sidebar-width: 15rem;
+      --app-sidebar-peek: 0.75rem;
+      transform: translateX(calc(-1 * (var(--app-sidebar-width) - var(--app-sidebar-peek))));
+      transition: transform 180ms ease;
+      will-change: transform;
+    }
+
+    .app-sidebar::after {
+      content: "";
+      position: absolute;
+      inset: 0 0 0 auto;
+      width: var(--app-sidebar-peek);
+      background: hsl(var(--sidebar-accent));
+      border-left: 1px solid hsl(var(--sidebar-border));
+      pointer-events: none;
+    }
+
+    .app-sidebar:hover,
+    .app-sidebar:focus-within {
+      transform: translateX(0);
+    }
+
+    .app-sidebar:hover::after,
+    .app-sidebar:focus-within::after {
+      opacity: 0;
+    }
+
+    .app-main {
+      margin-left: var(--app-sidebar-peek);
+      transition: margin-left 180ms ease;
+    }
+
+    .app-sidebar:hover + .app-main,
+    .app-sidebar:focus-within + .app-main {
+      margin-left: var(--app-sidebar-width);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .app-sidebar {
+      --app-sidebar-width: 16rem;
+    }
+  }
+}
+
 /* Elevate system (unchanged) */
 @layer utilities {
   input[type='search']::-webkit-search-cancel-button { @apply hidden; }
@@ -187,15 +235,20 @@
 
 @media print {
   @page {
-    margin: 0.5in;
+    margin: 0.35in;
+    size: letter portrait;
   }
 
   body.printing-quote {
     background: white !important;
     color: #0f172a !important;
+    width: 100% !important;
+    margin: 0 !important;
+    overflow: visible !important;
   }
 
   body.printing-quote * {
+    box-sizing: border-box !important;
     visibility: hidden !important;
   }
 
@@ -207,9 +260,106 @@
   body.printing-quote .quote-print-document {
     display: block !important;
     position: absolute !important;
-    inset: 0 !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
     width: 100% !important;
-    padding: 0 !important;
+    max-width: 7.8in !important;
+    min-height: auto !important;
+    margin: 0 auto !important;
+    padding: 0.08in 0.12in !important;
+    overflow: visible !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 9.5pt !important;
+    line-height: 1.35 !important;
+  }
+
+  body.printing-quote .quote-print-header {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    gap: 0.25in !important;
+    border-bottom: 1px solid #cbd5e1 !important;
+    margin-bottom: 0.22in !important;
+    padding-bottom: 0.16in !important;
+  }
+
+  body.printing-quote .quote-print-title {
+    font-size: 22pt !important;
+    line-height: 1.05 !important;
+    margin: 0.06in 0 0 !important;
+  }
+
+  body.printing-quote .quote-print-brand {
+    font-size: 7.5pt !important;
+    letter-spacing: 0.16em !important;
+  }
+
+  body.printing-quote .quote-print-muted,
+  body.printing-quote .quote-print-contact,
+  body.printing-quote .quote-print-contact div {
+    font-size: 9pt !important;
+  }
+
+  body.printing-quote .quote-print-summary {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    column-gap: 0.35in !important;
+    row-gap: 0.15in !important;
+  }
+
+  body.printing-quote .quote-print-section {
+    margin-top: 0.28in !important;
+  }
+
+  body.printing-quote .quote-print-section-title {
+    font-size: 13pt !important;
+    margin-bottom: 0.1in !important;
+  }
+
+  body.printing-quote .quote-print-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    font-size: 8.8pt !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  body.printing-quote .quote-print-table th,
+  body.printing-quote .quote-print-table td {
+    overflow-wrap: anywhere !important;
+    vertical-align: top !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding-top: 0.075in !important;
+    padding-bottom: 0.075in !important;
+  }
+
+  body.printing-quote .quote-print-table thead th {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+  }
+
+  body.printing-quote .quote-print-desc,
+  body.printing-quote .quote-print-desc-col {
+    width: auto !important;
+  }
+
+  body.printing-quote .quote-print-number,
+  body.printing-quote .quote-print-number-col {
+    width: 0.55in !important;
+    white-space: nowrap !important;
+  }
+
+  body.printing-quote .quote-print-money,
+  body.printing-quote .quote-print-money-col {
+    width: 1.05in !important;
+    white-space: nowrap !important;
+  }
+
+  body.printing-quote .quote-print-total-row td {
+    background: #f8fafc !important;
+    border-top: 2px solid #94a3b8 !important;
+    border-bottom: 0 !important;
   }
 
   body.printing-quote .quote-print-document table,
