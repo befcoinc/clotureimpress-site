@@ -7,7 +7,9 @@ import path from "node:path";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage, detectSector, seed, hashPassword, verifyPassword } from "./storage";
-import { sendInviteEmail, sendInstallerProfileReminderEmail, sendInstallerFicheLinkEmail, sendInstallerFicheIncompleteEmail, sendRepresentativeFicheLinkEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail, sendOverdueInstallAlert } from "./email";
+import { sendInviteEmail, sendInstallerProfileReminderEmail, sendInstallerFicheLinkEmail, sendInstallerFicheIncompleteEmail, sendRepresentativeFicheLinkEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail, sendOverdueInstallAlert, sendQuoteDepositEmail } from "./email";
+import Stripe from "stripe";
+const stripeClient = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-04-30" as any }) : null;
 import { sendInviteSms, sendInstallerProfileReminderSms, sendSatisfactionSms } from "./sms";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema, insertInstallerApplicationSchema, insertRepresentativeApplicationSchema } from "@shared/schema";
 import { getInstallerFichePricingGaps } from "@shared/installerFichePricing";
@@ -3569,6 +3571,80 @@ Sois concret, direct, adapté au marché québécois.`;
   });
 
 
+
+  // ============= DÉPÔT STRIPE — envoyer lien de paiement au client =============
+  app.post("/api/quotes/:id/send-deposit", requireAuth, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+      const quote = await storage.getQuote(id);
+      if (!quote) return res.status(404).json({ error: "Soumission introuvable" });
+
+      const price = (quote as any).estimatedPrice;
+      if (!price || price <= 0) return res.status(400).json({ error: "Prix estimé manquant ou nul" });
+
+      // Email du client depuis le lead
+      let clientEmail: string | null = null;
+      if ((quote as any).leadId) {
+        const lead = await storage.getLead((quote as any).leadId);
+        clientEmail = (lead as any)?.email ?? null;
+      }
+      if (!clientEmail) return res.status(400).json({ error: "Courriel du client introuvable. Ajoutez-le sur le lead." });
+
+      const depositAmount = Math.round(price * 0.30 * 100) / 100; // 30%
+      const depositCents = Math.round(depositAmount * 100);
+
+      if (!stripeClient) return res.status(503).json({ error: "Stripe non configuré — ajoutez STRIPE_SECRET_KEY dans les variables d'environnement." });
+
+      // Créer un Price temporaire + Payment Link Stripe
+      const stripePrice = await stripeClient.prices.create({
+        unit_amount: depositCents,
+        currency: "cad",
+        product_data: {
+          name: `Dépôt — Clôture Impress Soumission #${id}${quote.clientName ? " — " + quote.clientName : ""}`,
+          metadata: { quoteId: String(id) },
+        },
+      });
+
+      const paymentLink = await stripeClient.paymentLinks.create({
+        line_items: [{ price: stripePrice.id, quantity: 1 }],
+        metadata: { quoteId: String(id), clientEmail },
+        after_completion: { type: "hosted_confirmation", hosted_confirmation: { custom_message: "Merci ! Votre dépôt a été reçu. Nous vous contacterons très prochainement pour confirmer l'installation." } },
+      });
+
+      // Envoyer l'email au client
+      const currentUser = req.user as any;
+      const vendorName = currentUser?.name ?? null;
+      const emailResult = await sendQuoteDepositEmail({
+        clientEmail,
+        clientName: quote.clientName,
+        quoteId: id,
+        estimatedPrice: price,
+        depositAmount,
+        depositUrl: paymentLink.url,
+        fenceType: (quote as any).fenceType ?? undefined,
+        city: (quote as any).city ?? undefined,
+        vendorName,
+      });
+
+      // Sauvegarder le lien sur la soumission
+      await storage.updateQuote(id, {
+        stripeDepositUrl: paymentLink.url,
+        stripeDepositAmount: depositAmount,
+        depositEmailSentAt: new Date().toISOString(),
+      } as any);
+
+      return res.json({
+        ok: true,
+        depositUrl: paymentLink.url,
+        depositAmount,
+        emailSent: emailResult.ok,
+        emailError: emailResult.error ?? null,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
 
   // ============= PHOTOS DE FIN DE CHANTIER =============
   app.post("/api/quotes/:id/completion-photos", requireAuth, async (req, res, next) => {

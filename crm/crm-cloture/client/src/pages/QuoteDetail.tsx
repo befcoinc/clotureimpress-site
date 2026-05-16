@@ -103,6 +103,7 @@ export function QuoteDetail() {
   const rep = users.find(u => u.id === quote?.assignedSalesId);
   const installer = users.find(u => u.id === quote?.assignedInstallerId);
   const moneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
+  const preciseMoneyFmt = new Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const updateMut = useMutation({
     mutationFn: async (data: any) => apiRequest("PATCH", `/api/quotes/${id}`, {
@@ -192,20 +193,20 @@ export function QuoteDetail() {
       />
 
       <section className="quote-print-document hidden">
-        <div className="mb-8 flex items-start justify-between gap-6 border-b border-slate-300 pb-5">
+        <div className="quote-print-header mb-6 flex items-start justify-between gap-6 border-b border-slate-300 pb-4">
           <div>
-            <div className="text-xs uppercase tracking-[0.22em] text-slate-500">Cloture Impress</div>
-            <h1 className="mt-2 text-3xl font-bold text-slate-950">{isEn ? "Quote" : "Soumission"} #{quote.id}</h1>
-            <p className="mt-1 text-sm text-slate-600">{isEn ? "Printed on" : "Imprimée le"} {printDate}</p>
+            <div className="quote-print-brand text-xs uppercase tracking-[0.22em] text-slate-500">Cloture Impress</div>
+            <h1 className="quote-print-title mt-2 text-3xl font-bold text-slate-950">{isEn ? "Quote" : "Soumission"} #{quote.id}</h1>
+            <p className="quote-print-muted mt-1 text-sm text-slate-600">{isEn ? "Printed on" : "Imprimée le"} {printDate}</p>
           </div>
-          <div className="text-right">
+          <div className="quote-print-contact text-right">
             <div className="text-sm font-semibold text-slate-950">{quote.clientName}</div>
             <div className="mt-1 text-sm text-slate-600">{displayPhone || "—"}</div>
             <div className="text-sm text-slate-600">{displayEmail || "—"}</div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="quote-print-summary grid grid-cols-2 gap-5">
           <PrintBlock label={isEn ? "Client" : "Client"} value={quote.clientName} />
           <PrintBlock label={isEn ? "Project address" : "Adresse du projet"} value={printAddress || "—"} />
           <PrintBlock label={isEn ? "Fence type" : "Type de clôture"} value={quote.fenceType || "—"} />
@@ -214,15 +215,21 @@ export function QuoteDetail() {
           <PrintBlock label={isEn ? "Total" : "Total"} value={printTotal != null ? moneyFmt.format(printTotal) : "—"} />
         </div>
 
-        <div className="mt-8">
-          <h2 className="mb-3 text-lg font-semibold text-slate-950">{isEn ? "Items" : "Articles"}</h2>
-          <table className="w-full border-collapse text-sm">
+        <div className="quote-print-section mt-7">
+          <h2 className="quote-print-section-title mb-3 text-lg font-semibold text-slate-950">{isEn ? "Items" : "Articles"}</h2>
+          <table className="quote-print-table w-full border-collapse text-sm">
+            <colgroup>
+              <col className="quote-print-desc-col" />
+              <col className="quote-print-number-col" />
+              <col className="quote-print-money-col" />
+              <col className="quote-print-money-col" />
+            </colgroup>
             <thead>
               <tr className="border-b border-slate-300 text-left text-xs uppercase tracking-wider text-slate-500">
-                <th className="py-2 pr-3 font-semibold">{isEn ? "Description" : "Description"}</th>
-                <th className="w-20 px-3 py-2 text-right font-semibold">{isEn ? "Qty" : "Qté"}</th>
-                <th className="w-28 px-3 py-2 text-right font-semibold">{isEn ? "Unit" : "Unité"}</th>
-                <th className="w-32 py-2 pl-3 text-right font-semibold">Total</th>
+                <th className="quote-print-desc py-2 pr-3 font-semibold">{isEn ? "Description" : "Description"}</th>
+                <th className="quote-print-number px-2 py-2 text-right font-semibold">{isEn ? "Qty" : "Qté"}</th>
+                <th className="quote-print-money px-2 py-2 text-right font-semibold">{isEn ? "Unit" : "Unité"}</th>
+                <th className="quote-print-money py-2 pl-2 text-right font-semibold">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -232,10 +239,10 @@ export function QuoteDetail() {
                 const lineTotal = qty * unitPrice;
                 return (
                   <tr key={it.id || idx} className="border-b border-slate-200">
-                    <td className="py-2 pr-3">{it.description || "—"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{qty || "—"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{moneyFmt.format(unitPrice)}</td>
-                    <td className="py-2 pl-3 text-right tabular-nums">{moneyFmt.format(lineTotal)}</td>
+                    <td className="quote-print-desc py-2 pr-3">{it.description || "—"}</td>
+                    <td className="quote-print-number px-2 py-2 text-right tabular-nums">{qty || "—"}</td>
+                    <td className="quote-print-money px-2 py-2 text-right tabular-nums">{preciseMoneyFmt.format(unitPrice)}</td>
+                    <td className="quote-print-money py-2 pl-2 text-right tabular-nums">{preciseMoneyFmt.format(lineTotal)}</td>
                   </tr>
                 );
               }) : (
@@ -245,18 +252,18 @@ export function QuoteDetail() {
               )}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-slate-400 font-semibold">
+              <tr className="quote-print-total-row border-t-2 border-slate-400 font-semibold">
                 <td colSpan={3} className="py-3 pr-3 text-right">{isEn ? "Subtotal" : "Sous-total"}</td>
-                <td className="py-3 pl-3 text-right tabular-nums">{printTotal != null ? moneyFmt.format(printTotal) : "—"}</td>
+                <td className="quote-print-money py-3 pl-2 text-right tabular-nums">{items.length > 0 ? preciseMoneyFmt.format(subtotal) : printTotal != null ? preciseMoneyFmt.format(printTotal) : "—"}</td>
               </tr>
             </tfoot>
           </table>
         </div>
 
         {Array.isArray(intimura?.metadata) && intimura.metadata.length > 0 && (
-          <div className="mt-8">
-            <h2 className="mb-3 text-lg font-semibold text-slate-950">{isEn ? "Specifications" : "Spécifications"}</h2>
-            <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="quote-print-section mt-7">
+            <h2 className="quote-print-section-title mb-3 text-lg font-semibold text-slate-950">{isEn ? "Specifications" : "Spécifications"}</h2>
+            <div className="quote-print-summary grid grid-cols-2 gap-3 text-sm">
               {intimura.metadata.map((m: any) => (
                 <PrintBlock key={m.id || m.label} label={m.label} value={m.value || "—"} />
               ))}
@@ -456,40 +463,47 @@ export function QuoteDetail() {
                       <Button size="sm" variant="outline" onClick={addItem} data-testid="button-add-intimura-item">+ {isEn ? "Add item" : "Ajouter article"}</Button>
                     )}
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-[12px]">
-                      <thead className="text-muted-foreground text-left">
+                  <div className="overflow-x-auto rounded-lg border border-border">
+                    <table className="w-full min-w-[720px] table-fixed text-[12px]">
+                      <colgroup>
+                        <col />
+                        <col className="w-24" />
+                        <col className="w-32" />
+                        <col className="w-32" />
+                        {canEditSales && <col className="w-10" />}
+                      </colgroup>
+                      <thead className="bg-muted/40 text-left text-muted-foreground">
                         <tr>
-                          <th className="font-medium py-1 pr-2">{isEn ? "Description" : "Description"}</th>
-                          <th className="font-medium py-1 px-2 w-20">{isEn ? "Qty" : "Qté"}</th>
-                          <th className="font-medium py-1 px-2 w-28">{isEn ? "Unit $" : "Prix unit."}</th>
-                          <th className="font-medium py-1 pl-2 w-28 text-right">{isEn ? "Total" : "Total"}</th>
-                          {canEditSales && <th className="w-8"></th>}
+                          <th className="px-3 py-2 font-medium">{isEn ? "Description" : "Description"}</th>
+                          <th className="px-2 py-2 text-right font-medium">{isEn ? "Qty" : "Qté"}</th>
+                          <th className="px-2 py-2 text-right font-medium">{isEn ? "Unit $" : "Prix unit."}</th>
+                          <th className="px-3 py-2 text-right font-medium">{isEn ? "Total" : "Total"}</th>
+                          {canEditSales && <th className="px-2 py-2"></th>}
                         </tr>
                       </thead>
                       <tbody>
                         {items.map((it: any, idx: number) => {
                           const lineTotal = Number(it?.qty || 0) * Number(it?.unit_price || 0);
                           return (
-                            <tr key={it.id || idx} className="border-t">
-                              <td className="py-1 pr-2">
+                            <tr key={it.id || idx} className="border-t bg-card transition-colors hover:bg-muted/20">
+                              <td className="px-3 py-1.5 align-middle">
                                 {canEditSales ? (
-                                  <Input value={it.description || ""} onChange={(e) => updateItem(idx, { description: e.target.value })} className="h-7 text-[12px]" />
+                                  <Input value={it.description || ""} onChange={(e) => updateItem(idx, { description: e.target.value })} className="h-8 text-[12px]" />
                                 ) : (it.description || "—")}
                               </td>
-                              <td className="py-1 px-2">
+                              <td className="px-2 py-1.5 align-middle">
                                 {canEditSales ? (
-                                  <Input type="number" step="0.01" value={it.qty ?? ""} onChange={(e) => updateItem(idx, { qty: e.target.value })} className="h-7 text-[12px]" />
+                                  <Input type="number" step="0.01" value={it.qty ?? ""} onChange={(e) => updateItem(idx, { qty: e.target.value })} className="h-8 px-2 text-right text-[12px] tabular-nums" />
                                 ) : it.qty}
                               </td>
-                              <td className="py-1 px-2">
+                              <td className="px-2 py-1.5 align-middle">
                                 {canEditSales ? (
-                                  <Input type="number" step="0.01" value={it.unit_price ?? ""} onChange={(e) => updateItem(idx, { unit_price: e.target.value })} className="h-7 text-[12px]" />
+                                  <Input type="number" step="0.01" value={it.unit_price ?? ""} onChange={(e) => updateItem(idx, { unit_price: e.target.value })} className="h-8 px-2 text-right text-[12px] tabular-nums" />
                                 ) : it.unit_price}
                               </td>
-                              <td className="py-1 pl-2 text-right tabular-nums">${lineTotal.toFixed(2)}</td>
+                              <td className="px-3 py-1.5 text-right align-middle font-medium tabular-nums">${lineTotal.toFixed(2)}</td>
                               {canEditSales && (
-                                <td className="py-1 pl-2">
+                                <td className="px-2 py-1.5 text-center align-middle">
                                   <button type="button" onClick={() => removeItem(idx)} className="text-muted-foreground hover:text-destructive" title={isEn ? "Remove" : "Supprimer"}>×</button>
                                 </td>
                               )}
@@ -501,9 +515,9 @@ export function QuoteDetail() {
                         )}
                       </tbody>
                       <tfoot>
-                        <tr className="border-t font-semibold">
-                          <td colSpan={3} className="py-2 text-right">{isEn ? "Subtotal" : "Sous-total"}</td>
-                          <td className="py-2 pl-2 text-right tabular-nums">${subtotal.toFixed(2)}</td>
+                        <tr className="border-t bg-muted/20 font-semibold">
+                          <td colSpan={3} className="px-3 py-2.5 text-right">{isEn ? "Subtotal" : "Sous-total"}</td>
+                          <td className="px-3 py-2.5 text-right tabular-nums">${subtotal.toFixed(2)}</td>
                           {canEditSales && <td></td>}
                         </tr>
                       </tfoot>
@@ -668,6 +682,10 @@ export function QuoteDetail() {
             </CardContent>
           </Card>
 
+          {can("view_sales") && (
+            <DepositPanel quoteId={id} quote={quote} isEn={isEn} />
+          )}
+
           {(can("edit_sales") || can("edit_install")) && (
             <CallScriptPanel quoteId={id} isEn={isEn} />
           )}
@@ -780,6 +798,78 @@ function EditableInfo({
         </button>
       )}
     </div>
+  );
+}
+
+// ─── Dépôt Stripe ────────────────────────────────────────────────────────────
+function DepositPanel({ quoteId, quote, isEn }: { quoteId: number; quote: any; isEn: boolean }) {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ depositUrl?: string; depositAmount?: number; emailSent?: boolean; error?: string } | null>(null);
+  const { toast } = useToast();
+  const fmt = (n: number) => n.toLocaleString("fr-CA", { style: "currency", currency: "CAD" });
+  const price = quote?.estimatedPrice;
+  const existingUrl = (quote as any)?.stripeDepositUrl;
+  const sentAt = (quote as any)?.depositEmailSentAt;
+
+  const send = async () => {
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await fetch(`/api/quotes/${quoteId}/send-deposit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || `Erreur ${res.status}`);
+      setResult(data);
+      toast({ title: data.emailSent ? "✅ Email envoyé au client !" : "⚠️ Lien créé mais email non envoyé", description: data.emailSent ? `Dépôt de ${fmt(data.depositAmount)} envoyé.` : data.emailError });
+    } catch (err: any) {
+      setResult({ error: err.message });
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card className="border-green-500/30 bg-green-500/5">
+      <CardHeader className="pb-2 pt-4 px-4">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <span>💳</span>
+          {isEn ? "Stripe Deposit" : "Dépôt Stripe"}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 space-y-3">
+        {!price && (
+          <p className="text-[12px] text-amber-600">Ajoutez un prix estimé avant d'envoyer le lien de dépôt.</p>
+        )}
+        {price > 0 && (
+          <div className="text-[12px] text-muted-foreground space-y-1">
+            <p>Total soumission : <strong className="text-foreground">{fmt(price)}</strong></p>
+            <p>Dépôt 30 % : <strong className="text-green-700">{fmt(Math.round(price * 0.30 * 100) / 100)}</strong></p>
+            {sentAt && <p className="text-[11px] text-muted-foreground">Dernier envoi : {new Date(sentAt).toLocaleString("fr-CA")}</p>}
+          </div>
+        )}
+        {existingUrl && (
+          <div className="flex items-center gap-2">
+            <a href={existingUrl} target="_blank" rel="noreferrer" className="text-[11px] text-primary underline truncate max-w-[240px]">Voir lien Stripe</a>
+            <button type="button" onClick={() => { navigator.clipboard.writeText(existingUrl); toast({ title: "Lien copié !" }); }}
+              className="text-[10px] border rounded px-2 py-0.5 text-muted-foreground hover:text-foreground">Copier</button>
+          </div>
+        )}
+        {result?.error && <p className="text-[12px] text-destructive">{result.error}</p>}
+        <button
+          type="button"
+          onClick={send}
+          disabled={loading || !price}
+          className="w-full rounded-md bg-green-700 hover:bg-green-800 disabled:opacity-50 text-white text-[13px] font-semibold py-2 px-4 transition-colors"
+        >
+          {loading ? "Génération en cours…" : existingUrl ? (isEn ? "Resend deposit email" : "Renvoyer l'email de dépôt") : (isEn ? "Send deposit link to client" : "Envoyer le lien de dépôt au client")}
+        </button>
+        <p className="text-[10px] text-muted-foreground text-center">Génère un lien Stripe sécurisé et l'envoie par courriel au client automatiquement.</p>
+      </CardContent>
+    </Card>
   );
 }
 

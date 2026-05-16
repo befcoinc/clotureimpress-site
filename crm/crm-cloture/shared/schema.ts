@@ -85,6 +85,10 @@ export const quotes = pgTable("quotes", {
   completionPhotos: text("completion_photos"), // JSON array: [{url, uploadedAt, uploadedBy}]
   satisfactionSmsSentAt: text("satisfaction_sms_sent_at"), // ISO timestamp when satisfaction SMS was sent
   overdueAlertSentAt: text("overdue_alert_sent_at"),     // ISO timestamp when overdue alert email was sent
+  stripeDepositUrl: text("stripe_deposit_url"),           // Stripe Payment Link URL (30% du total)
+  stripeDepositAmount: real("stripe_deposit_amount"),     // Montant du dépôt en $
+  stripeDepositPaidAt: text("stripe_deposit_paid_at"),    // ISO timestamp quand le dépôt a été payé
+  depositEmailSentAt: text("deposit_email_sent_at"),      // ISO timestamp quand l'email de dépôt a été envoyé
   createdAt: text("created_at").notNull().default("CURRENT_TIMESTAMP"),
 });
 

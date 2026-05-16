@@ -920,3 +920,116 @@ export async function sendOverdueInstallAlert(params: {
     }
   }
 }
+
+// ─── EMAIL DÉPÔT CLIENT ───────────────────────────────────────────────────────
+export async function sendQuoteDepositEmail(opts: {
+  clientEmail: string;
+  clientName: string;
+  quoteId: number;
+  estimatedPrice: number;
+  depositAmount: number;
+  depositUrl: string;
+  fenceType?: string;
+  city?: string;
+  vendorName?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const { clientEmail, clientName, quoteId, estimatedPrice, depositAmount, depositUrl, fenceType, city, vendorName } = opts;
+  const fmt = (n: number) => n.toLocaleString("fr-CA", { style: "currency", currency: "CAD" });
+  const subject = `Clôture Impress — Votre soumission #${quoteId} est prête`;
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:32px 0;">
+  <tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      <!-- Header -->
+      <tr><td style="background:#1a2b4a;padding:28px 32px;">
+        <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Clôture Impress</h1>
+        <p style="margin:4px 0 0;color:#aab4c8;font-size:13px;">Votre soumission est prête</p>
+      </td></tr>
+      <!-- Body -->
+      <tr><td style="padding:32px;">
+        <p style="margin:0 0 16px;color:#333;font-size:15px;">Bonjour ${clientName},</p>
+        <p style="margin:0 0 24px;color:#555;font-size:14px;line-height:1.6;">
+          Merci de votre confiance. Votre soumission <strong>#${quoteId}</strong>${city ? ` pour votre propriété à <strong>${city}</strong>` : ""} est prête.
+          ${fenceType ? `<br/>Type de clôture : <strong>${fenceType}</strong>` : ""}
+        </p>
+        <!-- Amounts box -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f8;border-radius:6px;margin-bottom:28px;">
+          <tr>
+            <td style="padding:16px 20px;border-bottom:1px solid #dde3eb;">
+              <span style="color:#555;font-size:13px;">Total de la soumission</span>
+              <span style="float:right;color:#1a2b4a;font-weight:700;font-size:15px;">${fmt(estimatedPrice)}</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 20px;">
+              <span style="color:#2e7d32;font-weight:700;font-size:14px;">Dépôt requis (30 %)</span>
+              <span style="float:right;color:#2e7d32;font-weight:700;font-size:18px;">${fmt(depositAmount)}</span>
+            </td>
+          </tr>
+        </table>
+        <!-- CTA Button -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+          <tr><td align="center">
+            <a href="${depositUrl}" style="display:inline-block;background:#2e7d32;color:#ffffff;font-size:16px;font-weight:700;padding:16px 40px;border-radius:6px;text-decoration:none;">
+              Payer le dépôt — ${fmt(depositAmount)}
+            </a>
+          </td></tr>
+        </table>
+        <p style="margin:0 0 8px;color:#777;font-size:12px;text-align:center;">
+          Paiement 100 % sécurisé via Stripe. Visa, Mastercard, American Express acceptés.
+        </p>
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0;" />
+        <p style="margin:0 0 8px;color:#555;font-size:13px;line-height:1.6;">
+          Une fois le dépôt reçu, nous vous contacterons pour confirmer la date d'installation.
+          Le solde de <strong>${fmt(estimatedPrice - depositAmount)}</strong> sera payable à la complétion des travaux.
+        </p>
+        <p style="margin:16px 0 0;color:#555;font-size:13px;">
+          Des questions ? Contactez-nous — nous sommes là pour vous.
+        </p>
+        ${vendorName ? `<p style="margin:16px 0 0;color:#555;font-size:13px;">Votre représentant : <strong>${vendorName}</strong></p>` : ""}
+      </td></tr>
+      <!-- Footer -->
+      <tr><td style="background:#f8f9fa;padding:20px 32px;border-top:1px solid #eee;">
+        <p style="margin:0;color:#999;font-size:11px;text-align:center;">
+          Clôture Impress · clotureimpress.com<br/>
+          Ce courriel a été envoyé suite à votre demande de soumission #${quoteId}.
+        </p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+  try {
+    if (BREVO_API_KEY) {
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "api-key": BREVO_API_KEY },
+        body: JSON.stringify({
+          sender: { name: "Clôture Impress", email: SMTP_USER },
+          to: [{ email: clientEmail, name: clientName }],
+          subject,
+          htmlContent: html,
+        }),
+      });
+      const payload = (await response.json()) as any;
+      if (response.ok && payload?.messageId) {
+        console.log("[email] Deposit email sent to", clientEmail, "via Brevo");
+        return { ok: true };
+      }
+      console.warn("[email] Brevo deposit email failed:", JSON.stringify(payload));
+    }
+    if (SMTP_PASS) {
+      await transporter.sendMail({ from: FROM, to: clientEmail, subject, html });
+      console.log("[email] Deposit email sent to", clientEmail, "via SMTP");
+      return { ok: true };
+    }
+    return { ok: false, error: "No email provider configured" };
+  } catch (err: any) {
+    console.error("[email] sendQuoteDepositEmail error:", err?.message);
+    return { ok: false, error: err?.message };
+  }
+}
