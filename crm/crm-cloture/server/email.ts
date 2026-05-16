@@ -436,6 +436,101 @@ export async function sendInstallerFicheLinkEmail(
   }
 }
 
+export async function sendInstallerFicheIncompleteEmail(
+  to: string,
+  contactName: string,
+  companyName: string,
+  ficheUrl: string,
+  missingLines: string[]
+): Promise<{ ok: boolean; error?: string; messageId?: string }> {
+  const firstName = (contactName || "").split(" ")[0] || "Bonjour";
+  const listText = missingLines.map((l) => `- ${l}`).join("\n");
+  const listHtml = missingLines.map((l) => `<li style="margin:6px 0;">${l}</li>`).join("");
+  const subject = "Cloture Impress | Fiche à compléter — tarification au pied linéaire";
+  const textContent = [
+    `Bonjour ${firstName},`,
+    "",
+    `Nous avons révisé ta fiche sous-traitant pour ${companyName}. Il manque encore des informations dans la section tarification au pied linéaire.`,
+    "Peux-tu ouvrir le lien, compléter ce qui suit puis soumettre a nouveau la fiche :",
+    "",
+    listText,
+    "",
+    ficheUrl,
+    "",
+    "Merci,",
+    "L'equipe Cloture Impress",
+  ].join("\n");
+  const html = `
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8" /></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:system-ui,-apple-system,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
+        <tr><td style="background:#0f766e;padding:24px 36px;">
+          <p style="margin:0;font-size:22px;font-weight:700;color:#ffffff;">Cloture Impress</p>
+        </td></tr>
+        <tr><td style="padding:32px 36px;">
+          <p style="margin:0 0 12px;font-size:18px;font-weight:600;color:#111827;">Bonjour ${firstName},</p>
+          <p style="margin:0 0 18px;font-size:15px;color:#4b5563;line-height:1.6;">
+            Nous avons révisé ta fiche sous-traitant pour <strong>${companyName}</strong>. Il manque encore des informations dans la section <strong>tarification au pied linéaire</strong>.
+          </p>
+          <p style="margin:0 0 12px;font-size:15px;color:#4b5563;line-height:1.6;">Peux-tu compléter les éléments suivants puis cliquer sur <strong>Soumettre la fiche</strong> :</p>
+          <ul style="margin:0 0 20px;padding-left:20px;font-size:14px;color:#374151;line-height:1.5;">
+            ${listHtml}
+          </ul>
+          <table cellpadding="0" cellspacing="0" style="margin:18px 0;">
+            <tr><td style="background:#0f766e;border-radius:8px;">
+              <a href="${ficheUrl}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">
+                Ouvrir la fiche
+              </a>
+            </td></tr>
+          </table>
+          <p style="margin:0 0 8px;font-size:12px;color:#9ca3af;word-break:break-all;">${ficheUrl}</p>
+          <p style="margin:18px 0 0;font-size:13px;color:#9ca3af;">Merci, l'equipe Cloture Impress.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  if (BREVO_API_KEY) {
+    try {
+      const blockReason = await getBrevoBlockReason(to);
+      if (blockReason) return { ok: false, error: `Destinataire bloque dans Brevo (${blockReason})` };
+      const senderDomain = BREVO_SENDER_EMAIL.split("@")[1] || "clotureimpress.com";
+      const messageId = `<fiche-incomplete.${Date.now()}.${Math.random().toString(36).slice(2)}@${senderDomain}>`;
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "api-key": BREVO_API_KEY },
+        body: JSON.stringify({
+          sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
+          replyTo: { email: BREVO_REPLY_TO, name: BREVO_SENDER_NAME },
+          to: [{ email: to, name: contactName }],
+          subject,
+          textContent,
+          htmlContent: html,
+          headers: {
+            "X-Mailin-custom": "source:crm-installer-fiche|type:installer-application-incomplete",
+            "Message-ID": messageId,
+          },
+        }),
+      });
+      const payload = (await response.json()) as any;
+      if (response.ok && payload?.messageId) return { ok: true, messageId: String(payload.messageId) };
+    } catch {
+      // Fall through to SMTP
+    }
+  }
+  if (!SMTP_PASS) return { ok: false, error: "SMTP_PASS not configured" };
+  try {
+    const info = await transporter.sendMail({ from: FROM, to, subject, html });
+    return { ok: true, messageId: info.messageId };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || String(err) };
+  }
+}
+
 export async function sendRepresentativeFicheLinkEmail(
   to: string,
   contactName: string,
