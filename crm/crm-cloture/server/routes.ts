@@ -7,9 +7,10 @@ import path from "node:path";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage, detectSector, seed, hashPassword, verifyPassword } from "./storage";
-import { sendInviteEmail, sendInstallerProfileReminderEmail, sendInstallerFicheLinkEmail, sendRepresentativeFicheLinkEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail, sendOverdueInstallAlert } from "./email";
+import { sendInviteEmail, sendInstallerProfileReminderEmail, sendInstallerFicheLinkEmail, sendInstallerFicheIncompleteEmail, sendRepresentativeFicheLinkEmail, sendLeadAssignedEmail, sendInstallerAssignedEmail, sendOverdueInstallAlert } from "./email";
 import { sendInviteSms, sendInstallerProfileReminderSms, sendSatisfactionSms } from "./sms";
 import { insertLeadSchema, insertQuoteSchema, insertActivitySchema, insertUserSchema, insertCrewSchema, insertInstallerApplicationSchema, insertRepresentativeApplicationSchema } from "@shared/schema";
+import { getInstallerFichePricingGaps } from "@shared/installerFichePricing";
 import { buildBookmarkletLoaderHref, buildIntimuraBookmarkletRunner } from "./intimura-bookmarklet-runner";
 import {
   INTIMURA_SYNC_CUTOFF,
@@ -17,17 +18,7 @@ import {
   isIntimuraQuoteOnOrAfterCutoff,
 } from "./intimura-sync-cutoff";
 import {
-  allIntimuraIdsOnQuote,
-  groupIntimuraBatchDuplicates,
-  intimuraRowKeys,
-  multiIntimuraNotice,
-  normAddress,
-  normEmail,
-  normPhone,
-  nameKey,
   parseLinkedIntimuraQuotes,
-  personKey,
-  planLinkIntimuraToPrimary,
 } from "./intimura-duplicate-merge";
 
 function decodeSvelteData(data: any[]) {
@@ -697,7 +688,7 @@ export async function registerRoutes(
       if (!allowed.includes(actor?.role)) {
         return res.status(403).json({ error: "Accès refusé" });
       }
-      const userId = parseInt(req.params.id, 10);
+      const userId = Number(req.params.id);
       if (isNaN(userId)) return res.status(400).json({ error: "ID invalide" });
       const raw = await storage.getInstallerProfileFormData(userId);
       if (!raw) return res.json({ data: null });
@@ -718,7 +709,7 @@ export async function registerRoutes(
       if (actor?.role !== "admin") {
         return res.status(403).json({ error: "Accès refusé" });
       }
-      const userId = parseInt(req.params.id, 10);
+      const userId = Number(req.params.id);
       if (isNaN(userId)) return res.status(400).json({ error: "ID invalide" });
       const { data } = req.body;
       if (!data || typeof data !== "object") return res.status(400).json({ error: "Données invalides" });
@@ -1480,6 +1471,67 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/installer-applications/:id/send-fiche-incomplete", requireAuth, async (req, res) => {
+    try {
+      const actor = req.user as any;
+      if (!["admin", "sales_director", "install_director"].includes(actor?.role)) {
+        return res.status(403).json({ error: "Acces refuse" });
+      }
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ error: "ID invalide" });
+
+      const app = await storage.getInstallerApplication(id);
+      if (!app) return res.status(404).json({ error: "Application introuvable" });
+
+      let parsed: Record<string, unknown> = {};
+      if (app.ficheData) {
+        try {
+          parsed = JSON.parse(app.ficheData) as Record<string, unknown>;
+        } catch {
+          parsed = {};
+        }
+      }
+
+      const pricingGaps = getInstallerFichePricingGaps(parsed);
+      if (pricingGaps.length === 0) {
+        return res.status(400).json({
+          error: "La tarification au pied lineaire est deja complete pour cette fiche.",
+        });
+      }
+
+      const token = app.formToken || randomBytes(24).toString("hex");
+      if (!app.formToken) {
+        await storage.setInstallerApplicationFormToken(id, token);
+      }
+
+      const siteUrl = process.env.SITE_URL || "https://clotureimpress.com";
+      const ficheUrl = `${siteUrl}/fiche-installateur.html?token=${token}`;
+
+      const emailResult = await sendInstallerFicheIncompleteEmail(
+        app.email,
+        app.contactName,
+        app.companyName,
+        ficheUrl,
+        pricingGaps
+      );
+
+      await storage.setInstallerApplicationFicheData(id, app.ficheData || "{}", "");
+
+      await storage.createActivity({
+        userId: actor?.id || null,
+        userName: actor?.name || "Admin",
+        userRole: actor?.role || "admin",
+        action: "installer_application_send_fiche_incomplete",
+        note: `Rappel fiche incomplete (tarification) envoye a ${app.contactName} (${app.email}) pour ${app.companyName}${emailResult.ok ? "" : ` - erreur: ${emailResult.error}`}`,
+      });
+
+      res.json({ ok: true, ficheUrl, emailSent: emailResult.ok, emailError: emailResult.error, pricingGaps });
+    } catch (err: any) {
+      console.error("[installer-applications/send-fiche-incomplete] error", err);
+      res.status(500).json({ error: err?.message || "Erreur serveur" });
+    }
+  });
+
   // -------- Public fiche endpoints (token-based, no auth) --------
   app.options("/api/public/installer-fiche/:token", (req, res) => {
     applyPublicCors(req, res);
@@ -1529,6 +1581,17 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Donnees invalides" });
       }
       const submitted = req.body?.submitted === true;
+
+      if (submitted) {
+        const pricingGaps = getInstallerFichePricingGaps(data as Record<string, unknown>);
+        if (pricingGaps.length > 0) {
+          return res.status(400).json({
+            error:
+              "La section tarification au pied lineaire doit etre completee avant la soumission (chaque type : Oui/Non, et tarif si offert).",
+            pricingGaps,
+          });
+        }
+      }
 
       const serialized = JSON.stringify(data);
       const completedAt = submitted
@@ -1955,80 +2018,20 @@ export async function registerRoutes(
   async function findQuoteByIntimuraIdAny(intimuraId: string) {
     const direct = await storage.getQuoteByIntimuraId(intimuraId);
     if (direct) return { quote: direct, isLinkedId: direct.intimuraId !== intimuraId };
-    const all = await storage.getQuotes();
-    for (const row of all) {
-      const linked = parseLinkedIntimuraQuotes(row.linkedIntimuraQuotes);
-      if (linked.some((l) => l.intimuraId === intimuraId)) {
-        return { quote: row, isLinkedId: true };
-      }
-    }
     return null;
   }
 
-  async function linkIntimuraQuoteToPrimary(primaryQuote: any, dupeLead: any, iq: any) {
-    const plan = planLinkIntimuraToPrimary(primaryQuote, iq, intimuraQuoteUrl);
-    if (!plan) return primaryQuote;
-    const updated = await storage.updateQuote(primaryQuote.id, {
-      linkedIntimuraQuotes: plan.linkedIntimuraQuotes,
-      salesNotes: plan.salesNotes,
-    } as any);
-    const notice = multiIntimuraNotice(plan.intimuraCount);
-    if (notice && dupeLead) {
-      const leadMsg = String(dupeLead.message || "");
-      if (!leadMsg.includes("soumissions Intimura")) {
-        await storage.updateLead(dupeLead.id, {
-          message: leadMsg ? `${leadMsg}\n\n${notice}` : notice,
-        } as any);
-      }
-    }
-    await storage.createActivity({
-      leadId: dupeLead?.id ?? primaryQuote.leadId ?? null,
-      quoteId: primaryQuote.id,
-      userId: null,
-      userName: "Sync Intimura",
-      userRole: "system",
-      action: "intimura_sync",
-      note: `Soumission Intimura ${iq.id} regroupée sur la fiche #${primaryQuote.id} (${plan.intimuraCount} soumissions liées).`,
-    });
-    return updated || { ...primaryQuote, linkedIntimuraQuotes: plan.linkedIntimuraQuotes, salesNotes: plan.salesNotes };
-  }
-
-  /** Fusionne les soumissions Intimura multiples (IDs différents) d'un même lead en une fiche. */
-  async function consolidateIntimuraQuotesOnSameLead() {
+  async function unlinkIntimuraIdFromGroupedQuotes(intimuraId: string, directQuoteId?: number) {
     const all = await storage.getQuotes();
-    const byLead = new Map<number, (typeof all)[number][]>();
     for (const q of all) {
-      if (q.leadId == null) continue;
-      const arr = byLead.get(q.leadId) || [];
-      arr.push(q);
-      byLead.set(q.leadId, arr);
+      if (directQuoteId && q.id === directQuoteId) continue;
+      const linked = parseLinkedIntimuraQuotes(q.linkedIntimuraQuotes);
+      if (!linked.some((l) => l.intimuraId === intimuraId)) continue;
+      const next = linked.filter((l) => l.intimuraId !== intimuraId);
+      await storage.updateQuote(q.id, {
+        linkedIntimuraQuotes: next.length ? JSON.stringify(next) : null,
+      } as any);
     }
-    let merged = 0;
-    for (const [, arr] of byLead) {
-      if (arr.length < 2) continue;
-      const distinct = new Set(arr.map((q) => q.intimuraId).filter(Boolean));
-      if (distinct.size < 2) continue;
-      arr.sort((a, b) => a.id - b.id);
-      const keeper = arr[0];
-      const lead = keeper.leadId ? await storage.getLead(keeper.leadId) : null;
-      for (let i = 1; i < arr.length; i++) {
-        const dup = arr[i];
-        if (!dup.intimuraId || dup.intimuraId === keeper.intimuraId) continue;
-        try {
-          await linkIntimuraQuoteToPrimary(keeper, lead, {
-            id: dup.intimuraId,
-            title: dup.clientName,
-            status: dup.salesStatus,
-            subtotal: dup.estimatedPrice,
-          });
-          const ok = await (storage as any).mergeQuoteInto(dup.id, keeper.id);
-          if (ok) merged++;
-        } catch (e) {
-          console.error("[intimura consolidate] merge failed", dup.id, "->", keeper.id, e);
-        }
-      }
-    }
-    return merged;
   }
 
   async function createQuoteFromIntimuraRow(lead: any, iq: any) {
@@ -2066,11 +2069,46 @@ export async function registerRoutes(
     });
   }
 
+  async function materializeLinkedIntimuraQuotes() {
+    const all = await storage.getQuotes();
+    let created = 0;
+    let changed = 0;
+    for (const quote of all) {
+      const linked = parseLinkedIntimuraQuotes(quote.linkedIntimuraQuotes);
+      if (!linked.length) continue;
+      const lead = quote.leadId ? await storage.getLead(quote.leadId) : null;
+      if (!lead) continue;
+
+      for (const entry of linked) {
+        if (!entry.intimuraId) continue;
+        const existing = await storage.getQuoteByIntimuraId(entry.intimuraId);
+        if (existing) continue;
+
+        const createdQuote = await createQuoteFromIntimuraRow(lead, {
+          id: entry.intimuraId,
+          title: entry.title || quote.clientName,
+          status: entry.status || quote.salesStatus,
+          subtotal: entry.subtotal || quote.estimatedPrice || 0,
+        });
+        if (entry.intimuraData) {
+          await storage.updateQuote(createdQuote.id, {
+            intimuraData: JSON.stringify(entry.intimuraData),
+          } as any);
+        }
+        created++;
+      }
+
+      await storage.updateQuote(quote.id, {
+        linkedIntimuraQuotes: null,
+      } as any);
+      changed++;
+    }
+    return { created, changed };
+  }
+
   function queueIntimuraDetailFetch(queue: string[], intimuraId: string, quote: any | undefined | null) {
     if (!intimuraId || !quote) return;
     if (quote.intimuraId === intimuraId && quote.intimuraData) return;
-    const linked = parseLinkedIntimuraQuotes(quote.linkedIntimuraQuotes);
-    if (linked.some((l) => l.intimuraId === intimuraId && l.intimuraData)) return;
     if (!queue.includes(intimuraId)) queue.push(intimuraId);
   }
 
@@ -2084,116 +2122,29 @@ export async function registerRoutes(
     let createdQuotes = 0;
     let skipped = 0;
     let skippedBeforeCutoff = 0;
+    createdQuotes += (await materializeLinkedIntimuraQuotes()).created;
     const createdIntimuraIds: string[] = [];
     const detailIntimuraIds: string[] = [];
 
     const allQuotes = await storage.getQuotes();
     const quoteByIntimuraId = new Map<string, (typeof allQuotes)[number]>();
-    const quotesByLeadId = new Map<number, (typeof allQuotes)[number][]>();
     for (const q of allQuotes) {
       if (q.intimuraId) quoteByIntimuraId.set(q.intimuraId, q);
-      for (const linked of parseLinkedIntimuraQuotes(q.linkedIntimuraQuotes)) {
-        if (linked.intimuraId) quoteByIntimuraId.set(linked.intimuraId, q);
-      }
-      if (q.leadId != null) {
-        const arr = quotesByLeadId.get(q.leadId) || [];
-        arr.push(q);
-        quotesByLeadId.set(q.leadId, arr);
-      }
     }
 
-    const { groups: batchGroups } = groupIntimuraBatchDuplicates(
-      intimuraQuotes.filter((row) => row?.id && isIntimuraQuoteOnOrAfterCutoff(row)),
-    );
-    const batchPrimaryById = new Map<string, string>();
-    for (const ids of batchGroups.values()) {
-      if (ids.length < 2) continue;
-      const sorted = [...ids].sort();
-      const primary = sorted[0];
-      for (const id of ids) batchPrimaryById.set(id, primary);
-    }
     const sortedIntimuraQuotes = [...intimuraQuotes].sort((a, b) => {
-      const pa = batchPrimaryById.get(a?.id) || a?.id || "";
-      const pb = batchPrimaryById.get(b?.id) || b?.id || "";
-      if (pa !== pb) return pa.localeCompare(pb);
       return String(a?.id).localeCompare(String(b?.id));
     });
-
-    // Pre-load all leads once to enable robust secondary dedup when the
-    // Intimura quote id differs (bookmarklet row vs API row).
-    const allLeads = await storage.getLeads();
-    const sameZone = (a: any, city: string, province: string) => {
-      const aCity = String(a?.city || "").trim().toLowerCase();
-      const cCity = String(city || "").trim().toLowerCase();
-      const aProv = String(a?.province || "").trim().toUpperCase();
-      const cProv = String(province || "").trim().toUpperCase();
-      const cityOk = !aCity || !cCity || aCity === cCity;
-      const provOk = !aProv || !cProv || aProv === cProv;
-      return cityOk && provOk;
-    };
-
-    const byNameKey = new Map<string, Array<typeof allLeads[number]>>();
-    const byPersonKey = new Map<string, Array<typeof allLeads[number]>>();
-    const byPhone = new Map<string, Array<typeof allLeads[number]>>();
-    const byEmail = new Map<string, Array<typeof allLeads[number]>>();
-    const byAddress = new Map<string, Array<typeof allLeads[number]>>();
-    const pushMap = <T>(m: Map<string, T[]>, k: string, v: T) => {
-      if (!k) return;
-      const arr = m.get(k);
-      if (arr) arr.push(v); else m.set(k, [v]);
-    };
-    for (const l of allLeads) {
-      const k = nameKey(l.clientName || "");
-      pushMap(byNameKey, k, l);
-      pushMap(byPersonKey, personKey(l.clientName || ""), l);
-      const p = normPhone(l.phone || "");
-      if (p && p.length >= 10) pushMap(byPhone, p, l);
-      const e = normEmail(l.email || "");
-      if (e) pushMap(byEmail, e, l);
-      const addr = normAddress(l.address || "");
-      if (addr.length >= 8) pushMap(byAddress, addr, l);
-    }
-
-    const pickBestDuplicate = (
-      candName: string,
-      candPhoneKey: string,
-      candEmailKey: string,
-      candAddressKey: string,
-      city: string,
-      province: string,
-    ) => {
-      const direct = [
-        ...(candPhoneKey && candPhoneKey.length >= 10 ? (byPhone.get(candPhoneKey) || []) : []),
-        ...(candEmailKey ? (byEmail.get(candEmailKey) || []) : []),
-        ...(candAddressKey ? (byAddress.get(candAddressKey) || []) : []),
-      ];
-      const seen = new Set<number>();
-      const fuzzy = [
-        ...(byPersonKey.get(personKey(candName)) || []),
-        ...(byNameKey.get(nameKey(candName)) || []),
-      ];
-      const all = [...direct, ...fuzzy].filter((l) => {
-        if (!l || seen.has(l.id)) return false;
-        seen.add(l.id);
-        return true;
-      });
-      if (!all.length) return undefined;
-
-      // Direct (phone/email) matches are STRONG signals — never gate on zone.
-      // Only fuzzy name-only matches require zone agreement to avoid false merges.
-      const directSet = new Set(direct.filter(Boolean).map((l) => l!.id));
-      const scored = all
-        .filter((l) => directSet.has(l.id) || sameZone(l, city, province))
-        .sort((a, b) => {
-          const sa = (directSet.has(a.id) ? 1000 : 0) + (a.assignedSalesId ? 100 : 0) + (a.intimuraId ? 20 : 0) + (a.source !== "intimura" ? 10 : 0);
-          const sb = (directSet.has(b.id) ? 1000 : 0) + (b.assignedSalesId ? 100 : 0) + (b.intimuraId ? 20 : 0) + (b.source !== "intimura" ? 10 : 0);
-          return sb - sa;
-        });
-      return scored[0] || all[0];
-    };
+    const incomingIds = new Set<string>();
 
     for (const iq of sortedIntimuraQuotes) {
       if (!iq?.id) continue;
+      const incomingId = String(iq.id);
+      if (incomingIds.has(incomingId)) {
+        skipped++;
+        continue;
+      }
+      incomingIds.add(incomingId);
       if (!isIntimuraQuoteOnOrAfterCutoff(iq)) {
         skippedBeforeCutoff++;
         continue;
@@ -2206,9 +2157,6 @@ export async function registerRoutes(
           existingQuote = await createQuoteFromIntimuraRow(existingLead, iq);
           createdQuotes++;
           quoteByIntimuraId.set(iq.id, existingQuote);
-          const lq = quotesByLeadId.get(existingLead.id) || [];
-          lq.push(existingQuote);
-          quotesByLeadId.set(existingLead.id, lq);
         } else if (existingLead && existingQuote && !existingQuote.leadId) {
           try {
             await storage.updateQuote(existingQuote.id, { leadId: existingLead.id } as any);
@@ -2219,68 +2167,8 @@ export async function registerRoutes(
         continue;
       }
 
-      // Secondary dedup: same person already exists under another Intimura id
       const city = extractCity(iq.title || "");
       const province = inferProvince(city);
-      const candName = iq.customer_name || iq.title || "";
-      const candPhoneKey = normPhone(iq.customer_phone || "");
-      const candEmailKey = normEmail(iq.customer_email || "");
-      const candAddressKey = normAddress(iq.customer_address || iq.address || "");
-      const batchPrimaryId = batchPrimaryById.get(iq.id);
-      if (batchPrimaryId && batchPrimaryId !== iq.id) {
-        const primaryQuote = quoteByIntimuraId.get(batchPrimaryId);
-        if (primaryQuote) {
-          const batchLead = primaryQuote.leadId ? await storage.getLead(primaryQuote.leadId) : null;
-          const linked = await linkIntimuraQuoteToPrimary(primaryQuote, batchLead, iq);
-          quoteByIntimuraId.set(iq.id, linked);
-          queueIntimuraDetailFetch(detailIntimuraIds, iq.id, linked);
-          skipped++;
-          continue;
-        }
-      }
-
-      const dupe = pickBestDuplicate(candName, candPhoneKey, candEmailKey, candAddressKey, city, province);
-      if (dupe) {
-        if (!dupe.intimuraId) {
-          try { await storage.updateLead(dupe.id, { intimuraId: iq.id }); } catch {}
-        }
-
-        if (dupe.assignedSalesId) {
-          const pk = personKey(candName);
-          const stale = byPersonKey.get(pk) || [];
-          for (const s of stale) {
-            if (s.id === dupe.id) continue;
-            if (s.assignedSalesId) continue;
-            if (!sameZone(s, city, province)) continue;
-            try {
-              await storage.updateLead(s.id, {
-                assignedSalesId: dupe.assignedSalesId,
-                status: s.status === "nouveau" ? "assigne" : s.status,
-              });
-              s.assignedSalesId = dupe.assignedSalesId;
-            } catch {}
-          }
-        }
-
-        const leadQuotes = (quotesByLeadId.get(dupe.id) || []).slice().sort((a, b) => a.id - b.id);
-        let linkedQuote =
-          quoteByIntimuraId.get(iq.id) ||
-          leadQuotes.find((q) => q.intimuraId === iq.id) ||
-          leadQuotes[0];
-        if (linkedQuote && linkedQuote.intimuraId !== iq.id && !allIntimuraIdsOnQuote(linkedQuote).has(iq.id)) {
-          linkedQuote = await linkIntimuraQuoteToPrimary(linkedQuote, dupe, iq);
-        } else if (!linkedQuote) {
-          linkedQuote = await createQuoteFromIntimuraRow(dupe, iq);
-          createdQuotes++;
-        }
-        quoteByIntimuraId.set(iq.id, linkedQuote);
-        const lq = quotesByLeadId.get(dupe.id) || [];
-        if (!lq.some((q) => q.id === linkedQuote.id)) lq.push(linkedQuote);
-        quotesByLeadId.set(dupe.id, lq);
-        queueIntimuraDetailFetch(detailIntimuraIds, iq.id, linkedQuote);
-        skipped++;
-        continue;
-      }
       const intimuraUrl = intimuraQuoteUrl(iq.id);
       const lead = await storage.createLead({
         clientName: iq.customer_name || iq.title || "Client Intimura",
@@ -2301,14 +2189,6 @@ export async function registerRoutes(
         estimatedLength: null,
       });
       createdLeads++;
-
-      // Keep in-memory indexes fresh to avoid duplicates within the same payload.
-      pushMap(byNameKey, nameKey(lead.clientName || ""), lead as any);
-      pushMap(byPersonKey, personKey(lead.clientName || ""), lead as any);
-      const lp = normPhone(lead.phone || "");
-      if (lp && lp.length >= 10) pushMap(byPhone, lp, lead as any);
-      const le = normEmail(lead.email || "");
-      if (le) pushMap(byEmail, le, lead as any);
 
       const newQuote = await storage.createQuote({
         leadId: lead.id,
@@ -2340,10 +2220,8 @@ export async function registerRoutes(
       });
       createdQuotes++;
       createdIntimuraIds.push(iq.id);
+      await unlinkIntimuraIdFromGroupedQuotes(iq.id, newQuote.id);
       quoteByIntimuraId.set(iq.id, newQuote);
-      const lq = quotesByLeadId.get(lead.id) || [];
-      lq.push(newQuote);
-      quotesByLeadId.set(lead.id, lq);
 
       await storage.createActivity({
         leadId: lead.id,
@@ -2356,11 +2234,6 @@ export async function registerRoutes(
     }
 
     let consolidatedQuotes = 0;
-    try {
-      consolidatedQuotes = await consolidateIntimuraQuotesOnSameLead();
-    } catch (e) {
-      console.error("[intimura import] consolidate multi-intimura failed", e);
-    }
 
     // Optional post-import dedup (server cron / admin sync only — bookmarklet skips this).
     let dedupedAfterImport = 0;
@@ -2913,13 +2786,7 @@ export async function registerRoutes(
     if (actor?.role !== "admin" && actor?.role !== "sales_director") {
       return res.status(403).json({ error: "Acces reserve aux administrateurs et directeurs" });
     }
-    try {
-      const merged = await consolidateIntimuraQuotesOnSameLead();
-      res.json({ ok: true, consolidatedQuotes: merged });
-    } catch (err: any) {
-      console.error("[admin/consolidate-intimura-quotes] error", err);
-      res.status(500).json({ error: "SERVER_ERROR", message: err?.message || "Erreur serveur" });
-    }
+    res.json({ ok: true, consolidatedQuotes: 0, disabled: true });
   });
 
   // -------- Intimura quote DETAILS (per-submission) --------
@@ -3083,44 +2950,7 @@ export async function registerRoutes(
         with_installation: q.with_installation,
         first_payment_paid_at: q.first_payment_paid_at,
       });
-    }
-    const isLinkedSubmission = found?.isLinkedId || (quote.intimuraId && quote.intimuraId !== intimuraId);
-    if (isLinkedSubmission) {
-      const linked = parseLinkedIntimuraQuotes(quote.linkedIntimuraQuotes);
-      const idx = linked.findIndex((l) => l.intimuraId === intimuraId);
-      if (idx >= 0 && linked[idx].intimuraData) return { ok: false, reason: "ALREADY_SYNCED" };
-      const entry = {
-        intimuraId,
-        title: details.quote?.title || details.quote?.name,
-        status: details.quote?.status,
-        subtotal: Number(details.quote?.subtotal ?? details.quote?.total ?? 0) || undefined,
-        url: intimuraQuoteUrl(intimuraId),
-        syncedAt: new Date().toISOString(),
-        intimuraData: details,
-      };
-      if (idx >= 0) linked[idx] = { ...linked[idx], ...entry };
-      else linked.push(entry);
-      const qLinked = details.quote || {};
-      const patchLinked: any = { linkedIntimuraQuotes: JSON.stringify(linked) };
-      if (qLinked.internal_notes) {
-        const block = String(qLinked.internal_notes).trim();
-        if (block && !String(quote.salesNotes || "").includes(block)) {
-          patchLinked.salesNotes = quote.salesNotes
-            ? `${quote.salesNotes}\n\n--- Intimura ---\n${block}`
-            : block;
-        }
-      }
-      await storage.updateQuote(quote.id, patchLinked);
-      if (quote.leadId) {
-        const lead = await storage.getLead(quote.leadId);
-        const notice = multiIntimuraNotice(linked.length + (quote.intimuraId ? 1 : 0));
-        if (lead && notice && !String(lead.message || "").includes("soumissions Intimura")) {
-          await storage.updateLead(lead.id, {
-            message: lead.message ? `${lead.message}\n\n${notice}` : notice,
-          } as any);
-        }
-      }
-      return { ok: true, quoteId: quote.id, linked: true };
+      await unlinkIntimuraIdFromGroupedQuotes(intimuraId, quote.id);
     }
 
     // Ne pas réécrire les soumissions déjà synchronisées (sync = nouveaux leads seulement).
@@ -3241,19 +3071,21 @@ export async function registerRoutes(
     let updated = 0;
     const errors: any[] = [];
     for (const q of targets) {
+      const intimuraId = q.intimuraId;
+      if (!intimuraId) continue;
       try {
-        const url = `${intimuraQuoteUrl(q.intimuraId)}/__data.json?x-sveltekit-invalidated=001`;
+        const url = `${intimuraQuoteUrl(intimuraId)}/__data.json?x-sveltekit-invalidated=001`;
         const r = await fetch(url, { headers });
-        if (!r.ok) { errors.push({ id: q.intimuraId, status: r.status }); continue; }
+        if (!r.ok) { errors.push({ id: intimuraId, status: r.status }); continue; }
         const payload = await r.json() as any;
         const node = payload?.nodes?.find((n: any) => n?.type === "data");
-        if (!node?.data) { errors.push({ id: q.intimuraId, reason: "NO_DATA_NODE" }); continue; }
+        if (!node?.data) { errors.push({ id: intimuraId, reason: "NO_DATA_NODE" }); continue; }
         const decoded = decodeSvelteData(node.data);
-        const result = await applyIntimuraDetails(q.intimuraId, decoded);
+        const result = await applyIntimuraDetails(intimuraId, decoded);
         if (result.ok) updated++;
-        else errors.push({ id: q.intimuraId, reason: result.reason });
+        else errors.push({ id: intimuraId, reason: result.reason });
       } catch (err: any) {
-        errors.push({ id: q.intimuraId, error: err?.message });
+        errors.push({ id: intimuraId, error: err?.message });
       }
     }
     res.json({ candidates: targets.length, updated, errors });
@@ -3301,7 +3133,8 @@ export async function registerRoutes(
 
   // -------- Quotes --------
   app.get("/api/quotes", async (req, res) => {
-    const cached = getCachedApiResponse<any[]>(req);
+    const repairedLinkedQuotes = await materializeLinkedIntimuraQuotes();
+    const cached = repairedLinkedQuotes.changed > 0 ? null : getCachedApiResponse<any[]>(req);
     if (cached) {
       return res.json(cached);
     }
@@ -3316,10 +3149,12 @@ export async function registerRoutes(
       );
       quotes = quotes.filter((q: any) => q.assignedSalesId === actor.id || (q.leadId && assignedLeadIds.has(q.leadId)));
     }
-    setCachedApiResponse(req, quotes);
-    res.json(quotes);
+    const cleanedQuotes = quotes.map((q: any) => ({ ...q, linkedIntimuraQuotes: null }));
+    setCachedApiResponse(req, cleanedQuotes);
+    res.json(cleanedQuotes);
   });
   app.get("/api/quotes/:id", async (req, res) => {
+    await materializeLinkedIntimuraQuotes();
     const q = await storage.getQuote(Number(req.params.id));
     if (!q) return res.status(404).json({ error: "Not found" });
     const actor = req.user as any;
@@ -3329,7 +3164,7 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Acces refuse" });
       }
     }
-    res.json(q);
+    res.json({ ...q, linkedIntimuraQuotes: null });
   });
   app.post("/api/quotes", async (req, res) => {
     const { _userId, _userName, _userRole, ...payload } = req.body;

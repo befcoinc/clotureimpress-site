@@ -35,6 +35,7 @@ interface NavItem {
     | "nav.representativeApplications"
     | "nav.sectorsPlanning"
     | "nav.usersRoles"
+    | "nav.analytics"
     | "nav.architecture"
     | "nav.dormantAlerts";
   icon: any;

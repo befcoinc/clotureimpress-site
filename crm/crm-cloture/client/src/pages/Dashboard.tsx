@@ -36,7 +36,12 @@ export function Dashboard() {
   
   // Calculate weighted pipeline
   const inProgressQuotes = quotes.filter(q => !["signee", "perdue"].includes(q.salesStatus));
-  const weightedValue = computeWeightedPipeline(inProgressQuotes);
+  const weightedValue = computeWeightedPipeline(
+    inProgressQuotes.map((q) => ({
+      estimatedPrice: q.estimatedPrice ?? undefined,
+      salesStatus: q.salesStatus,
+    })),
+  );
 
   // Pipeline groups
   const pipelineGroups: Array<{ key: string; label: string; items: Quote[] }> = [

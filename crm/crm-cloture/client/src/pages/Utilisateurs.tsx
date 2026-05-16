@@ -694,7 +694,7 @@ function InstallerFormDialog({ userId, userName, isEn, canEdit, onClose }: { use
   const [draft, setDraft] = useState<Record<string, string | boolean>>({});
 
   const formData = data?.data || null;
-  const sections = [...new Set(FORM_FIELDS.map(f => f.section))];
+  const sections = Array.from(new Set(FORM_FIELDS.map(f => f.section)));
 
   function startEdit() {
     setDraft({ ...(formData || {}) });

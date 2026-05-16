@@ -42,7 +42,16 @@ export function IntimuraBookmarklet() {
   });
 
   const serverSyncMut = useMutation({
-    mutationFn: async () => apiRequest("POST", "/api/intimura/sync", {}),
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/intimura/sync", {});
+      return res.json() as Promise<{
+        createdLeads?: number;
+        createdQuotes?: number;
+        skipped?: number;
+        detailsUpdated?: number;
+        fetchedFromIntimura?: number;
+      }>;
+    },
     onSuccess: (data: {
       createdLeads?: number;
       createdQuotes?: number;

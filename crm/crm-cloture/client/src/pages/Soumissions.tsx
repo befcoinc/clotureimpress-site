@@ -346,23 +346,6 @@ export function Soumissions() {
                           <div className="cursor-pointer select-none">
                             <div className="font-semibold text-[12px] truncate flex items-center gap-1">
                               <span className="truncate">{q.clientName}</span>
-                              {(() => {
-                                let linked = 0;
-                                try {
-                                  linked = (q as any).linkedIntimuraQuotes
-                                    ? JSON.parse((q as any).linkedIntimuraQuotes).length
-                                    : 0;
-                                } catch {
-                                  linked = 0;
-                                }
-                                const n = (q.intimuraId ? 1 : 0) + linked;
-                                if (n < 2) return null;
-                                return (
-                                  <Badge variant="secondary" className="text-[8px] shrink-0 px-1 py-0">
-                                    {n}× Intimura
-                                  </Badge>
-                                );
-                              })()}
                             </div>
                             <div className="text-[10px] text-muted-foreground truncate">{q.city}, {q.province}</div>
                             <div className="flex items-center justify-between mt-2 gap-1">

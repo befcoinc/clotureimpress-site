@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,8 +11,9 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLanguage } from "@/lib/language-context";
 import { useToast } from "@/hooks/use-toast";
 import type { InstallerApplication } from "@shared/schema";
+import { getInstallerFichePricingGaps, INSTALLER_FICHE_PRICING_LABELS } from "@shared/installerFichePricing";
 import { useLocation } from "wouter";
-import { Building2, CalendarDays, FileText, Mail, MapPin, Phone, Send, UserPlus, Wrench, CheckCircle2 } from "lucide-react";
+import { Building2, CalendarDays, FileText, Mail, MapPin, Phone, Send, UserPlus, Wrench, CheckCircle2, AlertCircle } from "lucide-react";
 
 const STATUS_LABELS: Record<string, string> = {
   en_attente: "En attente",
@@ -48,6 +49,7 @@ export function ApplicationsInstallateurs() {
   const [newStatus, setNewStatus] = useState("");
   const [notes, setNotes] = useState("");
   const [isSendingFiche, setIsSendingFiche] = useState(false);
+  const [isSendingFicheIncomplete, setIsSendingFicheIncomplete] = useState(false);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [showFicheData, setShowFicheData] = useState(false);
@@ -83,6 +85,15 @@ export function ApplicationsInstallateurs() {
       toast({ title: language === "fr" ? "Erreur lors de la mise à jour" : "Update failed", variant: "destructive" });
     },
   });
+
+  const selectedPricingGaps = useMemo(() => {
+    if (!selected?.ficheData) return getInstallerFichePricingGaps({});
+    try {
+      return getInstallerFichePricingGaps(JSON.parse(selected.ficheData) as Record<string, unknown>);
+    } catch {
+      return getInstallerFichePricingGaps({});
+    }
+  }, [selected?.ficheData]);
 
   function openDetail(app: InstallerApplication) {
     setSelected(app);
@@ -121,6 +132,30 @@ export function ApplicationsInstallateurs() {
       toast({ title: language === "fr" ? "Erreur réseau" : "Network error", variant: "destructive" });
     } finally {
       setIsSendingFiche(false);
+    }
+  }
+
+  async function sendFicheIncomplete(app: InstallerApplication) {
+    setIsSendingFicheIncomplete(true);
+    try {
+      const res = await apiRequest("POST", `/api/installer-applications/${app.id}/send-fiche-incomplete`, {});
+      const data = await res.json().catch(() => ({})) as any;
+      if (!res.ok) {
+        toast({ title: data?.error || (language === "fr" ? "Erreur" : "Error"), variant: "destructive" });
+        return;
+      }
+      setSelected((prev) => (prev && prev.id === app.id ? { ...prev, ficheCompletedAt: null } : prev));
+      queryClient.invalidateQueries({ queryKey: ["/api/installer-applications"] });
+      toast({
+        title: data.emailSent
+          ? (language === "fr" ? "Courriel « fiche incomplète » envoyé" : "Incomplete reminder sent")
+          : (language === "fr" ? "Échec envoi courriel" : "Email failed"),
+        description: data.ficheUrl,
+      });
+    } catch {
+      toast({ title: language === "fr" ? "Erreur réseau" : "Network error", variant: "destructive" });
+    } finally {
+      setIsSendingFicheIncomplete(false);
     }
   }
 
@@ -203,7 +238,7 @@ export function ApplicationsInstallateurs() {
     <div>
       <PageHeader
         title={isFr ? "Applications installateurs" : "Installer Applications"}
-        subtitle={isFr ? "Candidatures reçues depuis le site web" : "Applications received from the website"}
+        description={isFr ? "Candidatures reçues depuis le site web" : "Applications received from the website"}
         leadingAction={
           <Button
             variant={showArchived ? "default" : "outline"}
@@ -418,6 +453,22 @@ export function ApplicationsInstallateurs() {
                         : (isFr ? "Envoyer la fiche à remplir" : "Send form to fill")}
                   </Button>
                   <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isSendingFicheIncomplete || selectedPricingGaps.length === 0}
+                    onClick={() => sendFicheIncomplete(selected)}
+                    title={
+                      selectedPricingGaps.length === 0
+                        ? (isFr ? "La tarification est déjà complète" : "Pricing section is complete")
+                        : undefined
+                    }
+                  >
+                    <AlertCircle size={14} className="mr-1" />
+                    {isSendingFicheIncomplete
+                      ? (isFr ? "Envoi..." : "Sending...")
+                      : (isFr ? "Rappel fiche incomplète" : "Incomplete form reminder")}
+                  </Button>
+                  <Button
                     variant="default"
                     size="sm"
                     disabled={isCreatingAccount || !!selected.convertedUserId}
@@ -472,19 +523,6 @@ export function ApplicationsInstallateurs() {
 }
 
 // ---------- Fiche renderer (structured view of submitted form data) ----------
-
-const PRICING_LABELS = [
-  "Maille de chaîne",
-  "Ornementale",
-  "Bois",
-  "Vinyle",
-  "Commerciale",
-  "Industrielle",
-  "Portails",
-  "Composite fibre/aluminium",
-  "Clôture de verre",
-  "Autres",
-];
 
 function yesNo(d: any, yesKey: string, noKey: string, isFr: boolean): string {
   if (d?.[yesKey]) return isFr ? "Oui" : "Yes";
@@ -550,12 +588,25 @@ function FicheRenderer({ raw, isFr }: { raw: string; isFr: boolean }) {
   };
   for (const k of Object.keys(eqMap)) if (d[k]) equipements.push(eqMap[k]);
 
-  const pricingRows = PRICING_LABELS.map((label, i) => ({
-    label,
-    offered: !!d[`pricing${i}_offered`],
-    rate: val(d[`pricing${i}_rate`]),
-    notes: val(d[`pricing${i}_notes`]),
-  }));
+  const pricingRows = INSTALLER_FICHE_PRICING_LABELS.map((label, i) => {
+    const offered = !!d[`pricing${i}_offered`];
+    const offerState = d[`pricing${i}_offerState`];
+    const rateRaw = String(d[`pricing${i}_rate`] ?? "").trim();
+    const notesRaw = String(d[`pricing${i}_notes`] ?? "").trim();
+    const explicitNo = offerState === "no";
+    const offeredDisplay = offered
+      ? (isFr ? "Oui" : "Yes")
+      : explicitNo || rateRaw || notesRaw
+        ? (isFr ? "Non" : "No")
+        : "—";
+    return {
+      label,
+      offered,
+      offeredDisplay,
+      rate: val(d[`pricing${i}_rate`]),
+      notes: val(d[`pricing${i}_notes`]),
+    };
+  });
 
   const refs = [1, 2, 3].map((n) => ({
     company: val(d[`ref${n}_company`]),
@@ -618,7 +669,7 @@ function FicheRenderer({ raw, isFr }: { raw: string; isFr: boolean }) {
               {pricingRows.map((r) => (
                 <tr key={r.label} className={r.offered ? "" : "text-muted-foreground"}>
                   <td className="px-2 py-1 border">{r.label}</td>
-                  <td className="px-2 py-1 border">{r.offered ? (isFr ? "Oui" : "Yes") : "—"}</td>
+                  <td className="px-2 py-1 border">{r.offeredDisplay}</td>
                   <td className="px-2 py-1 border">{r.rate}</td>
                   <td className="px-2 py-1 border">{r.notes}</td>
                 </tr>

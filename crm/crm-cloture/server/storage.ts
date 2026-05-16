@@ -239,6 +239,9 @@ async function migrate() {
   // Intimura full submission blob on quotes
   await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS intimura_data TEXT`);
   await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS linked_intimura_quotes TEXT`);
+  // Chaque soumission Intimura doit vivre dans sa propre fiche CRM.
+  // Nettoie les anciens regroupements qui affichaient l'encadré "soumissions Intimura liées".
+  await db.execute(sql`UPDATE quotes SET linked_intimura_quotes = NULL WHERE linked_intimura_quotes IS NOT NULL`);
   // Photos de fin de chantier
   await db.execute(sql`ALTER TABLE quotes ADD COLUMN IF NOT EXISTS completion_photos TEXT`);
   // Alertes retard + SMS satisfaction
