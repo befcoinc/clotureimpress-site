@@ -184,3 +184,37 @@
   .hover-elevate-2:hover:not(.no-default-hover-elevate)::after, .active-elevate-2:active:not(.no-default-active-elevate)::after { background-color: var(--elevate-2); }
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after, .border.active-elevate:not(.no-active-interaction-elevate)::after, .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after, .border.active-elevate-2:not(.no-active-interaction-elevate)::after, .border.hover-elevate:not(.no-hover-interaction-elevate)::after { inset: -1px; }
 }
+
+@media print {
+  @page {
+    margin: 0.5in;
+  }
+
+  body.printing-quote {
+    background: white !important;
+    color: #0f172a !important;
+  }
+
+  body.printing-quote * {
+    visibility: hidden !important;
+  }
+
+  body.printing-quote .quote-print-document,
+  body.printing-quote .quote-print-document * {
+    visibility: visible !important;
+  }
+
+  body.printing-quote .quote-print-document {
+    display: block !important;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+
+  body.printing-quote .quote-print-document table,
+  body.printing-quote .quote-print-document tr,
+  body.printing-quote .quote-print-document div {
+    break-inside: avoid;
+  }
+}

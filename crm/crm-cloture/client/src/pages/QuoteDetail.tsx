@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { ArrowLeft, MapPin, Ruler, DollarSign, Calendar, Phone, Mail, User as UserIcon, Check, Sparkles, Copy, ChevronDown, ChevronUp, Camera, X as XIcon, ZoomIn } from "lucide-react";
+import { ArrowLeft, MapPin, Ruler, DollarSign, Calendar, Phone, Mail, User as UserIcon, Check, Sparkles, Copy, ChevronDown, ChevronUp, Camera, X as XIcon, ZoomIn, Printer } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -150,6 +150,16 @@ export function QuoteDetail() {
   const canMarkStep = (team: string) =>
     (team === "sales" && canChangeSalesStage) || (team === "install" && canEditInstall);
   const stepKey = (label: string) => label.replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
+  const printDate = new Date().toLocaleDateString(isEn ? "en-CA" : "fr-CA", { year: "numeric", month: "long", day: "numeric" });
+  const printAddress = [displayAddress, quote.city, quote.province].filter(Boolean).join(", ");
+  const printTotal = quote.finalPrice ?? quote.estimatedPrice ?? (items.length > 0 ? subtotal : null);
+  const handlePrint = () => {
+    document.body.classList.add("printing-quote");
+    const cleanup = () => document.body.classList.remove("printing-quote");
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.print();
+    window.setTimeout(cleanup, 1000);
+  };
   const markStep = (step: typeof TIMELINE_STEPS[number]) => updateMut.mutate({
     ...(step.payload || {}),
     _timelineStep: step.label,
@@ -170,11 +180,90 @@ export function QuoteDetail() {
         title={`${isEn ? "Quote" : "Soumission"} #${quote.id} — ${quote.clientName}`}
         description={`${quote.fenceType || (isEn ? "Type undefined" : "Type non défini")} · ${quote.sector || (isEn ? "Sector undefined" : "Secteur non défini")}`}
         action={
-          <Link href="/soumissions">
-            <Button variant="outline" size="sm" className="gap-1.5" data-testid="button-back-quotes"><ArrowLeft className="h-4 w-4" /> {isEn ? "Back" : "Retour"}</Button>
-          </Link>
+          <>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrint} data-testid="button-print-quote">
+              <Printer className="h-4 w-4" /> {isEn ? "Print" : "Imprimer"}
+            </Button>
+            <Link href="/soumissions">
+              <Button variant="outline" size="sm" className="gap-1.5" data-testid="button-back-quotes"><ArrowLeft className="h-4 w-4" /> {isEn ? "Back" : "Retour"}</Button>
+            </Link>
+          </>
         }
       />
+
+      <section className="quote-print-document hidden">
+        <div className="mb-8 flex items-start justify-between gap-6 border-b border-slate-300 pb-5">
+          <div>
+            <div className="text-xs uppercase tracking-[0.22em] text-slate-500">Cloture Impress</div>
+            <h1 className="mt-2 text-3xl font-bold text-slate-950">{isEn ? "Quote" : "Soumission"} #{quote.id}</h1>
+            <p className="mt-1 text-sm text-slate-600">{isEn ? "Printed on" : "Imprimée le"} {printDate}</p>
+          </div>
+          <div className="text-right">
+            <div className="text-sm font-semibold text-slate-950">{quote.clientName}</div>
+            <div className="mt-1 text-sm text-slate-600">{displayPhone || "—"}</div>
+            <div className="text-sm text-slate-600">{displayEmail || "—"}</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6">
+          <PrintBlock label={isEn ? "Client" : "Client"} value={quote.clientName} />
+          <PrintBlock label={isEn ? "Project address" : "Adresse du projet"} value={printAddress || "—"} />
+          <PrintBlock label={isEn ? "Fence type" : "Type de clôture"} value={quote.fenceType || "—"} />
+          <PrintBlock label={isEn ? "Estimated length" : "Longueur estimée"} value={quote.estimatedLength != null ? `${quote.estimatedLength} ${isEn ? "ft" : "pi"}` : "—"} />
+          <PrintBlock label={isEn ? "Sales rep" : "Vendeur"} value={rep?.name || "—"} />
+          <PrintBlock label={isEn ? "Total" : "Total"} value={printTotal != null ? moneyFmt.format(printTotal) : "—"} />
+        </div>
+
+        <div className="mt-8">
+          <h2 className="mb-3 text-lg font-semibold text-slate-950">{isEn ? "Items" : "Articles"}</h2>
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-slate-300 text-left text-xs uppercase tracking-wider text-slate-500">
+                <th className="py-2 pr-3 font-semibold">{isEn ? "Description" : "Description"}</th>
+                <th className="w-20 px-3 py-2 text-right font-semibold">{isEn ? "Qty" : "Qté"}</th>
+                <th className="w-28 px-3 py-2 text-right font-semibold">{isEn ? "Unit" : "Unité"}</th>
+                <th className="w-32 py-2 pl-3 text-right font-semibold">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.length > 0 ? items.map((it: any, idx: number) => {
+                const qty = Number(it?.qty || 0);
+                const unitPrice = Number(it?.unit_price || 0);
+                const lineTotal = qty * unitPrice;
+                return (
+                  <tr key={it.id || idx} className="border-b border-slate-200">
+                    <td className="py-2 pr-3">{it.description || "—"}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{qty || "—"}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{moneyFmt.format(unitPrice)}</td>
+                    <td className="py-2 pl-3 text-right tabular-nums">{moneyFmt.format(lineTotal)}</td>
+                  </tr>
+                );
+              }) : (
+                <tr>
+                  <td colSpan={4} className="py-4 text-center text-slate-500">{isEn ? "No line items available." : "Aucun article disponible."}</td>
+                </tr>
+              )}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-slate-400 font-semibold">
+                <td colSpan={3} className="py-3 pr-3 text-right">{isEn ? "Subtotal" : "Sous-total"}</td>
+                <td className="py-3 pl-3 text-right tabular-nums">{printTotal != null ? moneyFmt.format(printTotal) : "—"}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        {Array.isArray(intimura?.metadata) && intimura.metadata.length > 0 && (
+          <div className="mt-8">
+            <h2 className="mb-3 text-lg font-semibold text-slate-950">{isEn ? "Specifications" : "Spécifications"}</h2>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {intimura.metadata.map((m: any) => (
+                <PrintBlock key={m.id || m.label} label={m.label} value={m.value || "—"} />
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
 
       <div className="p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -616,6 +705,15 @@ function Info({ icon, label, value }: { icon: React.ReactNode; label: string; va
     <div className="space-y-0.5">
       <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">{icon} {label}</div>
       <div className="text-[13px]">{value}</div>
+    </div>
+  );
+}
+
+function PrintBlock({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</div>
+      <div className="mt-1 whitespace-pre-wrap text-sm text-slate-950">{value}</div>
     </div>
   );
 }
