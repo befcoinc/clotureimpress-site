@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Mail, Phone, MapPin, Filter, Globe, Database, Clock, Trash2, FlaskConical, RefreshCw, KeyRound, ExternalLink, Pencil, StickyNote } from "lucide-react";
+import { Plus, Mail, Phone, MapPin, Filter, Globe, Database, Clock, Trash2, FlaskConical, RefreshCw, KeyRound, ExternalLink, Pencil, StickyNote, FileText } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -201,6 +201,20 @@ export function Leads() {
       const lid = Number(q.leadId);
       const prev = m.get(lid);
       if (!prev || Number(q.id) > Number(prev.id)) m.set(lid, q);
+    }
+    return m;
+  }, [quotes]);
+  const quotesByLeadId = useMemo(() => {
+    const m = new Map<number, any[]>();
+    for (const q of quotes) {
+      if (q?.leadId == null) continue;
+      const lid = Number(q.leadId);
+      const list = m.get(lid) ?? [];
+      list.push(q);
+      m.set(lid, list);
+    }
+    for (const list of m.values()) {
+      list.sort((a, b) => Number(b.id) - Number(a.id));
     }
     return m;
   }, [quotes]);
@@ -560,6 +574,7 @@ export function Leads() {
             const rep = salesReps.find(r => r.id === lead.assignedSalesId);
             const isAssigned = !!lead.assignedSalesId;
             const linkedQuote = quoteByLeadId.get(lead.id);
+            const linkedQuotes = quotesByLeadId.get(lead.id) ?? [];
             const submissionNote = getSubmissionNoteForLead(lead.id, quotes);
             return (
               <Card
@@ -627,6 +642,23 @@ export function Leads() {
                   </div>
 
                   {lead.message && <p className="text-[12px] text-foreground/80 line-clamp-2">{lead.message}</p>}
+
+                  {linkedQuotes.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <FileText className="h-3 w-3" />
+                      <span>{isEn ? "Quotes" : "Soumissions"}:</span>
+                      {linkedQuotes.map((q) => (
+                        <Link key={q.id} href={`/soumissions/${q.id}`}>
+                          <Badge variant="outline" className="cursor-pointer text-[10px] hover:bg-muted" data-testid={`link-lead-quote-${lead.id}-${q.id}`}>
+                            #{q.id}
+                            {q.estimatedPrice
+                              ? ` · ${Intl.NumberFormat(isEn ? "en-CA" : "fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(q.estimatedPrice)}`
+                              : ""}
+                          </Badge>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
                     <div className="text-[11px]">
@@ -779,6 +811,32 @@ export function Leads() {
                   <FormItem><FormLabel>{isEn ? "Neighborhood" : "Quartier"}</FormLabel><FormControl><Input data-testid="edit-input-neighborhood" {...field} value={field.value ?? ""} /></FormControl></FormItem>
                 )}/>
                 <FormField control={editForm.control} name="fenceType" render={({ field }) => (
+                  <FormItem className="col-span-2"><FormLabel>{isEn ? "Fence type" : "Type de clôture"}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? "Bois traité"}>
+                      <FormControl><SelectTrigger data-testid="edit-select-fenceType"><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>{FENCE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </FormItem>
+                )}/>
+              </div>
+              <FormField control={editForm.control} name="message" render={({ field }) => (
+                <FormItem><FormLabel>{isEn ? "Message / notes" : "Message / notes"}</FormLabel><FormControl><Textarea rows={3} data-testid="edit-input-message" {...field} value={field.value ?? ""} /></FormControl></FormItem>
+              )}/>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditingLead(null)}>
+                  {isEn ? "Cancel" : "Annuler"}
+                </Button>
+                <Button type="submit" disabled={updateLeadMut.isPending} data-testid="button-save-edit-lead">
+                  {updateLeadMut.isPending ? (isEn ? "Saving..." : "Enregistrement...") : (isEn ? "Save" : "Enregistrer")}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
                   <FormItem className="col-span-2"><FormLabel>{isEn ? "Fence type" : "Type de clôture"}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value ?? "Bois traité"}>
                       <FormControl><SelectTrigger data-testid="edit-select-fenceType"><SelectValue /></SelectTrigger></FormControl>

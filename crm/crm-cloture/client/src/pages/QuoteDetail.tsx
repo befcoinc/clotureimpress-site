@@ -53,6 +53,8 @@ export function QuoteDetail() {
   // Parse the Intimura submission blob attached to this quote (if any).
   let intimura: any = null;
   try { intimura = quote?.intimuraData ? JSON.parse(quote.intimuraData as any) : null; } catch { intimura = null; }
+  const isManualCrmSubmission = intimura?.source === "manual-crm";
+  const intimuraUrl = intimura?.intimuraUrl || (quote?.intimuraId ? `https://crm.intimura.com/app/quotes/${quote.intimuraId}` : "");
   const intimuraCustomer = intimura?.customer || null;
   const intimuraQuote = intimura?.quote || null;
   const intimuraPayments = Array.isArray(intimura?.payments) ? intimura.payments : [];
@@ -362,15 +364,19 @@ export function QuoteDetail() {
           {intimura && (
             <Card>
               <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                <CardTitle className="text-base">{isEn ? "Intimura submission" : "Soumission Intimura"}</CardTitle>
-                <a
-                  href={intimura?.intimuraUrl || (quote.intimuraId ? `https://crm.intimura.com/app/quotes/${quote.intimuraId}` : "#")}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[11px] text-primary hover:underline"
-                >
-                  {isEn ? "Open in Intimura ↗" : "Ouvrir dans Intimura ↗"}
-                </a>
+                <CardTitle className="text-base">
+                  {isManualCrmSubmission ? (isEn ? "Quote details" : "Détails de soumission") : (isEn ? "Intimura submission" : "Soumission Intimura")}
+                </CardTitle>
+                {!isManualCrmSubmission && intimuraUrl && (
+                  <a
+                    href={intimuraUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    {isEn ? "Open in Intimura ↗" : "Ouvrir dans Intimura ↗"}
+                  </a>
+                )}
               </CardHeader>
               <CardContent className="space-y-4 text-sm">
                 {intimuraQuote && (
@@ -1200,6 +1206,17 @@ function CompletionPhotosPanel({
               />
             </label>
           )}
+
+          {canUpload && photos.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center pb-1">
+              {isEn ? "No photos yet. Tap above to capture." : "Aucune photo. Appuyez pour prendre une photo."}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  );
+}
 
           {canUpload && photos.length === 0 && (
             <p className="text-xs text-muted-foreground text-center pb-1">
